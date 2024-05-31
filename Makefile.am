@@ -11,7 +11,8 @@ noinst_HEADERS = src/ssh2-module.h \
 	src/SSH2Channel.h \
 	src/QC_SSH2Base.h
 
-USER_MODULES = qlib/SftpPollerUtil.qm \
+USER_MODULES = qlib/SftpClientDataProvider \
+    qlib/SftpPollerUtil.qm \
     qlib/SftpPoller.qm \
 	qlib/Ssh2Connections.qm
 
@@ -34,16 +35,26 @@ ACLOCAL_AMFLAGS=-I m4
 dist_mod_DATA = $(USER_MODULES)
 
 if COND_DOXYGEN
-DOX = ssh2 SftpPollerUtil SftpPoller Ssh2Connections
-DOXYGEN_OUTPUT=docs/ssh2/html docs/SftpPollerUtil/html docs/SftpPoller/html docs/Ssh2Connections/html
+DOX = ssh2 SftpClientDataProvider SftpPollerUtil SftpPoller Ssh2Connections
+DOXYGEN_OUTPUT=docs/ssh2/html docs/SftpClientDataProvider/html docs/SftpPollerUtil/html docs/SftpPoller/html docs/Ssh2Connections/html
 DOXYFILES = docs/doxyfile docs/mainpage.doxygen
 DOXYFILES_SRC = docs/doxyfile.tmpl docs/footer_template.html
-QLIB_TMP_DOXYFILES = docs/qlib/SftpPollerUtil.qm.dox.h docs/qlib/SftpPoller.qm.dox.h docs/qlib/Ssh2Connections.qm.dox.h docs/qlib/Doxyfile.SftpPollerUtil docs/qlib/Doxyfile.SftpPoller docs/qlib/Doxyfile.Ssh2Connections docs/ssh2.tag docs/SftpPollerUtil.tag docs/SftpPoller.tag docs/Ssh2Connections.tag
+QLIB_TMP_DOXYFILES = docs/qlib/SftpClientDataProvider.qm.dox.h docs/qlib/SftpPollerUtil.qm.dox.h docs/qlib/SftpPoller.qm.dox.h docs/qlib/Ssh2Connections.qm.dox.h docs/qlib/Doxyfile.SftpPollerUtil docs/qlib/Doxyfile.SftpPoller docs/qlib/Doxyfile.Ssh2Connections docs/ssh2.tag docs/SftpPollerUtil.tag docs/SftpPoller.tag docs/Ssh2Connections.tag
 QDX = qdx
 DX_CLEANFILES = ${DOXYFILES} $(QLIB_TMP_DOXYFILES)
 
 docs/qlib/Doxyfile.tmp: docs/qlib/Doxyfile.tmpl
 	sed s:__USERMODDIR__:${usermoddir}: $< > $@
+
+docs/qlib/Doxyfile.SftpClientDataProvider: docs/qlib/Doxyfile.tmp
+	$(QDX) -M=qlib/SftpClientDataProvider:qlib/SftpClientDataProvider.qm.dox.h -tssh2.tag=../../ssh2/html $< $@
+
+docs/qlib/SftpClientDataProvider.qm.dox.h: qlib/SftpClientDataProvider
+	$(QDX) $< $@
+
+docs/SftpClientDataProvider/html: docs/qlib/SftpClientDataProvider.qm.dox.h docs/qlib/Doxyfile.SftpClientDataProvider
+	cd docs; $(DOXYGEN_CMD) qlib/Doxyfile.SftpClientDataProvider
+	$(QDX) --post docs/SftpClientDataProvider/html docs/SftpClientDataProvider/html/search
 
 docs/qlib/Doxyfile.SftpPollerUtil: docs/qlib/Doxyfile.tmp
 	$(QDX) -M=qlib/SftpPollerUtil.qm:qlib/SftpPollerUtil.qm.dox.h -tssh2.tag=../../ssh2/html $< $@

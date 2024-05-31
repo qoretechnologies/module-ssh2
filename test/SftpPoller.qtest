@@ -51,7 +51,7 @@ class SftpPollerTest inherits QUnit::Test {
             "privkey": "k,private-key=s",
             "mask": "m,mask=s",
             "dir": "d,dir=s"
-            );
+        );
 
         SFTPClient sc;
 
@@ -62,7 +62,7 @@ class SftpPollerTest inherits QUnit::Test {
             "b.txt": "bcd",
             "c.txt": "cde",
             "d.php": "def",
-            );
+        );
 
         const Result = (
             ("name": "a.txt",
@@ -80,18 +80,18 @@ class SftpPollerTest inherits QUnit::Test {
              "type": "REGULAR",
              "data": "cde",
             ),
-            );
+        );
 
         const NoRetrievalFiles = (
             "x.txt": "abc",
-            );
+        );
 
         const NoRetrievalResult = (
             ("name": "x.txt",
              "size": 3,
              "type": "REGULAR",
             ),
-            );
+        );
     }
 
     constructor() : Test("SftpPollerTest", "1.2", \ARGV, MyOpts) {
@@ -100,11 +100,12 @@ class SftpPollerTest inherits QUnit::Test {
 
         string uri = shift ARGV ?? sprintf("%s@localhost", getusername());
 
+        printf("Connecting to %y\n", uri);
+
         sc = new SFTPClient(uri);
         if (m_options.privkey) {
             sc.setKeys(m_options.privkey);
-        }
-        else {
+        } else {
             if (PlatformOS == "Windows")
                 exit(0);
 
@@ -222,8 +223,10 @@ class SftpPollerTest inherits QUnit::Test {
             "writable": True,
         );
 
+        string tmp = "/tmp/";
+
         # setup directory
-        string nd = sprintf("%s/%s/", tmp_location(), get_random_string());
+        string nd = sprintf("%s/%s/", tmp, get_random_string());
         sc.mkdir(nd);
         map sc.putFile($1.value, nd + $1.key), Files.pairIterator();
         on_exit {

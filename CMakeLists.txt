@@ -1,12 +1,12 @@
 cmake_minimum_required(VERSION 3.0.0)
 
-project(qore-ssh2-module VERSION 1.4.2)
+project(qore-ssh2-module VERSION 1.5.0)
 
 include(CheckCXXCompilerFlag)
 include(CheckCXXSymbolExists)
 include(CheckIncludeFileCXX)
 
-find_package(Qore 1.0 REQUIRED)
+find_package(Qore 2.0 REQUIRED)
 find_package(OpenSSL REQUIRED)
 
 if(WIN32 OR MSYS OR MINGW)
@@ -96,6 +96,7 @@ add_library(${module_name} MODULE ${CPP_SRC} ${QPP_SOURCES})
 set(MODULE_DOX_INPUT ${CMAKE_BINARY_DIR}/mainpage.dox ${_dox_src})
 qore_external_binary_module(${module_name} ${PROJECT_VERSION} ${LIBSSH2_LDFLAGS})
 
+qore_external_user_module("qlib/SftpClientDataProvider" "")
 qore_external_user_module("qlib/SftpPollerUtil.qm" "")
 qore_external_user_module("qlib/SftpPoller.qm" "SftpPollerUtil")
 qore_external_user_module("qlib/Ssh2Connections.qm" "")

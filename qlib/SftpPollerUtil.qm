@@ -41,7 +41,7 @@ module SftpPollerUtil {
     license = "MIT";
     init = sub () {
         # register the event data type
-        DataProvider::registerType("qore/sftp/event", new SftpPollerFileEventInfoDataType());
+        DataProvider::registerType("qore/sftp/event", SftpPollerFileEventInfoDataType);
     };
 }
 
@@ -70,72 +70,147 @@ public namespace SftpPoller {
 public class SftpPollerFileEventInfoDataType inherits HashDataType {
     public {
         #! Markdown descriptions for hashdecl members
-        const FieldDescriptions = {
+        const Fields = {
             "name": {
                 "display_name": "Name",
-                "desc": "the name of the file, link, or directory",
+                "short_desc": "The name of the file, link, or directory",
+                "desc": "The name of the file, link, or directory",
+                "example_value": "example-file.txt",
             },
             "size": {
                 "display_name": "Size",
-                "desc": "the size of the file in bytes",
+                "short_desc": "The size of the file in bytes",
+                "desc": "The size of the file in bytes",
+                "example_value": 903,
             },
             "uid": {
                 "display_name": "User ID",
-                "desc": "the UID of the owner of the file",
+                "short_desc": "The UID of the owner of the file",
+                "desc": "The UID of the owner of the file",
+                "example_value": 1000,
             },
             "gid": {
                 "display_name": "Group ID",
-                "desc": "the GID of the owner of the file",
+                "short_desc": "The GID of the owner of the file",
+                "desc": "The GID of the owner of the file",
+                "example_value": 20,
             },
             "mode": {
                 "display_name": "File Mode",
-                "desc": "the permissions / mode of the file",
+                "short_desc": "The permissions / mode of the file",
+                "desc": "The permissions / mode of the file",
+                "example_value": 33261,
             },
             "atime": {
                 "display_name": "Last Access Time",
-                "desc": "the last accessed date/time of the file",
+                "short_desc": "The last accessed date/time of the file",
+                "desc": "The last accessed date/time of the file",
             },
             "mtime": {
                 "display_name": "Last Modified Time",
-                "desc": "the last modified date/time of the file",
+                "short_desc": "The last modified date/time of the file",
+                "desc": "The last modified date/time of the file",
             },
             "type": {
                 "display_name": "Type",
                 "short_desc": "The type of file",
-                "desc": "The type of file; one of:\n- `REGULAR`\n- `DIRECTORY`\n- `SYMBOLIC-LINK`\n"
-                    "- `BLOCK-DEVICE`\n- `CHARACTER-DEVICE`\n- `FIFO`\n- `SYMBOLIC-LINK`\n- `SOCKET`\n"
-                    "- `UNKNOWN`",
+                "desc": "The type of file",
+                "allowed_values": (
+                    <AllowedValueInfo>{
+                        "display_name": "REGULAR",
+                        "short_desc": "Regular file",
+                        "desc": "Regular file",
+                        "value": "REGULAR",
+                    },
+                    <AllowedValueInfo>{
+                        "display_name": "DIRECTORY",
+                        "short_desc": "Directory",
+                        "desc": "Directory",
+                        "value": "DIRECTORY",
+                    },
+                    <AllowedValueInfo>{
+                        "display_name": "SYMBOLIC-LINK",
+                        "short_desc": "Symbolic link",
+                        "desc": "Symbolic link",
+                        "value": "SYMBOLIC-LINK",
+                    },
+                    <AllowedValueInfo>{
+                        "display_name": "BLOCK-DEVICE",
+                        "short_desc": "Block device file",
+                        "desc": "Block device file",
+                        "value": "BLOCK-DEVICE",
+                    },
+                    <AllowedValueInfo>{
+                        "display_name": "CHARACTER-DEVICE",
+                        "short_desc": "Character device file",
+                        "desc": "Character device file",
+                        "value": "CHARACTER-DEVICE",
+                    },
+                    <AllowedValueInfo>{
+                        "display_name": "FIFO",
+                        "short_desc": "FIFO file",
+                        "desc": "FIFO file",
+                        "value": "FIFO",
+                    },
+                    <AllowedValueInfo>{
+                        "display_name": "SOCKET",
+                        "short_desc": "UNIX socket file",
+                        "desc": "UNIX socket file",
+                        "value": "SOCKET",
+                    },
+                    <AllowedValueInfo>{
+                        "display_name": "UNKNOWN",
+                        "short_desc": "Unknown file type",
+                        "desc": "Unknown file type",
+                        "value": "UNKNOWN",
+                    },
+                ),
+                "example_value": "REGULAR",
             },
             "perm": {
                 "display_name": "Permissions",
                 "short_desc": "A string giving UNIX-style permissions for the file",
                 "desc": "A string giving UNIX-style permissions for the file (ex: `-rwxr-xr-x`)",
+                "example_value": "-rwxr-x-r-x",
             },
             "data": {
                 "display_name": "File Data",
                 "short_desc": "The file's data",
-                "desc": "the file's data; this will be a string unless the `binary` option is set to `True`, in "
+                "desc": "The file's data; this will be a string unless the `binary` option is set to `True`, in "
                     "which case this key is assigned to the files binary data; this hash key is only present if "
                     "`skip_file_content_retrieval` was `False` in the `SftpPoller::constructor()` option hash",
             },
             "filepath": {
                 "display_name": "Remote Path",
-                "desc": "the remote filepath relative to SFTP root directory",
+                "short_desc": "The remote filepath relative to the remote root directory",
+                "desc": "The remote filepath relative to the remote root directory",
+                "example_value": "./example-file.txt",
+            },
+            "transfer_time":  {
+                "display_name": "Transfer Time",
+                "short_desc": "The relative date/time value giving the time taken to transfer the file",
+                "desc": "The relative date/time value giving the time taken to transfer the file",
+                "example_value": 0.154947s,
+            },
+            "local_path":  {
+                "display_name": "Local Path",
+                "short_desc": "The target path for the file if applicable",
+                "desc": "Only included when `local_dir` is set; the target path for the file where the file will "
+                    "be moved to in the post event action",
             },
         };
     }
 
     #! Creates the type
     constructor() {
-        # add members for base hashdecl
-        map addField(new QoreDataField({
-            "name": $1.getName(),
+        addQoreFields(map {$1.getName(): Fields{$1.getName()} + {
             "type": $1.getType(),
-            "default_value": $1.getDefaultValue(),
-        } + FieldDescriptions{$1.getName()})),
-            TypedHash::forName("SftpPoller::SftpPollerFileEventInfo").getMembers();
+        }}, TypedHash::forName("SftpPoller::SftpPollerFileEventInfo").getMembers());
     }
 }
+
+#! FTP poller event type constant
+public const SftpPollerFileEventInfoDataType = new SftpPollerFileEventInfoDataType();
 
 #! SftpPoller file event hash
 public hashdecl SftpPollerFileEventInfo {
@@ -186,5 +261,11 @@ public hashdecl SftpPollerFileEventInfo {
 
     #! the remote filepath relative to SFTP root directory
     string filepath;
+
+    #! The relative date/time value giving the time taken to transfer the file
+    date transfer_time;
+
+    #! Only included when `local_dir` is set; the target path for the file
+    *string local_path;
 }
 }

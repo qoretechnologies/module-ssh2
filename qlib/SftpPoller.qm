@@ -30,6 +30,8 @@
 # assume local vars and do not allow $ chars
 %new-style
 
+%allow-weak-references
+
 %requires DataProvider
 
 module SftpPoller {
@@ -38,6 +40,46 @@ module SftpPoller {
     author = "David Nichols <david@qore.org>";
     url = "http://qore.org";
     license = "MIT";
+    init = sub () {
+        # register the data provider factory
+        DataProvider::registerFactory(new SftpPollerDataProviderFactory());
+
+        # register the data provider application
+        # NOTE: this application is also registed in the SftpPoller module
+        DataProviderActionCatalog::registerApp(<DataProviderAppInfo>{
+            "name": SftpPoller::AppName,
+            "display_name": "SFTP Server",
+            "short_desc": "Generic SFTP server for exchanging files with SFTP",
+            "desc": "Generic SFTP server for exchanging files with SFTP",
+            "scheme": "sftp",
+            "logo": SftpWhiteLogo,
+            "logo_file_name": "generic-sftp-logo.svg",
+            "logo_mime_type": MimeTypeSvg,
+        });
+
+        # register all supported actions
+        DataProviderActionCatalog::registerAction(<DataProviderActionInfo>{
+            "app": SftpPoller::AppName,
+            "path": "/",
+            "action": "sftp-file-event",
+            "display_name": "SFTP File Received",
+            "subtype": "sftppoller",
+            "short_desc": "A file is uploaded to an SFTP server",
+            "desc": "React to files uploaded to an SFTP server",
+            "action_code": DPAT_EVENT,
+            "action_val": EVENT_SFTP_FILE,
+            "output_type": SftpPollerFileEventInfoDataType,
+            "convenience_options": DataProviderActionCatalog::getActionOptionFromFields(
+                SftpPollerDataProviderBase::ConstructorOptions{"mask",} - ("url"), {
+                    "preselected": True,
+                    "required": True,
+                },
+            ),
+            "advanced_options": DataProviderActionCatalog::getActionOptionFromFields(
+                SftpPollerDataProviderBase::ConstructorOptions - ("mask", "url")
+            ),
+        });
+    };
 }
 
 /** @mainpage SftpPoller Module
@@ -96,6 +138,9 @@ hash opts = (
 
     @section sftppollerrelnotes SftpPoller Module Release Notes
 
+    @section sftppollerv1_5 Version 1.5
+    - added data provider and app action support
+
     @section sftppollerv1_4_1 Version 1.4.1
     - fixed a bug registering the sftp event type
       (<a href="https://github.com/qorelanguage/qore/issues/4389">issue 4389</a>)
@@ -109,6 +154,12 @@ hash opts = (
 
 #! main SftpPoller namespace
 public namespace SftpPoller {
+#! Generic SFTP server app name
+public const AppName = "SFTP";
+
+#! SFTP file event constant
+public const EVENT_SFTP_FILE = "sftp-file-event";
+
 #! SftpPoller client class implementation
 public class SftpPoller {
     public {
@@ -146,6 +197,8 @@ public class SftpPoller {
             "binary": False,
             "writable": False,
             "check_file": "qore-sftp-check-file",
+            "tempfile_template": ".tmp.%s.part",
+            "atomic_transfer": False,
         };
 
         #! optional constructor hash keys
@@ -198,6 +251,15 @@ public class SftpPoller {
 
         #! poll interval in seconds
         int poll_interval;
+
+        #! Local directory to transfer file
+        string local_dir;
+
+        #! The temporary filename template when \c local_dir is set
+        string tempfile_template;
+
+        #! Atomic transfer flag for use with \c local_dir
+        bool atomic_transfer;
 
         #! run flag
         bool runflag = False;
@@ -266,6 +328,9 @@ public class SftpPoller {
     #! creates the SftpPoller object from the @ref Qore::SSH2::SFTPClient "SFTPClient" argument and configuration hash argument passed
     /** @param n_sftp the new @ref Qore::SSH2::SFTPClient "SFTPClient" object
         @param nconf a hash with the following optional keys:
+        - \c atomic_transfer: if @ref True and \c local_dir is set, then \c tempfile_template is used to write FTP
+          files to a temporary filename during transfer
+        - \c local_dir: a local directory to use to transfer remote files so large file data does not appear in events
         - \c poll_interval: the integer polling interval in seconds (default: 10 seconds; must be > 0 if given)
         - \c mask: the file glob mask to use (default: \c "*", ignored if \c "regex_mask" is also present)
         - \c path: the remote path(s) for retrieving the files; if a list of strings is given then each path will be polled for matching files according to the \c "mask" or \c "regex_mask" option
@@ -282,6 +347,9 @@ public class SftpPoller {
         - \c sleep: (required when imported into a context where @ref Qore::PO_NO_PROCESS_CONTROL is set) a @ref closure "closure" or @ref call_reference "call reference" to use instead of @ref Qore::sleep() (if not set then @ref Qore::sleep() will be used)
         - \c writable: check if path(s) is/are writable  (default: False see also the \c "check_file" option)
         - \c check_file: name of a check file. The file will be created and deleted in the path to test if path is writable. If the file alrady exists, it will be deleted. (default: \c "qore-sftp-check-file")
+        - \c tempfile_template: (used when \c local_dir and \c atomic_transfer are set) the temporary filename prefix
+          to use when transferring files to the local directory specified by \c local_dir; use \c "%s" as the
+          placeholder for the target filename
 
         @throw SFTPPOLLER-CONSTRUCTOR-ERROR missing required key, invalid port or poll_interval given
         @throw SFTPCLIENT-PARAMETER-ERROR empty hostname passed
@@ -290,7 +358,7 @@ public class SftpPoller {
         @throw SSH2-ERROR error initializing or establishing ssh2 session
         @throw SSH2CLIENT-AUTH-ERROR no proper authentication method found
         @throw SFTPCLIENT-CONNECT-ERROR error initializing sftp session or getting remote path
-        */
+    */
     constructor(Qore::SSH2::SFTPClient n_sftp, hash<auto> nconf) {
         # create hash of keys with only valid options in argument hash
         hash<auto> conf = Defaults + nconf{AllKeys};
@@ -298,6 +366,11 @@ public class SftpPoller {
         foreach string k in (RequiredKeys) {
             if (!exists conf{k})
                 throw "SFTPPOLLER-CONSTRUCTOR-ERROR", sprintf("required key %y missing from constructor hash argument)", k);
+        }
+
+        if (exists conf.local_dir && (!is_dir(conf.local_dir) || !is_writable(conf.local_dir))) {
+            throw "SFTPPOLLER-CONSTRUCTOR-ERROR", sprintf("Invalid local directory %y; directory does not exist or "
+                "cannot be written to", conf.local_dir);
         }
 
         conf.poll_interval = int(conf.poll_interval);
@@ -333,16 +406,14 @@ public class SftpPoller {
             logDetail("%s: logging in (timeout %y)", url, timeout);
             # connect to the remote system
             sftp.connect(timeout);
-        }
-        else
+        } else
             logDetail("%s: already connected: %y", url, ih);
         if (path && path.size() == 1 && path[0] != ".") {
             logInfo("path is %n", path);
             logInfo("%s: connected; changing directory to %s", url, path[0]);
             # change to the target directory
             sftp.chdir(path[0], timeout);
-        }
-        else
+        } else
             logInfo("%s: connected", url);
 
         map checkRemotePath($1, writable), path;
@@ -434,8 +505,7 @@ public class SftpPoller {
             logInfo("%s: connected; changing directory to %s", url, path[0]);
             # change to the target directory
             sftp.chdir(path[0], timeout);
-        }
-        else
+        } else
             logInfo("%s: connected", url);
 
         map checkRemotePath($1, writable), path;
@@ -523,7 +593,8 @@ public class SftpPoller {
 
     #! check if a remote path is writable
     /**
-        @throw "REMOTE-DIR-ERROR" this exception is thrown if the remote path does not exist, is not a directory, or is not not writable
+        @throw "REMOTE-DIR-ERROR" this exception is thrown if the remote path does not exist, is not a directory, or
+        is not not writable
     */
     checkRemotePath(string path, bool write = False, *timeout n_timeout) {
         string apath = rootSftpPath + "/" + path;
@@ -541,7 +612,8 @@ public class SftpPoller {
         try {
             string f = apath + "/" + check_file;
             if (!stat(f, n_timeout)) {
-                string content = "This is a qore test file for checking whether the sftp path is writable. This file can be deleted with no worries.";
+                string content = "This is a qore test file for checking whether the sftp path is writable. This file "
+                    "can be deleted with no worries.";
                 sftp.putFile(content, f, 0644, n_timeout);
             }
             sftp.removeFile(f, n_timeout);
@@ -718,35 +790,116 @@ public class SftpPoller {
 
                 if (fileEvent(files)) {
                     foreach hash<SftpPollerFileEventInfo> fh in (files) {
+                        fh.filepath = subdir == "." ? fh.name : (subdir + "/" + fh.name);
                         if (skip_file_content_retrieval) {
                             logInfo("%y: skipping retrieval of file data based on the poller configuration", fh.name);
                         } else {
-                            # transfer file from server
-                            logInfo("%y: retrieving %s file data", fh.name, binary ? "binary" : "text");
-                            date t1 = now_us();
-
-                            get_files = True;
-                            fh.data = binary ? getFile(fh.name) : getTextFile(fh.name);
-                            logInfo("%y: retrieved %d bytes in %y", fh.name, fh.data.size(), now_us() - t1);
+                            if (local_dir) {
+                                if (atomic_transfer) {
+                                    fh = retrieveTempFile(fh);
+                                } else {
+                                    fh = retrieveFile(fh);
+                                }
+                            } else {
+                                fh = getRemoteFileData(fh);
+                            }
                         }
 
                         # make sure any errors after this point cause the polling operation to stop
                         get_files = False;
-                        fh.filepath = subdir == "." ? fh.name : (subdir + "/" + fh.name);
                         singleFileEvent(fh);
 
-                        try {
-                            postSingleFileEvent(fh);
-                        } catch (hash<ExceptionInfo> ex) {
-                            fatal = True;
-                            rethrow;
-                        }
+                        # set the "fatal" flag if an exception is thrown in postSingleFileEvent()
+                        on_error fatal = True;
+
+                        postSingleFileEvent(fh);
                     }
                 }
                 ret = True;
             }
         }
         return ret;
+    }
+
+    #! Retrieves remote file data and adds it to the event data
+    hash<SftpPollerFileEventInfo> getRemoteFileData(hash<SftpPollerFileEventInfo> event) {
+        # get file to binary stream
+        OutputStream outstream = self."binary"
+            ? new BinaryOutputStream()
+            : new StringOutputStream();
+
+        logInfo("Retrieving %y (%d bytes) to memory", event.filepath, event.size);
+        date start = now_us();
+        sftp.get(event.name, outstream);
+        event.transfer_time = now_us() - start;
+        logInfo("Retrieved %y in %y", event.filepath, event.transfer_time);
+
+        # write data to event hash
+        event += {
+            "data": self."binary"
+                ? cast<BinaryOutputStream>(outstream).getData()
+                : cast<StringOutputStream>(outstream).getData(),
+        };
+        return event;
+    }
+
+    #! Retrieves the remote file to local_dir using a temporary file
+    private hash<SftpPollerFileEventInfo> retrieveTempFile(hash<SftpPollerFileEventInfo> event) {
+        # add filename
+        string tmp_name = sprintf(tempfile_template, event.name);
+        string tmp_path = normalize_dir(local_dir + DirSep + tmp_name);
+        string local_path = normalize_dir(local_dir + DirSep + event.name);
+
+        logInfo("Using local dir %y to stream %y -> %y (%d bytes)", local_dir, event.filepath,
+            tmp_path, event.size);
+        date start = now_us();
+        if (event.size) {
+            # stream remote file to local file
+            sftp.retrieveFile(event.name, tmp_path);
+        } else {
+            File f();
+            f.open2(tmp_path, O_CREAT | O_WRONLY | O_TRUNC);
+        }
+
+        # move to target filename after transfer to ensure atomicity
+        if (tmp_path != local_path) {
+            # NOTE: uses a simple rename() which may cause problems on some OSes if moving between filesystems
+            Qore::rename(tmp_path, local_path);
+            logInfo("Renamed %y -> %y", tmp_path, local_path);
+        }
+
+        event += {
+            "transfer_time": now_us() - start,
+            "local_path": local_path,
+        };
+        logInfo("Streamed %d byte%s from %y -> %y in %y", event.size, event.size == 1 ? "" : "s", event.filepath,
+            local_path, event.transfer_time);
+        return event;
+    }
+
+    #! Retrieves the remote file to local_dir directly
+    private hash<SftpPollerFileEventInfo> retrieveFile(hash<SftpPollerFileEventInfo> event) {
+        # add filename
+        string local_path = normalize_dir(local_dir + DirSep + event.name);
+
+        logInfo("Using local dir %y to stream %y -> %y (%d bytes)", local_dir, event.filepath, local_path,
+            event.size);
+        date start = now_us();
+        if (event.size) {
+            # stream remote file to local file
+            sftp.retrieveFile(event.name, local_path);
+        } else {
+            File f();
+            f.open2(local_path, O_CREAT | O_WRONLY | O_TRUNC);
+        }
+
+        event += {
+            "transfer_time": now_us() - start,
+            "local_path": local_path,
+        };
+        logInfo("Streamed %d byte%s from %y -> %y in %y", event.size, event.size == 1 ? "" : "s", event.filepath,
+            local_path, event.transfer_time);
+        return event;
     }
 
     #! sleeps for the specificed number of seconds
@@ -830,7 +983,7 @@ public class SftpPoller {
         @throw DIR-ERROR this exception is thrown if the local path does not exist, is not readable, is not a directory, or should be writable and is not
     */
     static checkPath(string path, string type, bool write = False) {
-        *hash h = hstat(path);
+        *hash<StatInfo> h = hstat(path);
         if (!h)
             throw "DIR-ERROR", sprintf("%y: %s path does not exist", path, type);
         if (h.type != "DIRECTORY")
@@ -845,4 +998,335 @@ public class SftpPoller {
             throw "DIR-ERROR", sprintf("%y: %s path is not writable", path, type);
     }
 }
+
+#! Event-based data provider for SFTP polling events
+/** When using the \c local_dir option, the local file must be removed / moved / archived by the event handler
+*/
+public class SftpPollerDataProviderBase inherits DataProvider::AbstractDataProvider {
+    public {
+        #! Constructor options
+        const ConstructorOptions = {
+            "atomic_transfer":  <DataProviderOptionInfo>{
+                "display_name": "Atomic File Transfer",
+                "short_desc": "Use an atomic file transfer mechanism",
+                "type": AbstractDataProviderTypeMap."bool",
+                "desc": "Use an atomic transfer mechanism with `local_dir` where remote files are first moved to a "
+                    "temporary location and then moved to the final location when they have been fully "
+                    "transferred.\n\n"
+                    "This ensures that files will never be read until they are fully transferred",
+                "default_value": True,
+            },
+
+            "keyfile": <DataProviderOptionInfo>{
+                "display_name": "SSH Private Key",
+                "short_desc": "A path to an SSH private key file in PEM format",
+                "type": AbstractDataProviderTypeMap."string",
+                "desc": "A path to an SSH private key file in PEM format to use for key-based authentication",
+            },
+
+            "local_dir": <DataProviderOptionInfo>{
+                "display_name": "Local Directory",
+                "short_desc": "A local directory that will be used to retrieve files",
+                "type": AbstractDataProviderTypeMap."*string",
+                "desc": "A local directory that will be used to retrieve files",
+            },
+
+            "mask": <DataProviderOptionInfo>{
+                "display_name": "Glob Mask",
+                "short_desc": "The glob mask to use to match files to poll",
+                "type": AbstractDataProviderTypeMap."string",
+                "desc": "The glob mask to use to match files to poll; will be treated as a regex if `regex` is "
+                    "`true`",
+                "default_value": "*",
+            },
+
+            "minage": <DataProviderOptionInfo>{
+                "display_name": "Minimum Polling Age",
+                "short_desc": "The minimum age of files to poll in seconds",
+                "type": AbstractDataProviderTypeMap."int",
+                "desc": "An integer giving the minimum file age in seconds before the file will be polled; this is "
+                    "meant to work around non-atomic file transfer operations.\n\n"
+                    "If this option is necessary, set it to a value that is larger than the longest time it should "
+                    "take to transfer a file",
+            },
+
+            "poll_interval": <DataProviderOptionInfo>{
+                "display_name": "Poll Interval",
+                "short_desc": "The poll interval in seconds",
+                "type": AbstractDataProviderTypeMap."int",
+                "desc": "The interval in seconds between polling for files",
+                "default_value": 10,
+            },
+
+            "regex": <DataProviderOptionInfo>{
+                "display_name": "Regular Expression Match",
+                "short_desc": "If true then the 'mask' argument is treated as a regular expression",
+                "type": AbstractDataProviderTypeMap."bool",
+                "desc": "If `true` then `mask` is treated as a regular expression instead of a glob pattern",
+            },
+
+            "reopt": <DataProviderOptionInfo>{
+                "display_name": "Regular Expression Options",
+                "short_desc": "A bitfield of regular expression options",
+                "type": AbstractDataProviderTypeMap."int",
+                "desc": "A bitfield of regular expression options (`1` = ignore case, `2` = treat EOL as a regular "
+                    "character); ignored if `regex` is not `true`",
+            },
+
+            "sort_desc": <DataProviderOptionInfo>{
+                "display_name": "Sort Descending",
+                "short_desc": "Sort files in descending order",
+                "type": AbstractDataProviderTypeMap."bool",
+                "desc": "Sort descending; if not given then an ascending sort is assumed if a `sort_type` is given",
+            },
+
+            "sort_type": <DataProviderOptionInfo>{
+                "display_name": "Sort Type",
+                "short_desc": "Field to sort files on",
+                "type": AbstractDataProviderTypeMap."string",
+                "desc": "Either `name` or `date` for the data to use for sorting",
+            },
+
+            "url": <DataProviderOptionInfo>{
+                "display_name": "SFTP URL",
+                "short_desc": "The URL for the SFTP connection",
+                "type": AbstractDataProviderTypeMap."string",
+                "desc": "A URL for an SFTP connection",
+                "required": True,
+            },
+        };
+    }
+
+    private {
+        #! The file poller itself
+        EmbeddedSftpPoller poller;
+    }
+
+    #! Creates the object from constructor options
+    constructor(*hash<auto> options) {
+        hash<auto> copts = checkOptions("CONSTRUCTOR-ERROR", ConstructorOptions, options);
+        string url = remove copts.url;
+        hash<UrlInfo> url_info = parse_url(url);
+
+        copts += url_info;
+        if (copts.username) {
+            copts.user = remove copts.username;
+        }
+        if (copts.password) {
+            copts.pass = remove copts.password;
+        }
+
+        bool regex = remove copts.regex ?? False;
+        if (!copts.mask) {
+            copts.mask = regex ? ".*" : ConstructorOptions.mask.default_value;
+        }
+        if (*string sort_type = remove copts.sort_type) {
+            if (sort_type == "name") {
+                copts.sort_type = SftpPoller::SortName;
+            #} else if (sort_type == "date") {
+            #    copts.sort_type = SftpPoller::SortDate;
+            } else {
+                throw "CONSTRUCTOR-ERROR", sprintf("expecting \"name\" or \"date\" for the \"sort_type\" option "
+                    "value; got %y instead", sort_type);
+            }
+            if (remove copts.sort_desc) {
+                copts.sort_order = SftpPoller::OrderDesc;
+            }
+        } else {
+            remove copts.sort_desc;
+        }
+
+        if (regex) {
+            copts.regex_mask = remove copts.mask;
+        }
+
+        copts.log_info = sub (string msg) {
+            info("%s", msg);
+        };
+        copts.log_detail = sub (string msg) {
+            info("%s", msg);
+        };
+        copts.log_debug = sub (string msg) {
+            debug("%s", msg);
+        };
+
+        poller = new EmbeddedSftpPoller(self, copts);
+    }
+
+    destructor() {
+        delete poller;
+    }
+
+    string getName() {
+        return "sftppoller";
+    }
+
+    #! Returns the data provider description
+    *string getDesc() {
+        return "Provides an event-based SFTP polling source";
+    }
+
+    #! Returns a hash of all supported event types
+    /** @return a hash of all supported event types
+
+        @note only called if the provider supports the observer pattern / event API
+    */
+    private hash<string, hash<DataProviderMessageInfo>> getEventTypesImpl() {
+        return {
+            EVENT_SFTP_FILE: <DataProviderMessageInfo>{
+                "desc": "SFTP file polled event",
+                "type": SftpPollerFileEventInfoDataType,
+            },
+        };
+    }
+}
+
+#! Event-based data provider for SFTP polling events
+/** When using the \c local_dir option, the local file must be removed / moved / archived by the event handler
+
+    The event ID raised for SFTP file events is \c "sftp-file-event" (see @ref EVENT_SFTP_FILE)
+*/
+public class SftpPollerDataProvider inherits SftpPollerDataProviderBase, DataProvider::Observable {
+    public {
+        #! Provider info
+        const ProviderInfo = <DataProviderInfo>{
+            "type": "SftpPollerDataProvider",
+            "supports_observable": True,
+            "constructor_options": ConstructorOptions,
+        };
+    }
+
+    #! Creates the object from constructor options
+    constructor(*hash<auto> options) : SftpPollerDataProviderBase(options) {
+        poller.start();
+    }
+
+    private hash<DataProviderInfo> getStaticInfoImpl() {
+        return ProviderInfo;
+    }
+}
+
+#! Event-based data provider for SFTP polling events
+/** When using the \c local_dir option, the local file must be removed / moved / archived by the event handler
+
+    The event ID raised for SFTP file events is \c "ftp-file-event" (see @ref EVENT_SFTP_FILE)
+*/
+public class SftpDelayedPollerDataProvider inherits SftpPollerDataProviderBase, DataProvider::DelayedObservable {
+    public {
+        #! Provider info
+        const ProviderInfo = <DataProviderInfo>{
+            "type": "SftpDelayedPollerDataProvider",
+            "supports_observable": True,
+            "constructor_options": ConstructorOptions,
+        };
+    }
+
+    #! Creates the object from constructor options
+    constructor(*hash<auto> options) : SftpPollerDataProviderBase(options) {
+    }
+
+    #! Called when all observers have been added to the object
+    /** This method is meant to trigger event generation
+    */
+    observersReady() {
+        poller.start();
+    }
+
+    private hash<DataProviderInfo> getStaticInfoImpl() {
+        return ProviderInfo;
+    }
+}
+
+#! The SFTP poller data provider factory
+public class SftpPollerDataProviderFactory inherits AbstractDataProviderFactory {
+    private {
+        #! Data provider type info
+        static Class cls = new Class("SftpDelayedPollerDataProvider");
+
+        #! Factory info
+        const FactoryInfo = <DataProviderFactoryInfo>{
+            "name": "sftppoller",
+            "desc": "SFTP poller data provider factory",
+            "children_can_support_observers": True,
+        };
+    }
+
+    #! Returns static factory information without \a provider_info
+    /** @return static factory information without \a provider_info which is provided by @ref getProviderInfo()
+    */
+    private hash<DataProviderFactoryInfo> getInfoImpl() {
+        return FactoryInfo;
+    }
+
+    #! Returns static provider information
+    /** @note the \c name and \c children attributes are not returned as they are dynamic attributes
+    */
+    private hash<DataProviderInfo> getProviderInfoImpl() {
+        return SftpPollerDataProvider::ProviderInfo;
+    }
+
+    #! Returns the class for the data provider object
+    private Class getClassImpl() {
+        return cls;
+    }
+}
+}
+
+# private namespace; not exported
+namespace Priv {
+class EmbeddedSftpPoller inherits SftpPoller {
+    private {
+        #! The parent observer object
+        Observable observable;
+    }
+
+    constructor(SftpPollerDataProviderBase provider, hash<auto> options) : SftpPoller(options) {
+        observable := cast<Observable>(provider);
+    }
+
+    singleFileEvent(hash<SftpPollerFileEventInfo> event) {
+        observable.notifyObservers("sftp-file-event", event);
+    }
+
+    postSingleFileEvent(hash<SftpPollerFileEventInfo> event) {
+    }
+}
+
+const SftpWhiteLogo = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>
+<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\" \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">
+<svg width=\"100%\" height=\"100%\" viewBox=\"0 0 2363 2363\" version=\"1.1\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" xml:space=\"preserve\" xmlns:serif=\"http://www.serif.com/\" style=\"fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;\">
+    <g transform=\"matrix(1,0,0,1,-122.453,634.336)\">
+        <g transform=\"matrix(1050,0,0,1050,99.9704,930.942)\">
+            <path d=\"M0.5,-0.193C0.5,-0.06 0.418,0.007 0.253,0.007C0.201,0.007 0.146,0.002 0.087,-0.007C0.074,-0.009 0.068,-0.015 0.068,-0.025L0.068,-0.065C0.068,-0.076 0.074,-0.081 0.085,-0.081L0.088,-0.081C0.134,-0.077 0.189,-0.075 0.253,-0.075C0.354,-0.075 0.405,-0.114 0.405,-0.193C0.405,-0.218 0.396,-0.239 0.379,-0.258C0.363,-0.275 0.332,-0.298 0.285,-0.327L0.188,-0.386C0.096,-0.442 0.05,-0.504 0.05,-0.573C0.05,-0.691 0.13,-0.75 0.289,-0.75C0.354,-0.75 0.412,-0.746 0.463,-0.738C0.474,-0.736 0.48,-0.73 0.48,-0.721L0.48,-0.678C0.48,-0.667 0.474,-0.662 0.463,-0.662L0.461,-0.662C0.402,-0.666 0.345,-0.668 0.289,-0.668C0.236,-0.668 0.199,-0.661 0.177,-0.648C0.154,-0.634 0.142,-0.609 0.142,-0.573C0.142,-0.536 0.178,-0.496 0.251,-0.452L0.343,-0.397C0.448,-0.335 0.5,-0.267 0.5,-0.193Z\" style=\"fill:white;fill-rule:nonzero;\"/>
+        </g>
+        <g transform=\"matrix(1050,0,0,1050,677.47,930.942)\">
+            <path d=\"M0.496,-0.367C0.496,-0.354 0.489,-0.347 0.476,-0.347L0.169,-0.347L0.169,-0.02C0.169,-0.007 0.162,-0 0.149,-0L0.098,-0C0.085,-0 0.078,-0.007 0.078,-0.02L0.078,-0.564C0.078,-0.688 0.149,-0.75 0.291,-0.75C0.379,-0.75 0.444,-0.748 0.486,-0.744C0.493,-0.743 0.496,-0.738 0.496,-0.73L0.496,-0.68C0.496,-0.672 0.492,-0.668 0.485,-0.668L0.292,-0.668C0.241,-0.668 0.208,-0.66 0.191,-0.645C0.176,-0.631 0.169,-0.604 0.169,-0.564L0.169,-0.425L0.476,-0.425C0.489,-0.425 0.496,-0.418 0.496,-0.405L0.496,-0.367Z\" style=\"fill:white;fill-rule:nonzero;\"/>
+        </g>
+        <g transform=\"matrix(1050,0,0,1050,1256.02,930.942)\">
+            <path d=\"M0.555,-0.681C0.555,-0.67 0.549,-0.665 0.536,-0.665L0.341,-0.665L0.341,-0.02C0.341,-0.007 0.335,-0 0.323,-0L0.268,-0C0.256,-0 0.25,-0.007 0.25,-0.02L0.25,-0.665L0.055,-0.665C0.042,-0.665 0.035,-0.67 0.035,-0.681L0.035,-0.725C0.035,-0.737 0.042,-0.743 0.055,-0.743L0.536,-0.743C0.549,-0.743 0.555,-0.737 0.555,-0.725L0.555,-0.681Z\" style=\"fill:white;fill-rule:nonzero;\"/>
+        </g>
+        <g transform=\"matrix(1050,0,0,1050,1875.52,930.942)\">
+            <path d=\"M0.548,-0.52C0.548,-0.371 0.455,-0.296 0.268,-0.296C0.245,-0.296 0.211,-0.298 0.168,-0.301L0.168,-0.02C0.168,-0.007 0.162,-0 0.15,-0L0.096,-0C0.084,-0 0.078,-0.007 0.078,-0.02L0.078,-0.717C0.078,-0.732 0.086,-0.74 0.102,-0.742C0.148,-0.747 0.203,-0.75 0.268,-0.75C0.455,-0.75 0.548,-0.678 0.548,-0.533L0.548,-0.52ZM0.457,-0.533C0.457,-0.583 0.442,-0.619 0.411,-0.641C0.381,-0.662 0.333,-0.673 0.268,-0.673C0.233,-0.673 0.2,-0.672 0.168,-0.669L0.168,-0.376L0.268,-0.372C0.336,-0.372 0.385,-0.384 0.414,-0.407C0.443,-0.43 0.457,-0.467 0.457,-0.52L0.457,-0.533Z\" style=\"fill:white;fill-rule:nonzero;\"/>
+        </g>
+    </g>
+</svg>";
+
+const SftpBlackLogo = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>
+<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\" \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">
+<svg width=\"100%\" height=\"100%\" viewBox=\"0 0 2363 2363\" version=\"1.1\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" xml:space=\"preserve\" xmlns:serif=\"http://www.serif.com/\" style=\"fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;\">
+    <g transform=\"matrix(1,0,0,1,-122.453,634.336)\">
+        <g transform=\"matrix(1050,0,0,1050,99.9704,930.942)\">
+            <path d=\"M0.5,-0.193C0.5,-0.06 0.418,0.007 0.253,0.007C0.201,0.007 0.146,0.002 0.087,-0.007C0.074,-0.009 0.068,-0.015 0.068,-0.025L0.068,-0.065C0.068,-0.076 0.074,-0.081 0.085,-0.081L0.088,-0.081C0.134,-0.077 0.189,-0.075 0.253,-0.075C0.354,-0.075 0.405,-0.114 0.405,-0.193C0.405,-0.218 0.396,-0.239 0.379,-0.258C0.363,-0.275 0.332,-0.298 0.285,-0.327L0.188,-0.386C0.096,-0.442 0.05,-0.504 0.05,-0.573C0.05,-0.691 0.13,-0.75 0.289,-0.75C0.354,-0.75 0.412,-0.746 0.463,-0.738C0.474,-0.736 0.48,-0.73 0.48,-0.721L0.48,-0.678C0.48,-0.667 0.474,-0.662 0.463,-0.662L0.461,-0.662C0.402,-0.666 0.345,-0.668 0.289,-0.668C0.236,-0.668 0.199,-0.661 0.177,-0.648C0.154,-0.634 0.142,-0.609 0.142,-0.573C0.142,-0.536 0.178,-0.496 0.251,-0.452L0.343,-0.397C0.448,-0.335 0.5,-0.267 0.5,-0.193Z\" style=\"fill-rule:nonzero;\"/>
+        </g>
+        <g transform=\"matrix(1050,0,0,1050,677.47,930.942)\">
+            <path d=\"M0.496,-0.367C0.496,-0.354 0.489,-0.347 0.476,-0.347L0.169,-0.347L0.169,-0.02C0.169,-0.007 0.162,-0 0.149,-0L0.098,-0C0.085,-0 0.078,-0.007 0.078,-0.02L0.078,-0.564C0.078,-0.688 0.149,-0.75 0.291,-0.75C0.379,-0.75 0.444,-0.748 0.486,-0.744C0.493,-0.743 0.496,-0.738 0.496,-0.73L0.496,-0.68C0.496,-0.672 0.492,-0.668 0.485,-0.668L0.292,-0.668C0.241,-0.668 0.208,-0.66 0.191,-0.645C0.176,-0.631 0.169,-0.604 0.169,-0.564L0.169,-0.425L0.476,-0.425C0.489,-0.425 0.496,-0.418 0.496,-0.405L0.496,-0.367Z\" style=\"fill-rule:nonzero;\"/>
+        </g>
+        <g transform=\"matrix(1050,0,0,1050,1256.02,930.942)\">
+            <path d=\"M0.555,-0.681C0.555,-0.67 0.549,-0.665 0.536,-0.665L0.341,-0.665L0.341,-0.02C0.341,-0.007 0.335,-0 0.323,-0L0.268,-0C0.256,-0 0.25,-0.007 0.25,-0.02L0.25,-0.665L0.055,-0.665C0.042,-0.665 0.035,-0.67 0.035,-0.681L0.035,-0.725C0.035,-0.737 0.042,-0.743 0.055,-0.743L0.536,-0.743C0.549,-0.743 0.555,-0.737 0.555,-0.725L0.555,-0.681Z\" style=\"fill-rule:nonzero;\"/>
+        </g>
+        <g transform=\"matrix(1050,0,0,1050,1875.52,930.942)\">
+            <path d=\"M0.548,-0.52C0.548,-0.371 0.455,-0.296 0.268,-0.296C0.245,-0.296 0.211,-0.298 0.168,-0.301L0.168,-0.02C0.168,-0.007 0.162,-0 0.15,-0L0.096,-0C0.084,-0 0.078,-0.007 0.078,-0.02L0.078,-0.717C0.078,-0.732 0.086,-0.74 0.102,-0.742C0.148,-0.747 0.203,-0.75 0.268,-0.75C0.455,-0.75 0.548,-0.678 0.548,-0.533L0.548,-0.52ZM0.457,-0.533C0.457,-0.583 0.442,-0.619 0.411,-0.641C0.381,-0.662 0.333,-0.673 0.268,-0.673C0.233,-0.673 0.2,-0.672 0.168,-0.669L0.168,-0.376L0.268,-0.372C0.336,-0.372 0.385,-0.384 0.414,-0.407C0.443,-0.43 0.457,-0.467 0.457,-0.52L0.457,-0.533Z\" style=\"fill-rule:nonzero;\"/>
+        </g>
+    </g>
+</svg>";
 }

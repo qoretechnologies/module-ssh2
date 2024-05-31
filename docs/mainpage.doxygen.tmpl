@@ -24,6 +24,7 @@
 
     Also included with the binary ssh2 module:
     - <a href="../../Ssh2Connections/html/index.html">Ssh2Connections user module</a>
+    - <a href="../../SftpClientDataProvider/html/index.html">SftpClientDataProvider user module</a>
     - <a href="../../SftpPollerUtil/html/index.html">SftpPollerUtil user module</a>
     - <a href="../../SftpPoller/html/index.html">SftpPoller user module</a>
 
@@ -102,6 +103,10 @@ stdout.printf("exit status: %d\n", chan.getExitStatus());@endcode
     Code with this flag is deprecated and may be removed in a future version of this module; if a variant with this flag is resolved at parse time, a \c "deprecated" warning is raised (assuming this warning is enabled).
 
     @section ssh2releasenotes Release Notes
+
+    @subsection ssh2v150 ssh Module Version 1.5.0
+    - added the <a href="../../SftpClientDataProvider/html/index.html">SftpClientDataProvider user module</a>
+    - added application action support for SFTP polling and SFTP client actions
 
     @subsection ssh2v142 ssh Module Version 1.4.2
     - fixed a bug where the \c sftp connection scheme was unusable

@@ -152,7 +152,7 @@ public class Ssh2ClientConnection inherits AbstractSsh2Connection {
             "options": {
                 "keyfile": <ConnectionOptionInfo>{
                     "display_name": "SSH Private Key",
-                    "short_desc": "A path to an SSH private key file in PEM forma",
+                    "short_desc": "A path to an SSH private key file in PEM format",
                     "type": "string",
                     "desc": "A path to an SSH private key file in PEM format to use for key-based authentication",
                 },
@@ -252,6 +252,24 @@ public class SftpConnection inherits AbstractSsh2Connection {
                 "sftp": True,
             },
         };
+
+        #! Data provider subtypes supported
+        const DataProviderSubtypeMap = {
+            "sftppoller": {
+                "module": "SftpPoller",
+                "class": "SftpDelayedPollerDataProvider",
+                "option_class": "SftpPollerDataProviderBase",
+                "options": "ConstructorOptions",
+            },
+        };
+    }
+
+    private {
+        #! Data provider subtype info
+        static hash<string, *hash<string, hash<DataProviderOptionInfo>>> subtype_info;
+
+        #! Data provider subtype lock
+        static Mutex subtype_lck();
     }
 
     #! creates the SftpConnection object
@@ -303,6 +321,101 @@ public class SftpConnection inherits AbstractSsh2Connection {
             "path": True,
             "path_add": True,
         };
+    }
+
+    #! returns an FtpClientDataProvider object for this connection
+    /** @param constructor_options any additional constructor options for the data provider
+
+        @return an FtpClientDataProvider object for this connection
+
+        @see hasDataProvider()
+    */
+    DataProvider::AbstractDataProvider getDataProvider(*hash<auto> constructor_options) {
+        # to avoid circular dependencies, this object loads the FtpDataProvider and creates the data provider
+        # object dynamically
+        load_module("SftpClientDataProvider");
+        return create_object("SftpClientDataProvider", get());
+    }
+
+    #! returns @ref True, as the connection returns a data provider with the @ref getDataProvider() method
+    /** @return @ref True, as the connection returns a data provider with the @ref getDataProvider() method
+
+        @see @ref getDataProvider()
+    */
+    bool hasDataProvider() {
+        return True;
+    }
+
+    #! returns a data provider object for the connection and subtype passed as an argument
+    /** @param subtype the subtype of data provider supported, in case the connection can return multiple data
+        providers
+        @param constructor_options any additional constructor options required by the data provider
+
+        @return a data provider object for the connection and subtype passed as an argument
+
+        @throw DATA-PROVIDER-ERROR this object does not support the data provider API or the given subtype is not
+        valid
+
+        @see
+        - hasDataProvider()
+        - getDataProviderSubtypes()
+
+        @since ConnectionProvider 2.0
+    */
+    private AbstractDataProvider getDataProviderImpl(string subtype, *hash<auto> constructor_options) {
+        *hash<auto> conf = DataProviderSubtypeMap{subtype};
+        if (!conf) {
+            throw "DATA-PROVIDER-ERROR", sprintf("sftp connections do not support data provider subtype %y; supported "
+                "subtypes: %y", subtype, keys getDataProviderSubtypes());
+        }
+        checkSubtypeInfo();
+        hash<auto> opts = {
+            "url": url,
+            "keyfile": opts.keyfile,
+        } + getSubtypeOptions(subtype_info{subtype}, constructor_options);
+        return create_object(conf."class", opts);
+    }
+
+    #! Sets child data provider capabilities
+    private setChildCapabilities() {
+        children_can_support_apis = True;
+    }
+
+    #! Verifies that subtype info has been loaded from external modules
+    /** @since ConnectionProvider 2.0
+    */
+    private checkSubtypeInfo() {
+        if (!subtype_info) {
+            loadSubtypeInfo();
+        }
+    }
+
+    #! Returns a hash of supported data provider subtypes
+    /** @return a hash of supported data provider subtypes
+
+        @since ConnectionProvider 2.0
+    */
+    private *hash<string, *hash<string, hash<DataProviderOptionInfo>>> getDataProviderSubtypesImpl() {
+        if (subtype_info) {
+            return subtype_info;
+        }
+        loadSubtypeInfo();
+        return subtype_info;
+    }
+
+    #! Loads subtype info from external modules
+    private loadSubtypeInfo() {
+        subtype_lck.lock();
+        on_exit subtype_lck.unlock();
+        # check again inside the lock
+        if (subtype_info) {
+            return;
+        }
+        foreach hash<auto> i in (DataProviderSubtypeMap.pairIterator()) {
+            load_module(i.value."module");
+            Class cls = Class::forName(i.value."option_class" ?? i.value."class");
+            subtype_info{i.key} = cls.getConstant(i.value."options").getValue();
+        }
     }
 
     #! returns a @ref Qore::SSH2::SFTPClient object
