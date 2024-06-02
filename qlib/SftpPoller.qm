@@ -65,7 +65,9 @@ module SftpPoller {
             "display_name": "SFTP File Received",
             "subtype": "sftppoller",
             "short_desc": "A file is uploaded to an SFTP server",
-            "desc": "React to files uploaded to an SFTP server",
+            "desc": "React to files uploaded to an SFTP server; the action configuration determines if the event "
+                "contains the file data itself or a link to the location of the file on the local filesystem. In any "
+                "case, the event indicates that the file data has already been downloaded and is available locally",
             "action_code": DPAT_EVENT,
             "action_val": EVENT_SFTP_FILE,
             "output_type": SftpPollerFileEventInfoDataType,
