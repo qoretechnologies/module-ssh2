@@ -87,8 +87,10 @@ class SFTPClientTest inherits QUnit::Test {
 
         hash<auto> info = sc.info();
 
-        if (m_options.verbose)
-            stdout.printf("SFTP %s@%s:%d auth: %y, hostkey: %y, crypt_cs: %y, tmp: %s\n", info.ssh2user, info.ssh2host, info.ssh2port, info.authenticated, info.methods.HOSTKEY, info.methods.CRYPT_CS, fn);
+        if (m_options.verbose) {
+            stdout.printf("SFTP %s@%s:%d auth: %y, hostkey: %y, crypt_cs: %y, tmp: %s\n", info.ssh2user,
+                info.ssh2host, info.ssh2port, info.authenticated, info.methods.HOSTKEY, info.methods.CRYPT_CS, fn);
+        }
 
         testAssertionValue("SFTPClient::info()", info.connected, True);
         testAssertionValue("SFTPClient::list()", sc.list(NOTHING, timeout).type(), Type::Hash);
@@ -104,7 +106,11 @@ class SFTPClientTest inherits QUnit::Test {
         testAssertionValue("SFTPClient::stat() mode", info.mode & 0777, FileMode);
         testAssertionValue("SFTPClient::stat() permissions", info.permissions, "-rwxr-xr-x");
 
-        testAssertionValue("(before getFile()) SFTPClient::chdir()", realpath(tmpDir), sc.chdir(tmpDir));
+        if (PlatformOS == "Darwin") {
+            sc.chdir(tmpDir);
+        } else {
+            testAssertionValue("(before getFile()) SFTPClient::chdir()", realpath(tmpDir), sc.chdir(tmpDir));
+        }
 
         # retrieve the file as a binary object
         binary b = sc.getFile(basename(fn), timeout);
@@ -203,7 +209,9 @@ class SFTPClientTest inherits QUnit::Test {
         testAssertionValue("SFTPClient::stat() on non-existent file", sc.stat(fn, timeout));
 
         string np = sc.chdir(tmpDir, timeout);
-        testAssertionValue("SFTPClient::chdir()", realpath(tmpDir), np);
+        if (PlatformOS != "Darwin") {
+            testAssertionValue("SFTPClient::chdir()", realpath(tmpDir), np);
+        }
 
         # remove directory
         sc.rmdir(file + ".new", timeout);

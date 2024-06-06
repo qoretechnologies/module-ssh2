@@ -163,6 +163,14 @@ public const AppName = "SFTP";
 public const EVENT_SFTP_FILE = "sftp-file-event";
 
 #! SftpPoller client class implementation
+/** See the @ref constructor options for information on how to configure this object; note that either
+    - \c delete_remote_file or
+    - \c move_remote_file
+    must be set, or SFTP files polled will remain where they are in the remote SFTP server, unless they are removed or
+    moved during polling processing.
+
+    Only one of these options may be set at one time; setting both will result in an error
+*/
 public class SftpPoller {
     public {
         #! ascending sort order
@@ -205,8 +213,8 @@ public class SftpPoller {
 
         #! optional constructor hash keys
         const OptionalKeys = (
-            "path", "user", "pass", "keyfile", "regex_mask", "minage",
-            "encoding", "log_info", "log_detail", "log_debug", "binary",
+            "path", "user", "pass", "keyfile", "regex_mask", "minage", "encoding", "log_info", "log_detail",
+            "log_debug", "binary", "delete_remote_file", "move_remote_file",
 %ifndef PO_NO_PROCESS_CONTROL
             "sleep",
 %endif
@@ -262,6 +270,16 @@ public class SftpPoller {
 
         #! Atomic transfer flag for use with \c local_dir
         bool atomic_transfer;
+
+        #! Delete file on remote SFTP server after processing?
+        /** This cannot be True while move_remote_file is set
+        */
+        bool delete_remote_file;
+
+        #! Remote target directory for moving the file on the remote SFTP server after processing
+        /** This cannot be True while delete_remote_file is set
+        */
+        *string move_remote_file;
 
         #! run flag
         bool runflag = False;
@@ -330,32 +348,56 @@ public class SftpPoller {
     #! creates the SftpPoller object from the @ref Qore::SSH2::SFTPClient "SFTPClient" argument and configuration hash argument passed
     /** @param n_sftp the new @ref Qore::SSH2::SFTPClient "SFTPClient" object
         @param nconf a hash with the following optional keys:
-        - \c atomic_transfer: if @ref True and \c local_dir is set, then \c tempfile_template is used to write FTP
+        - \c atomic_transfer: if @ref True and \c local_dir is set, then \c tempfile_template is used to write SFTP
           files to a temporary filename during transfer
+        - \c binary: if set to @ref Qore::True "True" then files are transferred in binary mode by default (with
+          singleFileEvent() usage only), otherwise file data is returned in text format
+        - \c check_file: name of a check file. The file will be created and deleted in the path to test if path is
+          writable. If the file alrady exists, it will be deleted. (default: \c "qore-sftp-check-file")
+        - \c delete_remote_file: if @ref True then the remote file is deleted on the SFTP server after processing.
+          Cannot be set if \c move_remote_file is also set
+        - \c encoding: the encoding for any text files received
         - \c local_dir: a local directory to use to transfer remote files so large file data does not appear in events
+        - \c log_info: a @ref closure "closure" or @ref call_reference "call reference" for logging important
+          information; must accept a single string giving the log message
+        - \c log_detail: a @ref closure "closure" or @ref call_reference "call reference" for logging detailed
+          information; must accept a single string giving the log message
+        - \c log_debug: a @ref closure "closure" or @ref call_reference "call reference" for logging verbose
+          debgugging information; must accept a single string giving the log message
         - \c poll_interval: the integer polling interval in seconds (default: 10 seconds; must be > 0 if given)
         - \c mask: the file glob mask to use (default: \c "*", ignored if \c "regex_mask" is also present)
-        - \c path: the remote path(s) for retrieving the files; if a list of strings is given then each path will be polled for matching files according to the \c "mask" or \c "regex_mask" option
+        - \c minage: the minimum file age in seconds before a file will be acquired (default: 0)
+        - \c move_remote_file: the remote target directory on the SFTP server where files will be moved to after
+          processing; cannot be set if \c delete_remote_file is also set
+        - \c path: the remote path(s) for retrieving the files; if a list of strings is given then each path will be
+          polled for matching files according to the \c "mask" or \c "regex_mask" option
         - \c regex_mask: a regular expression to use as a mask (overrides any \c "mask" value)
         - \c reopts: regular expression match options (ex RE_Caseless for case-insensitive matches)
+        - \c skip_file_content_retrieval: if True then @ref SftpPoller::SftpPoller::singleFileEvent and
+          @ref SftpPoller::SftpPoller::postSingleFileEvent methods won't get 'data' member of the input hash, i.e. the
+          file content won't be read by the SftpPoller class, opening a space for child classes to implement their own
+          file retrieval in @ref SftpPoller::SftpPoller::singleFileEvent or
+          @ref SftpPoller::SftpPoller::postSingleFileEvent (default: False); (since ssh2 1.1)
+        - \c start_thread: (required when imported into a context where @ref Qore::PO_NO_THREAD_CONTROL is set) a
+          @ref closure "closure" or @ref call_reference "call reference" for starting threads; must return the integer
+          thread ID (if not set then @ref background will be used)
+        - \c sleep: (required when imported into a context where @ref Qore::PO_NO_PROCESS_CONTROL is set) a
+          @ref closure "closure" or @ref call_reference "call reference" to use instead of @ref Qore::sleep() (if not
+          set then @ref Qore::sleep() will be used)
         - \c timeout: connection timeout (default \c 30s)
-        - \c minage: the minimum file age in seconds before a file will be acquired (default: 0)
-        - \c encoding: the encoding for any text files received
-        - \c binary: if set to @ref Qore::True "True" then files are transferred in binary mode by default (with singleFileEvent() usage only), otherwise file data is returned in text format
-        - \c log_info: a @ref closure "closure" or @ref call_reference "call reference" for logging important information; must accept a single string giving the log message
-        - \c log_detail: a @ref closure "closure" or @ref call_reference "call reference" for logging detailed information; must accept a single string giving the log message
-        - \c log_debug: a @ref closure "closure" or @ref call_reference "call reference" for logging verbose debgugging information; must accept a single string giving the log message
-        - \c start_thread: (required when imported into a context where @ref Qore::PO_NO_THREAD_CONTROL is set) a @ref closure "closure" or @ref call_reference "call reference" for starting threads; must return the integer thread ID (if not set then @ref background will be used)
-        - \c sleep: (required when imported into a context where @ref Qore::PO_NO_PROCESS_CONTROL is set) a @ref closure "closure" or @ref call_reference "call reference" to use instead of @ref Qore::sleep() (if not set then @ref Qore::sleep() will be used)
         - \c writable: check if path(s) is/are writable  (default: False see also the \c "check_file" option)
-        - \c check_file: name of a check file. The file will be created and deleted in the path to test if path is writable. If the file alrady exists, it will be deleted. (default: \c "qore-sftp-check-file")
         - \c tempfile_template: (used when \c local_dir and \c atomic_transfer are set) the temporary filename prefix
           to use when transferring files to the local directory specified by \c local_dir; use \c "%s" as the
           placeholder for the target filename
 
-        @throw SFTPPOLLER-CONSTRUCTOR-ERROR missing required key, invalid port or poll_interval given
+        @note Either \c delete_remote_file or \c move_remote_file must be set, or SFTP files polled will remain where
+        they are in the remote SFTP server, unless they are removed or moved during polling processing. Only one of
+        these options may be set at one time; setting both will result in an error
+
+        @throw SFTPPOLLER-CONSTRUCTOR-ARG-ERROR missing required key, invalid port or poll_interval given
         @throw SFTPCLIENT-PARAMETER-ERROR empty hostname passed
-        @throw SOCKET-CONNECT-ERROR error establishing socket connection (no listener, port blocked, etc); timeout establishing socket connection
+        @throw SOCKET-CONNECT-ERROR error establishing socket connection (no listener, port blocked, etc); timeout
+        establishing socket connection
         @throw SSH2CLIENT-CONNECT-ERROR no user name set; ssh2 or libssh2 error
         @throw SSH2-ERROR error initializing or establishing ssh2 session
         @throw SSH2CLIENT-AUTH-ERROR no proper authentication method found
@@ -367,18 +409,26 @@ public class SftpPoller {
 
         foreach string k in (RequiredKeys) {
             if (!exists conf{k})
-                throw "SFTPPOLLER-CONSTRUCTOR-ERROR", sprintf("required key %y missing from constructor hash argument)", k);
+                throw "SFTPPOLLER-CONSTRUCTOR-ARG-ERROR", sprintf("required key %y missing from constructor hash "
+                    "argument)", k);
         }
 
         if (exists conf.local_dir && (!is_dir(conf.local_dir) || !is_writable(conf.local_dir))) {
-            throw "SFTPPOLLER-CONSTRUCTOR-ERROR", sprintf("Invalid local directory %y; directory does not exist or "
-                "cannot be written to", conf.local_dir);
+            throw "SFTPPOLLER-CONSTRUCTOR-ARG-ERROR", sprintf("Invalid local directory %y; directory does not exist "
+                "or cannot be written to", conf.local_dir);
         }
 
         conf.poll_interval = int(conf.poll_interval);
 
-        if (conf.poll_interval <= 0)
-            throw "SFTPPOLLER-CONSTRUCTOR-ERROR", sprintf("poll_interval cannot be <= 0 (val: %d)", conf.poll_interval);
+        if (conf.poll_interval <= 0) {
+            throw "SFTPPOLLER-CONSTRUCTOR-ARG-ERROR", sprintf("poll_interval cannot be <= 0 (val: %d)",
+                conf.poll_interval);
+        }
+
+        if (conf.delete_remote_file && conf.move_remote_file.val()) {
+            throw "SFTPPOLLER-CONSTRUCTOR-ARG-ERROR", sprintf("delete_remote_file is set along with move_remote_file "
+                "(%y); only one of these can be set at one time", conf.move_remote_file);
+        }
 
         bool re = False;
         if (conf.regex_mask) {
@@ -397,6 +447,12 @@ public class SftpPoller {
         # assign SFTPClient object
         sftp = n_sftp;
         rootSftpPath = sftp.path();
+
+        if (conf.delete_remote_file) {
+            logDetail("%s: remote files will be deleted after processing", url);
+        } else if (conf.move_remote_file.val()) {
+            logDetail("%s: remote files will be moved using %y after processing", url, conf.move_remote_file);
+        }
 
         hash ih = sftp.info();
         url = sprintf("%s@%s:%d", ih.ssh2user ? ih.ssh2user : "<none>", ih.ssh2host, ih.ssh2port);
@@ -423,52 +479,85 @@ public class SftpPoller {
 
     #! creates the SftpPoller object from the configuration hash argument passed
     /** @param nconf a hash with the following keys:
+        - \c atomic_transfer: if @ref True and \c local_dir is set, then \c tempfile_template is used to write SFTP
+          files to a temporary filename during transfer
+        - \c binary: if set to @ref Qore::True "True" then files are transferred in binary mode by default (with
+          singleFileEvent() usage only), otherwise file data is returned in text format
+        - \c check_file: name of a check file. The file will be created and deleted in the path to test if path is
+          writable. If the file alrady exists, it will be deleted. (default: \c "qore-sftp-check-file")
+        - \c delete_remote_file: if @ref True then the remote file is deleted on the SFTP server after processing.
+          Cannot be set if \c move_remote_file is also set
+        - \c encoding: the encoding for any text files received
         - \c host: (required) the hostname or address to connect to
-        - \c port: the integer port number to connect to (default 22; must be > 0 if given)
-        - \c user: the username to use for the connection
-        - \c pass: the password to use for the connection
         - \c keyfile: the SSH key (file and path to it)
-        - \c path: the remote path(s) for retrieving the files
+        - \c local_dir: a local directory to use to transfer remote files so large file data does not appear in events
+        - \c log_info: a @ref closure "closure" or @ref call_reference "call reference" for logging important
+          information; must accept a single string giving the log message
+        - \c log_detail: a @ref closure "closure" or @ref call_reference "call reference" for logging detailed
+          information; must accept a single string giving the log message
+        - \c log_debug: a @ref closure "closure" or @ref call_reference "call reference" for logging verbose
+          debgugging information; must accept a single string giving the log message
         - \c poll_interval: the integer polling interval in seconds (default: 10 seconds; must be > 0 if given)
         - \c mask: the file glob mask to use (default: \c "*", ignored if \c "regex_mask" is also present)
+        - \c minage: the minimum file age in seconds before a file will be acquired (default: 0)
+        - \c move_remote_file: the remote target directory on the SFTP server where files will be moved to after
+          processing; cannot be set if \c delete_remote_file is also set
+        - \c pass: the password to use for the connection
+        - \c path: the remote path(s) for retrieving the files; if a list of strings is given then each path will be
+          polled for matching files according to the \c "mask" or \c "regex_mask" option
+        - \c port: the integer port number to connect to (default 22; must be > 0 if given)
         - \c regex_mask: a regular expression to use as a mask (overrides any \c "mask" value)
         - \c reopts: regular expression match options (ex RE_Caseless for case-insensitive matches)
+        - \c skip_file_content_retrieval: if True then @ref SftpPoller::SftpPoller::singleFileEvent and
+          @ref SftpPoller::SftpPoller::postSingleFileEvent methods won't get 'data' member of the input hash, i.e. the
+          file content won't be read by the SftpPoller class, opening a space for child classes to implement their own
+          file retrieval in @ref SftpPoller::SftpPoller::singleFileEvent or
+          @ref SftpPoller::SftpPoller::postSingleFileEvent (default: False); (since ssh2 1.1)
+        - \c sleep: (required when imported into a context where @ref Qore::PO_NO_PROCESS_CONTROL is set) a
+          @ref closure "closure" or @ref call_reference "call reference" to use instead of @ref Qore::sleep() (if not
+          set then @ref Qore::sleep() will be used)
+        - \c start_thread: (required when imported into a context where @ref Qore::PO_NO_THREAD_CONTROL is set) a
+          @ref closure "closure" or @ref call_reference "call reference" for starting threads; must return the integer
+          thread ID (if not set then @ref background will be used)
         - \c timeout: connection timeout (default \c 30s)
-        - \c minage: the minimum file age in seconds before a file will be acquired (default: 0)
-        - \c encoding: the encoding for any text files received
-        - \c log_info: a @ref closure "closure" or @ref call_reference "call reference" for logging important information; must accept a single string giving the log message
-        - \c log_detail: a @ref closure "closure" or @ref call_reference "call reference" for logging detailed information; must accept a single string giving the log message
-        - \c log_debug: a @ref closure "closure" or @ref call_reference "call reference" for logging verbose debgugging information; must accept a single string giving the log message
-        - \c start_thread: (required when imported into a context where @ref Qore::PO_NO_THREAD_CONTROL is set) a @ref closure "closure" or @ref call_reference "call reference" for starting threads; must return the integer thread ID (if not set then @ref background will be used)
-        - \c sleep: (required when imported into a context where @ref Qore::PO_NO_PROCESS_CONTROL is set) a @ref closure "closure" or @ref call_reference "call reference" to use instead of @ref Qore::sleep() (if not set then @ref Qore::sleep() will be used)
+        - \c user: the username to use for the connection
         - \c writable: check if path(s) is/are writable  (default: False see also the \c "check_file" option)
-        - \c check_file: name of a check file. The file will be created and deleted in the path to test if path is writable. If the file alrady exists, it will be deleted. (default: \c "qore-sftp-check-file")
-        - \c skip_file_content_retrieval: if True then @ref SftpPoller::SftpPoller::singleFileEvent and @ref SftpPoller::SftpPoller::postSingleFileEvent methods won't get 'data' member of the input hash, i.e. the file content won't be read by the SftpPoller class, opening a space for child classes to implement their own file retrieval in @ref SftpPoller::SftpPoller::singleFileEvent or @ref SftpPoller::SftpPoller::postSingleFileEvent (default: False); (since ssh2 1.1)
+        - \c tempfile_template: (used when \c local_dir and \c atomic_transfer are set) the temporary filename prefix
+          to use when transferring files to the local directory specified by \c local_dir; use \c "%s" as the
+          placeholder for the target filename
 
-        @throw SFTPPOLLER-CONSTRUCTOR-ERROR missing required key, invalid port or poll_interval given
+        @throw SFTPPOLLER-CONSTRUCTOR-ARG-ERROR missing required key, invalid port or poll_interval given
         @throw SFTPCLIENT-PARAMETER-ERROR empty hostname passed
-        @throw SOCKET-CONNECT-ERROR error establishing socket connection (no listener, port blocked, etc); timeout establishing socket connection
+        @throw SOCKET-CONNECT-ERROR error establishing socket connection (no listener, port blocked, etc); timeout
+        establishing socket connection
         @throw SSH2CLIENT-CONNECT-ERROR no user name set; ssh2 or libssh2 error
         @throw SSH2-ERROR error initializing or establishing ssh2 session
         @throw SSH2CLIENT-AUTH-ERROR no proper authentication method found
         @throw SFTPCLIENT-CONNECT-ERROR error initializing sftp session or getting remote path
-        */
+    */
     constructor(hash<auto> nconf) {
         # create hash of keys with only valid options in argument hash
         hash<auto> conf = Defaults + nconf{AllKeys};
 
         foreach string k in (RequiredKeysWithHost) {
             if (!exists conf{k})
-                throw "SFTPPOLLER-CONSTRUCTOR-ERROR", sprintf("required key %y missing from constructor hash argument)", k);
+                throw "SFTPPOLLER-CONSTRUCTOR-ARG-ERROR", sprintf("required key %y missing from constructor hash "
+                    "argument)", k);
         }
 
         conf.poll_interval = int(conf.poll_interval);
         conf.port = int(conf.port);
 
         if (conf.poll_interval <= 0)
-            throw "SFTPPOLLER-CONSTRUCTOR-ERROR", sprintf("poll_interval cannot be <= 0 (val: %d)", conf.poll_interval);
+            throw "SFTPPOLLER-CONSTRUCTOR-ARG-ERROR", sprintf("poll_interval cannot be <= 0 (val: %d)",
+                conf.poll_interval);
         if (conf.port <= 0)
-            throw "SFTPPOLLER-CONSTRUCTOR-ERROR", sprintf("port cannot be <= 0 (val: %d)", conf.port);
+            throw "SFTPPOLLER-CONSTRUCTOR-ARG-ERROR", sprintf("port cannot be <= 0 (val: %d)", conf.port);
+
+        if (conf.delete_remote_file && conf.move_remote_file.val()) {
+            throw "SFTPPOLLER-CONSTRUCTOR-ARG-ERROR", sprintf("delete_remote_file is set along with move_remote_file "
+                "(%y); only one of these can be set at one time", conf.move_remote_file);
+        }
 
         bool re = False;
         if (conf.regex_mask) {
@@ -497,6 +586,12 @@ public class SftpPoller {
 
         if (mask)
             logDetail("%s: file regex mask: %s", url, mask);
+
+        if (conf.delete_remote_file) {
+            logDetail("%s: remote files will be deleted after processing", url);
+        } else if (conf.move_remote_file.val()) {
+            logDetail("%s: remote files will be moved using %y after processing", url, conf.move_remote_file);
+        }
 
         logDetail("%s: logging in (timeout %y)", url, timeout);
         # connect to the remote system
@@ -581,11 +676,13 @@ public class SftpPoller {
     #! renames a file on the server
     rename(string old, string nnew, *timeout n_timeout) {
         sftp.rename(old, nnew, n_timeout ?? timeout);
+        logInfo("Renamed %y -> %y on the remote host", old, nnew);
     }
 
     #! deletes a file on the server
     removeFile(string fn, *timeout n_timeout) {
         sftp.removeFile(fn, n_timeout ?? timeout);
+        logInfo("%y: deleted on the remote host", fn);
     }
 
     #! returns information about a remote file (see @ref Qore::SSH2::SFTPClient::stat() for a description of the return format)
@@ -814,6 +911,17 @@ public class SftpPoller {
                         # set the "fatal" flag if an exception is thrown in postSingleFileEvent()
                         on_error fatal = True;
 
+                        if (delete_remote_file) {
+                            removeFile(event.name);
+                            event.remote_status = RS_DELETED;
+                        } else if (move_remote_file.val()) {
+                            string remote_target = sprintf(move_remote_file, event.name);
+                            rename(event.name, remote_target);
+                            event.remote_status = RS_MOVED;
+                        } else {
+                            event.remote_status = RS_NONE;
+                        }
+
                         postSingleFileEvent(fh);
                     }
                 }
@@ -1029,7 +1137,10 @@ public class SftpPollerDataProviderBase inherits DataProvider::AbstractDataProvi
             "local_dir": <DataProviderOptionInfo>{
                 "display_name": "Local Directory",
                 "short_desc": "A local directory that will be used to retrieve files",
-                "type": AbstractDataProviderTypeMap."*string",
+                "type": AbstractDataProviderType::get(StringType, NOTHING, {
+                    DTT_FromFile: True,
+                    DTT_FromLocation: True,
+                }),
                 "desc": "A local directory that will be used to retrieve files",
             },
 
@@ -1067,6 +1178,46 @@ public class SftpPollerDataProviderBase inherits DataProvider::AbstractDataProvi
                 "desc": "If `true` then `mask` is treated as a regular expression instead of a glob pattern",
             },
 
+            "remote_file_disposition": <DataProviderOptionInfo>{
+                "display_name": "Remote File Disposition",
+                "short_desc": "Delete or move remote file after processing?",
+                "desc": "Delete or move remote file after processing? If `MOVE`, `remote_file_move_target` must also "
+                    "be set",
+                "type": AbstractDataProviderTypeMap."string",
+                "allowed_values": (
+                    <AllowedValueInfo>{
+                        "display_name": "DELETE",
+                        "short_desc": "Delete the remote file after processing",
+                        "desc": "Delete the remote file after processing",
+                        "value": "DELETE",
+                    },
+                    <AllowedValueInfo>{
+                        "display_name": "MOVE",
+                        "short_desc": "Move the remote file after processing",
+                        "desc": "Move the remote file after processing; in this case `remote_file_move_target` must "
+                            "be set",
+                        "value": "MOVE",
+                    },
+                    <AllowedValueInfo>{
+                        "display_name": "NONE",
+                        "short_desc": "Leave the file untouched after processing",
+                        "desc": "Leave the file untouched after processing; the file must be moved or deleted "
+                            "manually during post-processing, or the file will appear in subsequent polls as well",
+                        "value": "NONE",
+                    },
+                ),
+                "default_value": "DELETE",
+            },
+
+            "remote_file_move_target": <DataProviderOptionInfo>{
+                "display_name": "Remote File Move Target",
+                "short_desc": "The target template for the remote file after processing",
+                "desc": "The target template for the remote file after processing; use `%s` for the original file "
+                    "name. This option is only used when `remote_file_disposition` is `MOVE`, otherwise it is "
+                    "ignored",
+                "type": AbstractDataProviderTypeMap."*string",
+            },
+
             "reopt": <DataProviderOptionInfo>{
                 "display_name": "Regular Expression Options",
                 "short_desc": "A bitfield of regular expression options",
@@ -1087,6 +1238,14 @@ public class SftpPollerDataProviderBase inherits DataProvider::AbstractDataProvi
                 "short_desc": "Field to sort files on",
                 "type": AbstractDataProviderTypeMap."string",
                 "desc": "Either `name` or `date` for the data to use for sorting",
+            },
+
+            "tempfile_template":  <DataProviderOptionInfo>{
+                "display_name": "Temporary Filename Template",
+                "short_desc": "The template for temporary filenames",
+                "desc": "The template for temporary filenames; use `%s` for the original filename",
+                "type": AbstractDataProviderTypeMap."string",
+                "default_value": ".tmp.%s.part",
             },
 
             "url": <DataProviderOptionInfo>{
@@ -1136,6 +1295,20 @@ public class SftpPollerDataProviderBase inherits DataProvider::AbstractDataProvi
             }
         } else {
             remove copts.sort_desc;
+        }
+
+        *string move_target = remove copts.remote_file_move_target;
+        switch (remove copts.remote_file_disposition) {
+            case "DELETE":
+                copts.delete_remote_file = True;
+                break;
+            case "MOVE":
+                if (!move_target.val()) {
+                    throw "CONSTRUCTOR-ERROR", "If \"remote_file_disposition\" is \"MOVE\", "
+                        "\"remote_file_move_target\" must be set as well";
+                }
+                copts.move_remote_file = move_target;
+                break;
         }
 
         if (regex) {
