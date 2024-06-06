@@ -912,14 +912,14 @@ public class SftpPoller {
                         on_error fatal = True;
 
                         if (delete_remote_file) {
-                            removeFile(event.name);
-                            event.remote_status = RS_DELETED;
+                            removeFile(fh.name);
+                            fh.remote_status = RS_DELETED;
                         } else if (move_remote_file.val()) {
-                            string remote_target = sprintf(move_remote_file, event.name);
-                            rename(event.name, remote_target);
-                            event.remote_status = RS_MOVED;
+                            string remote_target = sprintf(move_remote_file, fh.name);
+                            rename(fh.name, remote_target);
+                            fh.remote_status = RS_MOVED;
                         } else {
-                            event.remote_status = RS_NONE;
+                            fh.remote_status = RS_NONE;
                         }
 
                         postSingleFileEvent(fh);
