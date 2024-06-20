@@ -229,13 +229,13 @@ int SSH2Client::disconnectUnlocked(bool force, int timeout_ms, AbstractDisconnec
  * return 1 if we think we are connected
  */
 int SSH2Client::sshConnectedUnlocked() {
-   return (ssh_session? 1: 0);
+    return (ssh_session? 1: 0);
 }
 
 int SSH2Client::sshConnected() {
-   AutoLocker al(m);
+    AutoLocker al(m);
 
-   return sshConnectedUnlocked();
+    return sshConnectedUnlocked();
 }
 
 QoreObject* SSH2Client::registerChannelUnlocked(LIBSSH2_CHANNEL *channel) {
@@ -249,149 +249,149 @@ SSH2Channel* SSH2Client::registerChannelUnlockedRaw(LIBSSH2_CHANNEL *channel) {
 }
 
 const char *SSH2Client::getHost() {
-   return sshhost.c_str();
+    return sshhost.c_str();
 }
 
 const uint32_t SSH2Client::getPort() {
-   return sshport;
+    return sshport;
 }
 
 const char *SSH2Client::getAuthenticatedWith() {
-   return sshauthenticatedwith;
+    return sshauthenticatedwith;
 }
 
 void SSH2Client::deref(ExceptionSink *xsink) {
-   if (ROdereference()) {
+    if (ROdereference()) {
 #ifdef _QORE_HAS_SOCKET_PERF_API
-      // this function is only exported in versions of qore with the socket performance API
-      // and must be called before the QoreSocket object is destroyed
-      socket.cleanup(xsink);
+        // this function is only exported in versions of qore with the socket performance API
+        // and must be called before the QoreSocket object is destroyed
+        socket.cleanup(xsink);
 #endif
-      delete this;
-   }
+        delete this;
+    }
 }
 
 int SSH2Client::setUser(const char *user) {
-   AutoLocker al(m);
+    AutoLocker al(m);
 
-   if (sshConnectedUnlocked())
-      return -1;
+    if (sshConnectedUnlocked())
+        return -1;
 
-   sshuser = user;
-   return 0;
+    sshuser = user;
+    return 0;
 }
 
 const char *SSH2Client::getUser() {
-   return sshuser.c_str();
+    return sshuser.c_str();
 }
 
 int SSH2Client::setPassword(const char *pwd) {
-   AutoLocker al(m);
+    AutoLocker al(m);
 
-   if (sshConnectedUnlocked())
-      return -1;
+    if (sshConnectedUnlocked())
+        return -1;
 
-   sshpass = pwd;
-   return 0;
+    sshpass = pwd;
+    return 0;
 }
 
-const char *SSH2Client::getPassword() {
-   return sshpass.c_str();
+const char* SSH2Client::getPassword() {
+    return sshpass.c_str();
 }
 
 int SSH2Client::setKeys(const char *priv, const char *pub, ExceptionSink* xsink) {
-   AutoLocker al(m);
+    AutoLocker al(m);
 
-   if (sshConnectedUnlocked()) {
-      xsink->raiseException(SSH2_CONNECTED, "usage of SSH2Base::setKeys() is not allowed when connected");
-      return -1;
-   }
+    if (sshConnectedUnlocked()) {
+        xsink->raiseException(SSH2_CONNECTED, "usage of SSH2Base::setKeys() is not allowed when connected");
+        return -1;
+    }
 
-   sshkeys_priv.clear();
-   sshkeys_pub.clear();
+    sshkeys_priv.clear();
+    sshkeys_pub.clear();
 
-   // if the strings are null then ignore
-   if (priv && strlen(priv)) {
-      sshkeys_priv = priv;
+    // if the strings are null then ignore
+    if (priv && strlen(priv)) {
+        sshkeys_priv = priv;
 #ifdef _QORE_HAS_PATH_IS_READABLE
-      if (!q_path_is_readable(sshkeys_priv.c_str())) {
-         xsink->raiseException("SSH2-SETKEYS-ERROR", "private key '%s' is not readable", sshkeys_priv.c_str());
-         sshkeys_priv.clear();
-         return -1;
-      }
+        if (!q_path_is_readable(sshkeys_priv.c_str())) {
+            xsink->raiseException("SSH2-SETKEYS-ERROR", "private key '%s' is not readable", sshkeys_priv.c_str());
+            sshkeys_priv.clear();
+            return -1;
+        }
 #endif
 
-      if (pub)
-         sshkeys_pub = pub;
-      else {
-         sshkeys_pub = priv;
-         sshkeys_pub += ".pub";
-      }
+        if (pub)
+            sshkeys_pub = pub;
+        else {
+            sshkeys_pub = priv;
+            sshkeys_pub += ".pub";
+        }
 
 #ifdef _QORE_HAS_PATH_IS_READABLE
-      if (!q_path_is_readable(sshkeys_pub.c_str())) {
-         xsink->raiseException("SSH2-SETKEYS-ERROR", "public key '%s' is not readable", sshkeys_pub.c_str());
-         sshkeys_priv.clear();
-         sshkeys_pub.clear();
-         return -1;
-      }
+        if (!q_path_is_readable(sshkeys_pub.c_str())) {
+            xsink->raiseException("SSH2-SETKEYS-ERROR", "public key '%s' is not readable", sshkeys_pub.c_str());
+            sshkeys_priv.clear();
+            sshkeys_pub.clear();
+            return -1;
+        }
 #endif
 
-   }
-   return 0;
+    }
+    return 0;
 }
 
 const char *SSH2Client::getKeyPriv() {
-   return sshkeys_priv.c_str();
+    return sshkeys_priv.c_str();
 }
 
 const char *SSH2Client::getKeyPub() {
-   return sshkeys_pub.c_str();
+    return sshkeys_pub.c_str();
 }
 
 QoreStringNode *SSH2Client::fingerprintUnlocked() {
-   if (!sshConnectedUnlocked())
-      return 0;
+    if (!sshConnectedUnlocked())
+        return 0;
 
-   const char *fingerprint = libssh2_hostkey_hash(ssh_session, LIBSSH2_HOSTKEY_HASH_MD5);
+    const char *fingerprint = libssh2_hostkey_hash(ssh_session, LIBSSH2_HOSTKEY_HASH_MD5);
 
-   if (!fingerprint)
-      return 0;
+    if (!fingerprint)
+        return 0;
 
-   QoreStringNode *fpstr = new QoreStringNode;
-   fpstr->sprintf("%02X", (unsigned char)fingerprint[0]);
-   for (int i = 1; i < 16; i++)
-      fpstr->sprintf(":%02X", (unsigned char)fingerprint[i]);
-   return fpstr;
+    QoreStringNode *fpstr = new QoreStringNode;
+    fpstr->sprintf("%02X", (unsigned char)fingerprint[0]);
+    for (int i = 1; i < 16; i++)
+        fpstr->sprintf(":%02X", (unsigned char)fingerprint[i]);
+    return fpstr;
 }
 
 /**
  * return the fingerprint given from the server as md5 string
  */
 QoreStringNode *SSH2Client::fingerprint() {
-   AutoLocker al(m);
+    AutoLocker al(m);
 
-   return fingerprintUnlocked();
+    return fingerprintUnlocked();
 }
 
 static void kbd_callback(const char *name, int name_len,
-                         const char *instruction, int instruction_len, int num_prompts,
-                         const LIBSSH2_USERAUTH_KBDINT_PROMPT *prompts,
-                         LIBSSH2_USERAUTH_KBDINT_RESPONSE *responses,
-                         void **abstract) {
-   const char *password = keyboardPassword.get();
-   //printd(5, "kdb_callback() num_prompts=%d pass=%s\n", num_prompts, password);
-   if (num_prompts == 1) {
-      responses[0].text = strdup(password);
-      responses[0].length = strlen(password);
-   }
+        const char *instruction, int instruction_len, int num_prompts,
+        const LIBSSH2_USERAUTH_KBDINT_PROMPT *prompts,
+        LIBSSH2_USERAUTH_KBDINT_RESPONSE *responses,
+        void **abstract) {
+    const char *password = keyboardPassword.get();
+    //printd(5, "kdb_callback() num_prompts=%d pass=%s\n", num_prompts, password);
+    if (num_prompts == 1) {
+        responses[0].text = strdup(password);
+        responses[0].length = strlen(password);
+    }
 } /* kbd_callback */
 
 int SSH2Client::startupUnlocked() {
 #ifdef HAVE_LIBSSH2_SESSION_HANDSHAKE
-   return libssh2_session_handshake(ssh_session, socket.getSocket());
+    return libssh2_session_handshake(ssh_session, socket.getSocket());
 #else
-   return libssh2_session_startup(ssh_session, socket.getSocket());
+    return libssh2_session_startup(ssh_session, socket.getSocket());
 #endif
 }
 
@@ -580,15 +580,15 @@ int SSH2Client::sshConnectUnlocked(int timeout_ms, ExceptionSink *xsink = 0) {
 }
 
 int SSH2Client::sshConnect(int timeout_ms, ExceptionSink *xsink = 0) {
-   AutoLocker al(m);
+    AutoLocker al(m);
 
-   return sshConnectUnlocked(timeout_ms, xsink);
+    return sshConnectUnlocked(timeout_ms, xsink);
 }
 
 QoreHashNode *SSH2Client::sshInfo(const TypedHashDecl* hashdecl, ExceptionSink* xsink) {
-   AutoLocker al(m);
+    AutoLocker al(m);
 
-   return sshInfoIntern(hashdecl, xsink);
+    return sshInfoIntern(hashdecl, xsink);
 }
 
 QoreHashNode *SSH2Client::sshInfoIntern(const TypedHashDecl* hashdecl, ExceptionSink* xsink) {

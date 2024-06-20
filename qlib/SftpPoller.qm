@@ -343,6 +343,9 @@ public class SftpPoller {
 
         #! whether or not to skip the file content retrieval in runOnce()
         *bool skip_file_content_retrieval;
+
+        #! For when the client gets updating during polling
+        SFTPClient new_sftp;
     }
 
     #! creates the SftpPoller object from the @ref Qore::SSH2::SFTPClient "SFTPClient" argument and configuration hash argument passed
@@ -403,7 +406,7 @@ public class SftpPoller {
         @throw SSH2CLIENT-AUTH-ERROR no proper authentication method found
         @throw SFTPCLIENT-CONNECT-ERROR error initializing sftp session or getting remote path
     */
-    constructor(Qore::SSH2::SFTPClient n_sftp, hash<auto> nconf) {
+    constructor(Qore::SSH2::SFTPClient sftp, hash<auto> nconf) {
         # create hash of keys with only valid options in argument hash
         hash<auto> conf = Defaults + nconf{AllKeys};
 
@@ -441,12 +444,13 @@ public class SftpPoller {
         self += conf;
 
         # set regex for mask if regex_mask was not already used
-        if (!re)
+        if (!re) {
             setMask();
+        }
 
-        # assign SFTPClient object
-        sftp = n_sftp;
-        rootSftpPath = sftp.path();
+        if (mask) {
+            logDetail("%s: file regex mask: %s", url, mask);
+        }
 
         if (conf.delete_remote_file) {
             logDetail("%s: remote files will be deleted after processing", url);
@@ -454,27 +458,7 @@ public class SftpPoller {
             logDetail("%s: remote files will be moved using %y after processing", url, conf.move_remote_file);
         }
 
-        hash ih = sftp.info();
-        url = sprintf("%s@%s:%d", ih.ssh2user ? ih.ssh2user : "<none>", ih.ssh2host, ih.ssh2port);
-
-        if (mask)
-            logDetail("%s: file regex mask: %s", url, mask);
-
-        if (!ih.connected) {
-            logDetail("%s: logging in (timeout %y)", url, timeout);
-            # connect to the remote system
-            sftp.connect(timeout);
-        } else
-            logDetail("%s: already connected: %y", url, ih);
-        if (path && path.size() == 1 && path[0] != ".") {
-            logInfo("path is %n", path);
-            logInfo("%s: connected; changing directory to %s", url, path[0]);
-            # change to the target directory
-            sftp.chdir(path[0], timeout);
-        } else
-            logInfo("%s: connected", url);
-
-        map checkRemotePath($1, writable), path;
+        setup(sftp);
     }
 
     #! creates the SftpPoller object from the configuration hash argument passed
@@ -570,22 +554,27 @@ public class SftpPoller {
         self += conf;
 
         # set regex for mask if regex_mask was not already used
-        if (!re)
+        if (!re) {
             setMask();
+        }
 
         # create SFTPClient object
-        sftp = new SFTPClient(host, port);
-        if (user)
+        SFTPClient sftp(host, port);
+        if (user) {
             sftp.setUser(user);
-        if (pass)
+        }
+        if (pass) {
             sftp.setPassword(pass);
-        if (keyfile)
+        }
+        if (keyfile) {
             sftp.setKeys(keyfile);
+        }
 
         url = sprintf("%s@%s:%d", user ? user : "<none>", host, port);
 
-        if (mask)
+        if (mask) {
             logDetail("%s: file regex mask: %s", url, mask);
+        }
 
         if (conf.delete_remote_file) {
             logDetail("%s: remote files will be deleted after processing", url);
@@ -593,24 +582,44 @@ public class SftpPoller {
             logDetail("%s: remote files will be moved using %y after processing", url, conf.move_remote_file);
         }
 
-        logDetail("%s: logging in (timeout %y)", url, timeout);
-        # connect to the remote system
-        sftp.connect(timeout);
-        rootSftpPath = sftp.path();
-
-        if (path && path.size() == 1 && path[0] != ".") {
-            logInfo("%s: connected; changing directory to %s", url, path[0]);
-            # change to the target directory
-            sftp.chdir(path[0], timeout);
-        } else
-            logInfo("%s: connected", url);
-
-        map checkRemotePath($1, writable), path;
+        setup(sftp);
     }
 
     #! stops the polling operation if in progress and destroys the object
     destructor() {
         stop();
+    }
+
+    updateOptions(SFTPClient sftp) {
+        hash<auto> info += sftp.info();
+
+        string url = sprintf("sftp://%s", info.ssh2host);
+        if (info.ssh2port) {
+            url += sprintf(":%d", info.ssh2port);
+        }
+        logDetail("%s: logging in (timeout %y)", url, timeout);
+        # connect to the remote system
+        sftp.connect(timeout);
+
+        self.url = url;
+
+        if (info.ssh2user.val()) {
+            user = info.ssh2user;
+        } else {
+            remove user;
+        }
+        if ((*string pass = sftp.getPassword()).val()) {
+            pass = info.password;
+        } else {
+            remove pass;
+        }
+        if (info.keyfile_priv) {
+            keyfile = info.keyfile_priv;
+        } else {
+            remove keyfile;
+        }
+
+        new_sftp = sftp;
     }
 
     #! returns the current poll count
@@ -1021,6 +1030,34 @@ public class SftpPoller {
 %endif
     }
 
+    #! Sets up a new SFTP connection
+    private setup(SFTPClient sftp) {
+        # connect to the remote system
+        hash<auto> ih = sftp.info();
+        if (!url) {
+            url = sprintf("%s@%s:%d", ih.ssh2user ? ih.ssh2user : "<none>", ih.ssh2host, ih.ssh2port);
+        }
+        if (!ih.connected) {
+            logDetail("%s: logging in (timeout %y)", url, timeout);
+            sftp.connect(timeout);
+        } else {
+            logDetail("%s: already connected: %y", url, ih);
+        }
+        rootSftpPath = sftp.path();
+
+        if (path && path.size() == 1 && path[0] != ".") {
+            logDetail("path is %y", path);
+            logInfo("%s: connected; changing directory to %s", url, path[0]);
+            # change to the target directory
+            sftp.chdir(path[0], timeout);
+        } else {
+            logInfo("%s: connected", url);
+        }
+
+        self.sftp = sftp;
+        map checkRemotePath($1, writable), path;
+    }
+
     #! starts the polling operation
     private run() {
         on_exit
@@ -1028,9 +1065,14 @@ public class SftpPoller {
 
         while (runflag) {
             try {
+                if (new_sftp) {
+                    logInfo("Continuing polling with an updated SFTP connection");
+                    setup(remove new_sftp);
+                }
                 runOnce();
-                if (runflag)
+                if (runflag) {
                     sftpSleep(poll_interval);
+                }
             } catch (hash<ExceptionInfo> ex) {
                 if (get_files) {
                     logInfo("SFTP error in %y: %s: %s; waiting %y for next try", path, ex.err, ex.desc, ErrorDelay);
@@ -1339,6 +1381,17 @@ public class SftpPollerDataProviderBase inherits DataProvider::AbstractDataProvi
     #! Returns the data provider description
     *string getDesc() {
         return "Provides an event-based SFTP polling source";
+    }
+
+    #! Update any connection used by the data provider
+    /** @param conn the new connection object
+    */
+    updateConnectionObject(object conn) {
+        if (!(conn instanceof SFTPClient)) {
+            throw "UPDATE-CONNECTION-ERROR", sprintf("Data provider %y requires an \"SFTPClient\" object; got "
+                "%y instead", self.className(), conn.className());
+        }
+        poller.updateOptions(cast<SFTPClient>(conn));
     }
 
     #! Returns a hash of all supported event types
