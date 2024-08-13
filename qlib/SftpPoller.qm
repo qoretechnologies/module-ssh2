@@ -71,13 +71,12 @@ module SftpPoller {
             "action_code": DPAT_EVENT,
             "action_val": EVENT_SFTP_FILE,
             "output_type": SftpPollerFileEventInfoDataType,
-            "convenience_options": DataProviderActionCatalog::getActionOptionFromFields(
+            "options": DataProviderActionCatalog::getActionOptionFromFields(
                 SftpPollerDataProviderBase::ConstructorOptions{"mask",} - ("url"), {
                     "preselected": True,
                     "required": True,
                 },
-            ),
-            "advanced_options": DataProviderActionCatalog::getActionOptionFromFields(
+            ) + DataProviderActionCatalog::getActionOptionFromFields(
                 SftpPollerDataProviderBase::ConstructorOptions - ("mask", "url")
             ),
         });

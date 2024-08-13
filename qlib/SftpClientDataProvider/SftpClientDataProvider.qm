@@ -70,13 +70,12 @@ module SftpClientDataProvider {
             "desc": "Retrieve a file from an SFTP server",
             "action_code": DPAT_API,
             "output_type": SftpClientGetFileResponseDataType,
-            "convenience_options": DataProviderActionCatalog::getActionOptionFromFields(
+            "options": DataProviderActionCatalog::getActionOptionFromFields(
                 SftpClientGetFileRequestDataType::Fields{"path", "location"}, {
                     "preselected": True,
                     "required": True,
                 },
-            ),
-            "advanced_options": DataProviderActionCatalog::getActionOptionFromFields(
+            ) + DataProviderActionCatalog::getActionOptionFromFields(
                 SftpClientGetFileRequestDataType::Fields - ("path", "location")
             ),
         });
@@ -90,13 +89,12 @@ module SftpClientDataProvider {
             "desc": "Sends a file to an SFTP server",
             "action_code": DPAT_API,
             "output_type": SftpClientPathDataType,
-            "convenience_options": DataProviderActionCatalog::getActionOptionFromFields(
+            "options": DataProviderActionCatalog::getActionOptionFromFields(
                 SftpClientGetFileRequestDataType::Fields{"path", "location"}, {
                     "preselected": True,
                     "required": True,
                 },
-            ),
-            "advanced_options": DataProviderActionCatalog::getActionOptionFromFields(
+            ) + DataProviderActionCatalog::getActionOptionFromFields(
                 SftpClientGetFileRequestDataType::Fields - ("path", "location")
             ),
         });
@@ -110,7 +108,7 @@ module SftpClientDataProvider {
             "desc": "Deletes a file on an SFTP server",
             "action_code": DPAT_API,
             "output_type": SftpClientPathDataType,
-            "convenience_options": DataProviderActionCatalog::getActionOptionFromFields(
+            "options": DataProviderActionCatalog::getActionOptionFromFields(
                 SftpClientGetFileRequestDataType::Fields{"path",}, {
                     "preselected": True,
                     "required": True,
