@@ -1459,6 +1459,13 @@ public class SftpDelayedPollerDataProvider inherits SftpPollerDataProviderBase, 
         poller.start();
     }
 
+    #! Called to stop generating events
+    /** Disconnects from the server and stops polling
+    */
+    stopEvents() {
+        poller.stop();
+    }
+
     private hash<DataProviderInfo> getStaticInfoImpl() {
         return ProviderInfo;
     }
