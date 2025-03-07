@@ -1383,14 +1383,15 @@ public class SftpPollerDataProviderBase inherits DataProvider::AbstractDataProvi
     }
 
     #! Update any connection used by the data provider
-    /** @param conn the new connection object
+    /** @param conn the new AbstractConnection object
+        @param connobj the new connection object itself (ex: RestClient for a "rest" connection)
     */
-    updateConnectionObject(object conn) {
-        if (!(conn instanceof SFTPClient)) {
+    updateConnectionObjects(object conn, object connobj) {
+        if (!(connobj instanceof SFTPClient)) {
             throw "UPDATE-CONNECTION-ERROR", sprintf("Data provider %y requires an \"SFTPClient\" object; got "
-                "%y instead", self.className(), conn.className());
+                "%y instead", self.className(), connobj.className());
         }
-        poller.updateOptions(cast<SFTPClient>(conn));
+        poller.updateOptions(cast<SFTPClient>(connobj));
     }
 
     #! Returns a hash of all supported event types
