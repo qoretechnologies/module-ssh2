@@ -76,7 +76,8 @@ public class SftpClientListDataProvider inherits AbstractDataProvider {
         @throw LIST-ERROR if the path cannot be read
     */
     private auto doRequestImpl(auto req, *hash<auto> request_options) {
-        return sftp.listFull(req.path);
+        string path = SftpClientDataProvider::getPath(sftp, req.path);
+        return sftp.listFull(path);
     }
 
     #! Returns the description of a successful request message, if any

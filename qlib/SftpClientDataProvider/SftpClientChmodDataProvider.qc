@@ -1,7 +1,7 @@
 # -*- mode: qore; indent-tabs-mode: nil -*-
 #! Qore SftpClientDataProvider module definition
 
-/** SftpClientStatDataProvider.qc Copyright 2023 - 2024 Qore Technologies, s.r.o.
+/** SftpClientChmodDataProvider.qc Copyright 2023 - 2024 Qore Technologies, s.r.o.
 
     Permission is hereby granted, free of charge, to any person obtaining a
     copy of this software and associated documentation files (the "Software"),
@@ -24,17 +24,17 @@
 
 #! contains all public definitions in the SftpClientDataProvider module
 public namespace SftpClientDataProvider {
-#! The SFTP client stat data provider class
-public class SftpClientStatDataProvider inherits AbstractDataProvider {
+#! The SFTP client chmod data provider class
+public class SftpClientChmodDataProvider inherits AbstractDataProvider {
     public {
         #! SFTP connection
         SFTPClient sftp;
 
         #! Provider info
         const ProviderInfo = <DataProviderInfo>{
-            "name": "stat",
-            "desc": "SFTP stat data provider; returns information about the path given as an argument",
-            "type": "SftpClientStatDataProvider",
+            "name": "chmod",
+            "desc": "SFTP chmod data provider; changes file or directory permissions on the server",
+            "type": "SftpClientChmodDataProvider",
             "constructor_options": SftpClientDataProvider::ConstructorOptions,
             "supports_request": True,
         };
@@ -45,10 +45,10 @@ public class SftpClientStatDataProvider inherits AbstractDataProvider {
         });
 
         #! Request type
-        const RequestType = SftpClientPathDataType;
+        const RequestType = new SftpClientChmodRequestDataType();
 
         #! Response type
-        const ResponseType = new SftpClientStatResponseDataType();
+        const ResponseType = SftpClientPathDataType;
     }
 
     #! Creates the object from constructor options
@@ -64,7 +64,7 @@ public class SftpClientStatDataProvider inherits AbstractDataProvider {
 
     #! Returns the data provider name
     string getName() {
-        return "stat";
+        return "chmod";
     }
 
     #! Makes a request and returns the response
@@ -73,11 +73,14 @@ public class SftpClientStatDataProvider inherits AbstractDataProvider {
 
         @return the response to the request
 
-        @throw STAT-ERROR if the path cannot be read
+        @throw SFTP-CHMOD-ERROR if the permissions cannot be changed
     */
     private auto doRequestImpl(auto req, *hash<auto> request_options) {
         string path = SftpClientDataProvider::getPath(sftp, req.path);
-        return sftp.stat(path);
+        sftp.chmod(path, req.mode);
+        return {
+            "path": path,
+        };
     }
 
     #! Returns the description of a successful request message, if any
@@ -97,6 +100,38 @@ public class SftpClientStatDataProvider inherits AbstractDataProvider {
     #! Returns data provider static info
     hash<DataProviderInfo> getStaticInfoImpl() {
         return ProviderInfo;
+    }
+}
+
+#! Data type for SFTP client chmod request calls
+public class SftpClientChmodRequestDataType inherits HashDataType {
+    public {
+        #! Field descriptions
+        const Fields = {
+            "path": {
+                "display_name": "Path",
+                "short_desc": "The SFTP path for the operation",
+                "desc": "The remote path on the SFTP server for the chmod operation",
+                "type": AbstractDataProviderTypeMap."string",
+                "required": True,
+                "example_value": "/home/user/file.txt",
+            },
+            "mode": {
+                "display_name": "Mode",
+                "short_desc": "The file permission mode",
+                "desc": "The file permission mode as an octal integer (e.g., 0755 for rwxr-xr-x). "
+                    "Only the lower 9 bits (owner/group/other permissions) are used; "
+                    "sticky bits and setuid/setgid bits are not supported.",
+                "type": AbstractDataProviderTypeMap."int",
+                "required": True,
+                "example_value": 0755,
+            },
+        };
+    }
+
+    #! Creates the object
+    constructor() : HashDataType("SftpClientChmodRequest") {
+        addQoreFields(Fields);
     }
 }
 }

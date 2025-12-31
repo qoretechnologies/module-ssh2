@@ -94,7 +94,7 @@ public class SftpClientMoveDataProvider inherits AbstractDataProvider {
     /** @return the response type for this response message
     */
     private *AbstractDataProviderType getResponseTypeImpl() {
-        return RequestType;
+        return ResponseType;
     }
 
     #! Returns data provider static info

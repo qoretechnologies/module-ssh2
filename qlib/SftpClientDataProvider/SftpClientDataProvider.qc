@@ -42,12 +42,6 @@ public class SftpClientDataProvider inherits AbstractDataProvider {
 
         #! Constructor arguments
         const ConstructorOptions = {
-            "timeout": <DataProviderOptionInfo>{
-                "display_name": "I/O Timeout",
-                "short_desc": "The maximum time an individual I/O operation can take in milliseconds",
-                "type": AbstractDataProviderTypeMap."int",
-                "desc": "Transfer timeout to use in milliseconds",
-            },
             "url": <DataProviderOptionInfo>{
                 "display_name": "URL",
                 "short_desc": "The URL to connect to",
@@ -68,14 +62,17 @@ public class SftpClientDataProvider inherits AbstractDataProvider {
 
     private {
         const ChildMap = {
+            "chmod": Class::forName("SftpClientDataProvider::SftpClientChmodDataProvider"),
             "create-file": Class::forName("SftpClientDataProvider::SftpClientCreateFileDataProvider"),
             "create-file-location": Class::forName("SftpClientDataProvider::SftpClientCreateFileLocationDataProvider"),
             "delete": Class::forName("SftpClientDataProvider::SftpClientDeleteDataProvider"),
+            "exists": Class::forName("SftpClientDataProvider::SftpClientExistsDataProvider"),
             "get-file": Class::forName("SftpClientDataProvider::SftpClientGetFileDataProvider"),
             "get-file-location": Class::forName("SftpClientDataProvider::SftpClientGetFileLocationDataProvider"),
             "list": Class::forName("SftpClientDataProvider::SftpClientListDataProvider"),
             "mkdir": Class::forName("SftpClientDataProvider::SftpClientMkdirDataProvider"),
             "move": Class::forName("SftpClientDataProvider::SftpClientMoveDataProvider"),
+            "rmdir": Class::forName("SftpClientDataProvider::SftpClientRmdirDataProvider"),
             "stat": Class::forName("SftpClientDataProvider::SftpClientStatDataProvider"),
         };
     }
@@ -109,9 +106,6 @@ public class SftpClientDataProvider inherits AbstractDataProvider {
     #! Returns an SFTP connection from constructor options
     static SFTPClient getSftpClientConnection(hash<auto> options) {
         SFTPClient sftp(options.url);
-        if (options."timeout") {
-            sftp.setTimeout(options."timeout");
-        }
         if (options.keyfile.val()) {
             sftp.setKeys(substitute_env_vars(options.keyfile));
         }
@@ -120,8 +114,18 @@ public class SftpClientDataProvider inherits AbstractDataProvider {
 
     #! Returns the path based on the SftpClient's base path
     static string getPath(SFTPClient sftp, string path1) {
-        path1 =~ s/^\/+//;
-        return sftp.info().path + "/" + path1;
+        # If path1 starts with /, treat it as absolute and return as-is
+        if (path1 =~ /^\//) {
+            return path1;
+        }
+        # Get base path from info
+        *string base_path = sftp.info().path;
+        if (!base_path.val()) {
+            # No base path set - use path relative to home directory
+            return path1;
+        }
+        # Combine base path with relative path
+        return base_path + "/" + path1;
     }
 
     #! Returns a list of child data provider names, if any

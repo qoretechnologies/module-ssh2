@@ -1,7 +1,7 @@
 # -*- mode: qore; indent-tabs-mode: nil -*-
 #! Qore SftpClientDataProvider module definition
 
-/** SftpClientStatDataProvider.qc Copyright 2023 - 2024 Qore Technologies, s.r.o.
+/** SftpClientExistsDataProvider.qc Copyright 2023 - 2024 Qore Technologies, s.r.o.
 
     Permission is hereby granted, free of charge, to any person obtaining a
     copy of this software and associated documentation files (the "Software"),
@@ -24,17 +24,17 @@
 
 #! contains all public definitions in the SftpClientDataProvider module
 public namespace SftpClientDataProvider {
-#! The SFTP client stat data provider class
-public class SftpClientStatDataProvider inherits AbstractDataProvider {
+#! The SFTP client exists data provider class
+public class SftpClientExistsDataProvider inherits AbstractDataProvider {
     public {
         #! SFTP connection
         SFTPClient sftp;
 
         #! Provider info
         const ProviderInfo = <DataProviderInfo>{
-            "name": "stat",
-            "desc": "SFTP stat data provider; returns information about the path given as an argument",
-            "type": "SftpClientStatDataProvider",
+            "name": "exists",
+            "desc": "SFTP exists data provider; checks if a file or directory exists on the server",
+            "type": "SftpClientExistsDataProvider",
             "constructor_options": SftpClientDataProvider::ConstructorOptions,
             "supports_request": True,
         };
@@ -48,7 +48,7 @@ public class SftpClientStatDataProvider inherits AbstractDataProvider {
         const RequestType = SftpClientPathDataType;
 
         #! Response type
-        const ResponseType = new SftpClientStatResponseDataType();
+        const ResponseType = new SftpClientExistsResponseDataType();
     }
 
     #! Creates the object from constructor options
@@ -64,20 +64,40 @@ public class SftpClientStatDataProvider inherits AbstractDataProvider {
 
     #! Returns the data provider name
     string getName() {
-        return "stat";
+        return "exists";
     }
 
     #! Makes a request and returns the response
     /** @param req the request info
         @param request_options the request options; will be processed by validateRequestOptions()
 
-        @return the response to the request
-
-        @throw STAT-ERROR if the path cannot be read
+        @return the response to the request with exists=True/False and type information
     */
     private auto doRequestImpl(auto req, *hash<auto> request_options) {
         string path = SftpClientDataProvider::getPath(sftp, req.path);
-        return sftp.stat(path);
+        *hash<auto> info = sftp.stat(path);
+        if (!info) {
+            return {
+                "path": path,
+                "exists": False,
+            };
+        }
+        # Determine type from mode
+        string type = "unknown";
+        int mode = info.mode;
+        if ((mode & 0170000) == 0040000) {
+            type = "directory";
+        } else if ((mode & 0170000) == 0100000) {
+            type = "file";
+        } else if ((mode & 0170000) == 0120000) {
+            type = "symlink";
+        }
+        return {
+            "path": path,
+            "exists": True,
+            "type": type,
+            "size": info.size,
+        };
     }
 
     #! Returns the description of a successful request message, if any
@@ -97,6 +117,49 @@ public class SftpClientStatDataProvider inherits AbstractDataProvider {
     #! Returns data provider static info
     hash<DataProviderInfo> getStaticInfoImpl() {
         return ProviderInfo;
+    }
+}
+
+#! Data type for SFTP client exists response
+public class SftpClientExistsResponseDataType inherits HashDataType {
+    public {
+        #! Field descriptions
+        const Fields = {
+            "path": {
+                "display_name": "Path",
+                "short_desc": "The path that was checked",
+                "desc": "The remote path on the SFTP server that was checked",
+                "type": AbstractDataProviderTypeMap."string",
+                "example_value": "/home/user/file.txt",
+            },
+            "exists": {
+                "display_name": "Exists",
+                "short_desc": "Whether the path exists",
+                "desc": "True if the file or directory exists, False otherwise",
+                "type": AbstractDataProviderTypeMap."bool",
+                "example_value": True,
+            },
+            "type": {
+                "display_name": "Type",
+                "short_desc": "The type of the path",
+                "desc": "The type of the path: 'file', 'directory', 'symlink', or 'unknown'. "
+                    "Only present if exists=True",
+                "type": AbstractDataProviderTypeMap."*string",
+                "example_value": "file",
+            },
+            "size": {
+                "display_name": "Size",
+                "short_desc": "The size in bytes",
+                "desc": "The size of the file in bytes. Only present if exists=True",
+                "type": AbstractDataProviderTypeMap."*int",
+                "example_value": 1024,
+            },
+        };
+    }
+
+    #! Creates the object
+    constructor() : HashDataType("SftpClientExistsResponse") {
+        addQoreFields(Fields);
     }
 }
 }

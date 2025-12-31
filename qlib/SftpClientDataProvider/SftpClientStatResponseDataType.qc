@@ -38,7 +38,7 @@ public class SftpClientStatResponseDataType inherits HashDataType {
                 "display_name": "Permissions",
                 "short_desc": "A string giving UNIX-style permissions for the file",
                 "desc": "A string giving UNIX-style permissions for the file (ex: `-rwxr-xr-x`)",
-                "example_value": "-rwxr-x-r-x",
+                "example_value": "-rwxr-xr-x",
             },
             "size": {
                 "display_name": "Size",

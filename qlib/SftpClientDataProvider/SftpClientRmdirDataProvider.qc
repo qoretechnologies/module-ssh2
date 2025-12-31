@@ -1,7 +1,7 @@
 # -*- mode: qore; indent-tabs-mode: nil -*-
 #! Qore SftpClientDataProvider module definition
 
-/** SftpClientStatDataProvider.qc Copyright 2023 - 2024 Qore Technologies, s.r.o.
+/** SftpClientRmdirDataProvider.qc Copyright 2023 - 2024 Qore Technologies, s.r.o.
 
     Permission is hereby granted, free of charge, to any person obtaining a
     copy of this software and associated documentation files (the "Software"),
@@ -24,17 +24,18 @@
 
 #! contains all public definitions in the SftpClientDataProvider module
 public namespace SftpClientDataProvider {
-#! The SFTP client stat data provider class
-public class SftpClientStatDataProvider inherits AbstractDataProvider {
+#! The SFTP client rmdir data provider class
+public class SftpClientRmdirDataProvider inherits AbstractDataProvider {
     public {
         #! SFTP connection
         SFTPClient sftp;
 
         #! Provider info
         const ProviderInfo = <DataProviderInfo>{
-            "name": "stat",
-            "desc": "SFTP stat data provider; returns information about the path given as an argument",
-            "type": "SftpClientStatDataProvider",
+            "name": "rmdir",
+            "desc": "SFTP rmdir data provider; removes an empty directory on the server given the path "
+               "as an argument",
+            "type": "SftpClientRmdirDataProvider",
             "constructor_options": SftpClientDataProvider::ConstructorOptions,
             "supports_request": True,
         };
@@ -48,7 +49,7 @@ public class SftpClientStatDataProvider inherits AbstractDataProvider {
         const RequestType = SftpClientPathDataType;
 
         #! Response type
-        const ResponseType = new SftpClientStatResponseDataType();
+        const ResponseType = SftpClientPathDataType;
     }
 
     #! Creates the object from constructor options
@@ -64,7 +65,7 @@ public class SftpClientStatDataProvider inherits AbstractDataProvider {
 
     #! Returns the data provider name
     string getName() {
-        return "stat";
+        return "rmdir";
     }
 
     #! Makes a request and returns the response
@@ -73,11 +74,14 @@ public class SftpClientStatDataProvider inherits AbstractDataProvider {
 
         @return the response to the request
 
-        @throw STAT-ERROR if the path cannot be read
+        @throw SFTP-RMDIR-ERROR if the directory cannot be removed (not empty, doesn't exist, or permission denied)
     */
     private auto doRequestImpl(auto req, *hash<auto> request_options) {
         string path = SftpClientDataProvider::getPath(sftp, req.path);
-        return sftp.stat(path);
+        sftp.rmdir(path);
+        return {
+            "path": path,
+        };
     }
 
     #! Returns the description of a successful request message, if any

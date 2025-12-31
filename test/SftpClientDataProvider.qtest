@@ -1,0 +1,606 @@
+#!/usr/bin/env qore
+# -*- mode: qore; indent-tabs-mode: nil -*-
+
+# Comprehensive tests for the SftpClientDataProvider module
+
+%new-style
+%require-types
+%strict-args
+%enable-all-warnings
+
+%requires ssh2 >= 1.2
+%requires SftpClientDataProvider
+%requires QUnit
+%requires Util
+
+%exec-class SftpClientDataProviderTest
+
+class SftpClientDataProviderTest inherits QUnit::Test {
+    public {}
+
+    private {
+        timeout timeout = 10s;
+        string uri;
+        *string keyfile;
+
+        const MyOpts = Opts + {
+            "privkey": "k,private-key=s",
+            "timeout": "T,timeout=i",
+        };
+
+        const ColumnOffset = 25;
+
+        const TestFileContents = "Test file contents for SftpClientDataProvider tests\nLine 2\n";
+        const BinTestContents = binary(TestFileContents);
+    }
+
+    constructor() : Test("SftpClientDataProviderTest", "1.0", \ARGV, MyOpts) {
+        if (m_options.timeout) {
+            timeout = m_options.timeout * 1000;
+        }
+        # Use home directory as base path for test files
+        uri = sprintf("sftp://%s@localhost%s", getusername(), ENV.HOME);
+
+        # Determine which key to use
+        if (m_options.privkey) {
+            keyfile = m_options.privkey;
+        } else if (PlatformOS != "Windows") {
+            string sshdir = ENV.HOME + "/.ssh";
+            if (is_file(sshdir + "/id_rsa")) {
+                keyfile = sshdir + "/id_rsa";
+            } else if (is_file(sshdir + "/id_dsa")) {
+                keyfile = sshdir + "/id_dsa";
+            }
+        }
+
+        # Provider structure tests (no connection required)
+        addTestCase("Provider structure tests", \providerStructureTests());
+        addTestCase("Constructor option tests", \constructorOptionTests());
+        addTestCase("Negative constructor tests", \negativeConstructorTests());
+
+        # Functional tests (connection required)
+        addTestCase("Create file tests", \createFileTests());
+        addTestCase("Get file tests", \getFileTests());
+        addTestCase("Stat tests", \statTests());
+        addTestCase("Exists tests", \existsTests());
+        addTestCase("List tests", \listTests());
+        addTestCase("Move tests", \moveTests());
+        addTestCase("Chmod tests", \chmodTests());
+        addTestCase("Mkdir/Rmdir tests", \mkdirRmdirTests());
+        addTestCase("Delete tests", \deleteTests());
+        addTestCase("Negative operation tests", \negativeOperationTests());
+        addTestCase("Corner case tests", \cornerCaseTests());
+
+        set_return_value(main());
+    }
+
+    private SftpClientDataProvider getProvider() {
+        hash<auto> opts = {
+            "url": uri,
+        };
+        if (keyfile) {
+            opts.keyfile = keyfile;
+        }
+        return new SftpClientDataProvider(opts);
+    }
+
+    providerStructureTests() {
+        # Test that the provider has all expected children
+        SftpClientDataProvider provider = getProvider();
+
+        assertEq("sftp", provider.getName());
+        assertEq(Type::String, provider.getDesc().type());
+
+        # Check all child providers exist
+        list<string> expectedChildren = (
+            "chmod", "create-file", "create-file-location", "delete", "exists",
+            "get-file", "get-file-location", "list", "mkdir", "move", "rmdir", "stat"
+        );
+
+        *list<string> children = provider.getChildProviderNames();
+        assertEq(expectedChildren.size(), children.size());
+
+        foreach string child in (expectedChildren) {
+            assertTrue(inlist(child, children), sprintf("Missing child provider: %s", child));
+            AbstractDataProvider childProvider = provider.getChildProvider(child);
+            assertEq(child, childProvider.getName());
+        }
+
+        # Test getting non-existent child returns nothing
+        assertNothing(provider.getChildProvider("nonexistent"));
+    }
+
+    constructorOptionTests() {
+        # Test constructor options
+        hash<auto> opts = {
+            "url": uri,
+        };
+        if (keyfile) {
+            opts.keyfile = keyfile;
+        }
+
+        SftpClientDataProvider provider(opts);
+        assertEq("sftp", provider.getName());
+
+        # Test provider info
+        hash<DataProviderInfo> info = provider.getInfo();
+        assertTrue(info.supports_children);
+        assertTrue(info.children_can_support_apis);
+        assertFalse(info.children_can_support_records);
+    }
+
+    negativeConstructorTests() {
+        # Test missing URL
+        assertThrows("CONSTRUCTOR-ERROR", sub () {
+            new SftpClientDataProvider({});
+        });
+
+        # Test invalid URL scheme
+        assertThrows("SFTPCLIENT-PARAMETER-ERROR", sub () {
+            new SftpClientDataProvider({"url": "http://localhost"});
+        });
+
+        # Test empty URL
+        assertThrows("SFTPCLIENT-PARAMETER-ERROR", sub () {
+            new SftpClientDataProvider({"url": ""});
+        });
+
+        # Test invalid keyfile
+        assertThrows("SSH2-SETKEYS-ERROR", sub () {
+            SftpClientDataProvider provider({"url": uri, "keyfile": "/nonexistent/key"});
+            # Force connection to trigger the error
+            provider.getChildProvider("stat").doRequest({"path": "/"});
+        });
+    }
+
+    createFileTests() {
+        SftpClientDataProvider provider = getProvider();
+        AbstractDataProvider createProvider = provider.getChildProvider("create-file");
+
+        # Use relative path - will be created in home directory
+        string testFile = sprintf("sftp_test_%s.txt", get_random_string(10));
+
+        # Create file with string data
+        hash<auto> result = createProvider.doRequest({
+            "path": testFile,
+            "data": TestFileContents,
+        });
+        assertEq(Type::String, result.path.type());
+        assertTrue(result.path.regex(testFile));
+
+        # Verify file was created
+        AbstractDataProvider statProvider = provider.getChildProvider("stat");
+        hash<auto> statResult = statProvider.doRequest({"path": testFile});
+        assertEq(TestFileContents.size(), statResult.size);
+
+        # Clean up
+        AbstractDataProvider deleteProvider = provider.getChildProvider("delete");
+        deleteProvider.doRequest({"path": testFile});
+
+        # Create file with binary data
+        testFile = sprintf("sftp_test_%s.bin", get_random_string(10));
+        result = createProvider.doRequest({
+            "path": testFile,
+            "data": BinTestContents,
+        });
+        assertEq(Type::String, result.path.type());
+
+        # Clean up
+        deleteProvider.doRequest({"path": testFile});
+    }
+
+    getFileTests() {
+        SftpClientDataProvider provider = getProvider();
+        string testFile = sprintf("sftp_test_%s.txt", get_random_string(10));
+
+        # Create test file first
+        AbstractDataProvider createProvider = provider.getChildProvider("create-file");
+        createProvider.doRequest({
+            "path": testFile,
+            "data": TestFileContents,
+        });
+
+        # Get file as binary (default)
+        AbstractDataProvider getFileProvider = provider.getChildProvider("get-file");
+        hash<auto> result = getFileProvider.doRequest({
+            "path": testFile,
+        });
+        assertEq(BinTestContents, result.data);
+        assertTrue(result.path.regex(testFile));
+
+        # Get file as text
+        result = getFileProvider.doRequest({
+            "path": testFile,
+            "text": True,
+        });
+        assertEq(TestFileContents, result.data);
+
+        # Get file as text with specific encoding
+        result = getFileProvider.doRequest({
+            "path": testFile,
+            "text": True,
+            "encoding": "UTF-8",
+        });
+        assertEq("UTF-8", result.data.encoding());
+
+        # Clean up
+        AbstractDataProvider deleteProvider = provider.getChildProvider("delete");
+        deleteProvider.doRequest({"path": testFile});
+    }
+
+    statTests() {
+        SftpClientDataProvider provider = getProvider();
+        string testFile = sprintf("sftp_test_%s.txt", get_random_string(10));
+
+        # Create test file
+        AbstractDataProvider createProvider = provider.getChildProvider("create-file");
+        createProvider.doRequest({
+            "path": testFile,
+            "data": TestFileContents,
+        });
+
+        # Stat the file
+        AbstractDataProvider statProvider = provider.getChildProvider("stat");
+        hash<auto> result = statProvider.doRequest({"path": testFile});
+
+        assertEq(TestFileContents.size(), result.size);
+        assertEq(Type::Int, result.mode.type());
+        assertEq(Type::String, result.permissions.type());
+        assertEq(Type::Date, result.atime.type());
+        assertEq(Type::Date, result.mtime.type());
+        assertEq(Type::Int, result.uid.type());
+        assertEq(Type::Int, result.gid.type());
+
+        # Stat non-existent file returns nothing
+        *hash<auto> nonExistentResult = statProvider.doRequest({"path": "nonexistent_file_12345.txt"});
+        assertNothing(nonExistentResult);
+
+        # Clean up
+        AbstractDataProvider deleteProvider = provider.getChildProvider("delete");
+        deleteProvider.doRequest({"path": testFile});
+    }
+
+    existsTests() {
+        SftpClientDataProvider provider = getProvider();
+        string testFile = sprintf("sftp_test_%s.txt", get_random_string(10));
+
+        # Check non-existent file
+        AbstractDataProvider existsProvider = provider.getChildProvider("exists");
+        hash<auto> result = existsProvider.doRequest({"path": testFile});
+        assertFalse(result.exists);
+        assertNothing(result.type);
+        assertNothing(result.size);
+
+        # Create file and check again
+        AbstractDataProvider createProvider = provider.getChildProvider("create-file");
+        createProvider.doRequest({
+            "path": testFile,
+            "data": TestFileContents,
+        });
+
+        result = existsProvider.doRequest({"path": testFile});
+        assertTrue(result.exists);
+        assertEq("file", result.type);
+        assertEq(TestFileContents.size(), result.size);
+
+        # Check directory - use relative empty path for home dir
+        result = existsProvider.doRequest({"path": "."});
+        assertTrue(result.exists);
+        assertEq("directory", result.type);
+
+        # Clean up
+        AbstractDataProvider deleteProvider = provider.getChildProvider("delete");
+        deleteProvider.doRequest({"path": testFile});
+    }
+
+    listTests() {
+        SftpClientDataProvider provider = getProvider();
+        string testDir = sprintf("sftp_test_dir_%s", get_random_string(10));
+
+        # Create test directory and files
+        AbstractDataProvider mkdirProvider = provider.getChildProvider("mkdir");
+        mkdirProvider.doRequest({"path": testDir});
+
+        AbstractDataProvider createProvider = provider.getChildProvider("create-file");
+        createProvider.doRequest({
+            "path": testDir + "/file1.txt",
+            "data": "content1",
+        });
+        createProvider.doRequest({
+            "path": testDir + "/file2.txt",
+            "data": "content2",
+        });
+
+        # List directory
+        AbstractDataProvider listProvider = provider.getChildProvider("list");
+        list<auto> result = listProvider.doRequest({"path": testDir});
+
+        assertTrue(result.size() >= 2);
+
+        # Find our files in the list
+        bool foundFile1 = False;
+        bool foundFile2 = False;
+        foreach hash<auto> entry in (result) {
+            if (entry.name == "file1.txt") {
+                foundFile1 = True;
+                assertEq(8, entry.size);  # "content1" is 8 bytes
+            }
+            if (entry.name == "file2.txt") {
+                foundFile2 = True;
+            }
+        }
+        assertTrue(foundFile1, "file1.txt not found in list");
+        assertTrue(foundFile2, "file2.txt not found in list");
+
+        # Clean up
+        AbstractDataProvider deleteProvider = provider.getChildProvider("delete");
+        deleteProvider.doRequest({"path": testDir + "/file1.txt"});
+        deleteProvider.doRequest({"path": testDir + "/file2.txt"});
+        AbstractDataProvider rmdirProvider = provider.getChildProvider("rmdir");
+        rmdirProvider.doRequest({"path": testDir});
+    }
+
+    moveTests() {
+        SftpClientDataProvider provider = getProvider();
+        string sourceFile = sprintf("sftp_test_source_%s.txt", get_random_string(10));
+        string targetFile = sprintf("sftp_test_target_%s.txt", get_random_string(10));
+
+        # Create source file
+        AbstractDataProvider createProvider = provider.getChildProvider("create-file");
+        createProvider.doRequest({
+            "path": sourceFile,
+            "data": TestFileContents,
+        });
+
+        # Move file
+        AbstractDataProvider moveProvider = provider.getChildProvider("move");
+        hash<auto> result = moveProvider.doRequest({
+            "source": sourceFile,
+            "target": targetFile,
+        });
+        assertTrue(result.path.regex(targetFile));
+
+        # Verify source no longer exists
+        AbstractDataProvider existsProvider = provider.getChildProvider("exists");
+        hash<auto> existsResult = existsProvider.doRequest({"path": sourceFile});
+        assertFalse(existsResult.exists);
+
+        # Verify target exists
+        existsResult = existsProvider.doRequest({"path": targetFile});
+        assertTrue(existsResult.exists);
+
+        # Clean up
+        AbstractDataProvider deleteProvider = provider.getChildProvider("delete");
+        deleteProvider.doRequest({"path": targetFile});
+    }
+
+    chmodTests() {
+        SftpClientDataProvider provider = getProvider();
+        string testFile = sprintf("sftp_test_%s.txt", get_random_string(10));
+
+        # Create test file
+        AbstractDataProvider createProvider = provider.getChildProvider("create-file");
+        createProvider.doRequest({
+            "path": testFile,
+            "data": TestFileContents,
+        });
+
+        # Change permissions to 0644
+        AbstractDataProvider chmodProvider = provider.getChildProvider("chmod");
+        hash<auto> result = chmodProvider.doRequest({
+            "path": testFile,
+            "mode": 0644,
+        });
+        assertTrue(result.path.regex(testFile));
+
+        # Verify permissions
+        AbstractDataProvider statProvider = provider.getChildProvider("stat");
+        hash<auto> statResult = statProvider.doRequest({"path": testFile});
+        assertEq(0644, statResult.mode & 0777);
+
+        # Change to 0755
+        chmodProvider.doRequest({
+            "path": testFile,
+            "mode": 0755,
+        });
+        statResult = statProvider.doRequest({"path": testFile});
+        assertEq(0755, statResult.mode & 0777);
+
+        # Clean up
+        AbstractDataProvider deleteProvider = provider.getChildProvider("delete");
+        deleteProvider.doRequest({"path": testFile});
+    }
+
+    mkdirRmdirTests() {
+        SftpClientDataProvider provider = getProvider();
+        string testDir = sprintf("sftp_test_dir_%s", get_random_string(10));
+
+        # Create directory
+        AbstractDataProvider mkdirProvider = provider.getChildProvider("mkdir");
+        hash<auto> result = mkdirProvider.doRequest({"path": testDir});
+        assertTrue(result.path.regex(testDir));
+
+        # Verify directory exists
+        AbstractDataProvider existsProvider = provider.getChildProvider("exists");
+        hash<auto> existsResult = existsProvider.doRequest({"path": testDir});
+        assertTrue(existsResult.exists);
+        assertEq("directory", existsResult.type);
+
+        # Remove directory
+        AbstractDataProvider rmdirProvider = provider.getChildProvider("rmdir");
+        result = rmdirProvider.doRequest({"path": testDir});
+        assertTrue(result.path.regex(testDir));
+
+        # Verify directory no longer exists
+        existsResult = existsProvider.doRequest({"path": testDir});
+        assertFalse(existsResult.exists);
+    }
+
+    deleteTests() {
+        SftpClientDataProvider provider = getProvider();
+        string testFile = sprintf("sftp_test_%s.txt", get_random_string(10));
+
+        # Create test file
+        AbstractDataProvider createProvider = provider.getChildProvider("create-file");
+        createProvider.doRequest({
+            "path": testFile,
+            "data": TestFileContents,
+        });
+
+        # Delete file
+        AbstractDataProvider deleteProvider = provider.getChildProvider("delete");
+        hash<auto> result = deleteProvider.doRequest({"path": testFile});
+        assertTrue(result.path.regex(testFile));
+
+        # Verify file no longer exists
+        AbstractDataProvider existsProvider = provider.getChildProvider("exists");
+        hash<auto> existsResult = existsProvider.doRequest({"path": testFile});
+        assertFalse(existsResult.exists);
+    }
+
+    negativeOperationTests() {
+        SftpClientDataProvider provider = getProvider();
+
+        # Delete non-existent file
+        AbstractDataProvider deleteProvider = provider.getChildProvider("delete");
+        assertThrows("SSH2-ERROR", sub () {
+            deleteProvider.doRequest({"path": "nonexistent_file_12345.txt"});
+        });
+
+        # Rmdir on non-existent directory
+        AbstractDataProvider rmdirProvider = provider.getChildProvider("rmdir");
+        assertThrows("SSH2-ERROR", sub () {
+            rmdirProvider.doRequest({"path": "nonexistent_dir_12345"});
+        });
+
+        # Rmdir on non-empty directory
+        string testDir = sprintf("sftp_test_dir_%s", get_random_string(10));
+        AbstractDataProvider mkdirProvider = provider.getChildProvider("mkdir");
+        mkdirProvider.doRequest({"path": testDir});
+
+        AbstractDataProvider createProvider = provider.getChildProvider("create-file");
+        createProvider.doRequest({
+            "path": testDir + "/file.txt",
+            "data": "content",
+        });
+
+        assertThrows("SSH2-ERROR", sub () {
+            rmdirProvider.doRequest({"path": testDir});
+        });
+
+        # Clean up
+        deleteProvider.doRequest({"path": testDir + "/file.txt"});
+        rmdirProvider.doRequest({"path": testDir});
+
+        # Get non-existent file
+        AbstractDataProvider getProviderNeg = provider.getChildProvider("get-file");
+        assertThrows("SSH2-ERROR", sub () {
+            getProviderNeg.doRequest({"path": "nonexistent_file_12345.txt"});
+        });
+
+        # Chmod on non-existent file
+        AbstractDataProvider chmodProvider = provider.getChildProvider("chmod");
+        assertThrows("SSH2-ERROR", sub () {
+            chmodProvider.doRequest({"path": "nonexistent_file_12345.txt", "mode": 0644});
+        });
+
+        # Move non-existent file
+        AbstractDataProvider moveProvider = provider.getChildProvider("move");
+        assertThrows("SSH2-ERROR", sub () {
+            moveProvider.doRequest({
+                "source": "nonexistent_source_12345.txt",
+                "target": "target.txt",
+            });
+        });
+
+        # List non-existent directory
+        AbstractDataProvider listProviderNeg = provider.getChildProvider("list");
+        assertThrows("SSH2-ERROR", sub () {
+            listProviderNeg.doRequest({"path": "nonexistent_dir_12345"});
+        });
+    }
+
+    cornerCaseTests() {
+        SftpClientDataProvider provider = getProvider();
+
+        # Test with empty file
+        string testFile = sprintf("sftp_test_empty_%s.txt", get_random_string(10));
+        AbstractDataProvider createProvider = provider.getChildProvider("create-file");
+        createProvider.doRequest({
+            "path": testFile,
+            "data": "",
+        });
+
+        AbstractDataProvider getFileProvider = provider.getChildProvider("get-file");
+        hash<auto> result = getFileProvider.doRequest({"path": testFile});
+        assertEq(binary(), result.data);
+
+        AbstractDataProvider statProvider = provider.getChildProvider("stat");
+        hash<auto> statResult = statProvider.doRequest({"path": testFile});
+        assertEq(0, statResult.size);
+
+        AbstractDataProvider deleteProvider = provider.getChildProvider("delete");
+        deleteProvider.doRequest({"path": testFile});
+
+        # Test with special characters in filename
+        testFile = sprintf("sftp_test_special_%s_file.txt", get_random_string(10));
+        createProvider.doRequest({
+            "path": testFile,
+            "data": "content",
+        });
+
+        AbstractDataProvider existsProvider = provider.getChildProvider("exists");
+        hash<auto> existsResult = existsProvider.doRequest({"path": testFile});
+        assertTrue(existsResult.exists);
+
+        deleteProvider.doRequest({"path": testFile});
+
+        # Test with path containing trailing slash for directory operations
+        string testDir = sprintf("sftp_test_trailing_%s", get_random_string(10));
+        AbstractDataProvider mkdirProvider = provider.getChildProvider("mkdir");
+        mkdirProvider.doRequest({"path": testDir});
+
+        # List with trailing slash should work
+        AbstractDataProvider listProvider = provider.getChildProvider("list");
+        list<auto> listResult = listProvider.doRequest({"path": testDir + "/"});
+        assertEq(Type::List, listResult.type());
+
+        AbstractDataProvider rmdirProvider = provider.getChildProvider("rmdir");
+        rmdirProvider.doRequest({"path": testDir});
+
+        # Test large file (> 128KB to exceed block size)
+        testFile = sprintf("sftp_test_large_%s.bin", get_random_string(10));
+        string largeData = strmul("x", 256 * 1024);  # 256KB
+        createProvider.doRequest({
+            "path": testFile,
+            "data": largeData,
+        });
+
+        statResult = statProvider.doRequest({"path": testFile});
+        assertEq(256 * 1024, statResult.size);
+
+        result = getFileProvider.doRequest({"path": testFile, "text": True});
+        assertEq(largeData.size(), result.data.size());
+
+        deleteProvider.doRequest({"path": testFile});
+
+        # Test file with unicode content
+        testFile = sprintf("sftp_test_unicode_%s.txt", get_random_string(10));
+        string unicodeContent = "Unicode test: ýčšěáýžšěčéářčě 你好世界 🎉";
+        createProvider.doRequest({
+            "path": testFile,
+            "data": unicodeContent,
+        });
+
+        result = getFileProvider.doRequest({"path": testFile, "text": True, "encoding": "UTF-8"});
+        assertEq(unicodeContent, result.data);
+
+        deleteProvider.doRequest({"path": testFile});
+    }
+
+    private usageIntern() {
+        TestReporter::usageIntern(ColumnOffset);
+        printOption("-k,--private-key=ARG", "set private key to use for authentication", ColumnOffset);
+        printOption("-T,--timeout=ARG", sprintf("set timeout in seconds (def: %ds)", timeout / 1000), ColumnOffset);
+    }
+}

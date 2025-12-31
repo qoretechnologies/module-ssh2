@@ -29,20 +29,27 @@ public class SftpClientCreateFileRequestDataType inherits HashDataType {
         #! Field descriptions
         const Fields = {
             "path": {
-                "type": StringType,
-                "desc": "The remote path on the SFTP server",
+                "display_name": "Path",
+                "short_desc": "The remote path on the SFTP server",
+                "desc": "The remote path on the SFTP server where the file will be created",
+                "type": AbstractDataProviderTypeMap."string",
+                "required": True,
+                "example_value": "/home/user/newfile.txt",
             },
             "data": {
-                "type": DataType,
-                "desc": "The string or binary data for the file",
-            }
+                "display_name": "Data",
+                "short_desc": "The file content data",
+                "desc": "The string or binary data for the file content",
+                "type": AbstractDataProviderTypeMap."data",
+                "required": True,
+                "example_value": "file contents here",
+            },
         };
     }
 
     #! Creates the object
-    constructor() {
-        map addField(new QoreDataField($1.key, $1.value.desc, $1.value.type, $1.value.default_value)),
-            Fields.pairIterator();
+    constructor() : HashDataType("SftpClientCreateFileRequest") {
+        addQoreFields(Fields);
     }
 }
 }
