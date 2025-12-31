@@ -105,7 +105,7 @@ protected:
 
     /*
         * close session/connection
-        * free ressources
+        * free resources
         */
     DLLLOCAL virtual ~SSH2Client();
 

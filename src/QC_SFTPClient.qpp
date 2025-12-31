@@ -327,7 +327,7 @@ nothing SFTPClient::rename(string old_name, string new_name, timeout timeout = 6
     If a connection has not yet been established, it is implicitly attempted here before executing the method.
 
     @param path the pathname of the file or directory to update
-    @param mode the new mode to se
+    @param mode the new mode to set (user/group/other permissions only, e.g. 0755)
     @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds)
 
     @throw SFTPCLIENT-PARAMETER-ERROR mode setting is only possible for user, group and other (no sticky bits)

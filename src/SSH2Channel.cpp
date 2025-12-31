@@ -221,21 +221,24 @@ QoreStringNode* SSH2Channel::read(ExceptionSink *xsink, int stream_id, int timeo
 
     qore_offset_t rc;
     bool first = true;
-    do {
-loop0:
+    while (true) {
         char buffer[QSSH2_BUFSIZE];
         rc = libssh2_channel_read_ex(channel, stream_id, buffer, QSSH2_BUFSIZE);
         //printd(0, "SSH2Channel::read() rc=%ld (EAGAIN=%d)\n", rc, LIBSSH2_ERROR_EAGAIN);
 
         if (rc > 0) {
             str->concat(buffer, rc);
-        } else if (rc == LIBSSH2_ERROR_EAGAIN && !str->strlen() && first) {
+            continue;
+        }
+        if (rc == LIBSSH2_ERROR_EAGAIN && !str->strlen() && first) {
             first = false;
             if ((rc = parent->waitSocketUnlocked(xsink, SSH2CHANNEL_TIMEOUT, "SSH2CHANNEL-READ-ERROR", "SSH2Channel::read", timeout_ms)))
                 return 0;
-            goto loop0;
+            continue;
         }
-    } while (rc > 0);
+        // rc <= 0 and not EAGAIN on first empty read, exit the loop
+        break;
+    }
 
     if (rc < 0 && rc != LIBSSH2_ERROR_EAGAIN) {
         parent->doSessionErrUnlocked(xsink);
@@ -306,21 +309,24 @@ BinaryNode *SSH2Channel::readBinary(ExceptionSink *xsink, int stream_id, int tim
 
     qore_offset_t rc;
     bool first = true;
-    do {
-loop0:
+    while (true) {
         char buffer[QSSH2_BUFSIZE];
         rc = libssh2_channel_read_ex(channel, stream_id, buffer, QSSH2_BUFSIZE);
         //printd(5, "SSH2Channel::readBinary() rc=%ld (EAGAIN=%d)\n", rc, LIBSSH2_ERROR_EAGAIN);
 
         if (rc > 0) {
             bin->append(buffer, rc);
-        } else if (rc == LIBSSH2_ERROR_EAGAIN && !bin->size() && first) {
+            continue;
+        }
+        if (rc == LIBSSH2_ERROR_EAGAIN && !bin->size() && first) {
             first = false;
             if ((rc = parent->waitSocketUnlocked(xsink, SSH2CHANNEL_TIMEOUT, "SSH2CHANNEL-READBINARY-ERROR", "SSH2Channel::readBinary", timeout_ms)))
                 return 0;
-            goto loop0;
+            continue;
         }
-    } while (rc > 0);
+        // rc <= 0 and not EAGAIN on first empty read, exit the loop
+        break;
+    }
 
     if (rc < 0 && rc != LIBSSH2_ERROR_EAGAIN) {
         parent->doSessionErrUnlocked(xsink);
@@ -536,6 +542,8 @@ int SSH2Channel::extendedDataNormal(ExceptionSink *xsink, int timeout_ms) {
    if (check_open(xsink))
       return -1;
 
+   BlockingHelper bh(parent);
+
    int rc;
    while (true) {
       rc = libssh2_channel_handle_extended_data2(channel, LIBSSH2_CHANNEL_EXTENDED_DATA_NORMAL);
@@ -556,6 +564,8 @@ int SSH2Channel::extendedDataMerge(ExceptionSink *xsink, int timeout_ms) {
    if (check_open(xsink))
       return -1;
 
+   BlockingHelper bh(parent);
+
    int rc;
    while (true) {
       rc = libssh2_channel_handle_extended_data2(channel, LIBSSH2_CHANNEL_EXTENDED_DATA_MERGE);
@@ -575,6 +585,8 @@ int SSH2Channel::extendedDataIgnore(ExceptionSink *xsink, int timeout_ms) {
    AutoLocker al(parent->m);
    if (check_open(xsink))
       return -1;
+
+   BlockingHelper bh(parent);
 
    int rc;
    while (true) {
