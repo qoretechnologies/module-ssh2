@@ -141,7 +141,7 @@ SFTPClient::SFTPClient(QoreURL &url, const uint32_t port) : SSH2Client(url, port
 
 /*
  * close session/connection
- * free ressources
+ * free resources
  */
 SFTPClient::~SFTPClient() {
    QORE_TRACE("SFTPClient::~SFTPClient()");
@@ -190,7 +190,7 @@ int SFTPClient::disconnectUnlocked(bool force, int timeout_ms, AbstractDisconnec
     //printd(5, "SFTPClient::disconnectUnlocked() force: %d timeout_ms: %d adh: %p xsink: %p\n", force, timeout_ms, adh, xsink);
     int rc;
 
-    // disconnect dependent opbjects first
+    // disconnect dependent objects first
     if (adh)
         adh->preDisconnect();
 

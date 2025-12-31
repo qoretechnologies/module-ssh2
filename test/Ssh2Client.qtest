@@ -44,6 +44,7 @@ class Ssh2ClientTest inherits QUnit::Test {
         uri = shift ARGV ?? sprintf("%s@localhost", getusername());
 
         addTestCase("Ssh2Client test", \ssh2ClientTest());
+        # Note: Parameter validation and edge case tests are in test/NegativeTests.qtest
 
         set_return_value(main());
     }

@@ -57,6 +57,7 @@ class SFTPClientTest inherits QUnit::Test {
         }
 
         addTestCase("SFTPClientTests", \sftpTests());
+        # Note: Parameter validation and edge case tests are in test/NegativeTests.qtest
 
         set_return_value(main());
     }

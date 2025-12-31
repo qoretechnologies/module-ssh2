@@ -1,0 +1,261 @@
+#!/usr/bin/env qore
+# -*- mode: qore; indent-tabs-mode: nil -*-
+
+# Negative and corner case tests for the SSH2 module
+
+%new-style
+%require-types
+%strict-args
+%enable-all-warnings
+
+%requires ssh2 >= 1.2
+%requires QUnit
+
+%exec-class NegativeTests
+
+class NegativeTests inherits QUnit::Test {
+    public {}
+
+    private {
+        timeout timeout = 5s;
+
+        const MyOpts = Opts + {
+            "timeout": "T,timeout=i",
+        };
+
+        const ColumnOffset = 25;
+    }
+
+    constructor() : Test("NegativeTests", "1.0", \ARGV, MyOpts) {
+        if (m_options.timeout)
+            timeout = m_options.timeout * 1000;
+
+        addTestCase("Constructor error tests", \constructorErrorTests());
+        addTestCase("Connection error tests", \connectionErrorTests());
+        addTestCase("Invalid parameter tests", \invalidParameterTests());
+        addTestCase("State error tests", \stateErrorTests());
+        addTestCase("Corner case tests", \cornerCaseTests());
+
+        set_return_value(main());
+    }
+
+    constructorErrorTests() {
+        # Test SSH2Client with empty URL
+        assertThrows("SSH2CLIENT-PARAMETER-ERROR", sub () {
+            new SSH2Client("");
+        });
+
+        # Test SSH2Client with invalid protocol
+        assertThrows("SSH2CLIENT-PARAMETER-ERROR", sub () {
+            new SSH2Client("http://localhost");
+        });
+
+        # Test SSH2Client with invalid protocol (ftp)
+        assertThrows("SSH2CLIENT-PARAMETER-ERROR", sub () {
+            new SSH2Client("ftp://user@localhost");
+        });
+
+        # Test SFTPClient with empty URL
+        assertThrows("SFTPCLIENT-PARAMETER-ERROR", sub () {
+            new SFTPClient("");
+        });
+
+        # Test SFTPClient with invalid protocol
+        assertThrows("SFTPCLIENT-PARAMETER-ERROR", sub () {
+            new SFTPClient("http://localhost");
+        });
+
+        # Valid constructor should work
+        {
+            SSH2Client sc("ssh://test@localhost:22");
+            assertEq("localhost", sc.getHost());
+            assertEq(22, sc.getPort());
+            assertEq("test", sc.getUser());
+        }
+
+        # SSH2 protocol should be accepted
+        {
+            SSH2Client sc("ssh2://test@localhost:22");
+            assertEq("localhost", sc.getHost());
+        }
+    }
+
+    connectionErrorTests() {
+        # Test connection to non-existent host
+        # May throw QOREADDRINFO-GETINFO-ERROR or SOCKET-CONNECT-ERROR depending on DNS resolution
+        {
+            SSH2Client sc("ssh://user@nonexistent.invalid.host.12345:22");
+            try {
+                sc.connect(timeout);
+                fail("Expected connection error");
+            } catch (hash<ExceptionInfo> ex) {
+                assertTrue(ex.err =~ /SOCKET-CONNECT-ERROR|QOREADDRINFO-GETINFO-ERROR/,
+                    sprintf("Expected connection error, got: %s", ex.err));
+            }
+        }
+
+        # Test connection to localhost on a port that's likely not running SSH
+        {
+            SSH2Client sc("ssh://user@localhost:59999");
+            try {
+                sc.connect(timeout);
+                fail("Expected connection error");
+            } catch (hash<ExceptionInfo> ex) {
+                assertTrue(ex.err =~ /SOCKET-CONNECT-ERROR|SSH2/,
+                    sprintf("Expected connection error, got: %s", ex.err));
+            }
+        }
+
+        # Test connection with very short timeout (likely to timeout)
+        {
+            SSH2Client sc("ssh://user@localhost:22");
+            # Even if SSH is running, 1ms is too short
+            try {
+                sc.connect(1);
+                # If we get here, SSH is running and very fast, so disconnect
+                sc.disconnect();
+            } catch (hash<ExceptionInfo> ex) {
+                # Expected: either timeout or connection error
+                assertTrue(ex.err =~ /SOCKET-CONNECT-ERROR|SSH2CLIENT-TIMEOUT|SSH2-ERROR/);
+            }
+        }
+    }
+
+    invalidParameterTests() {
+        # Test setKeys with non-existent file
+        {
+            SSH2Client sc("ssh://user@localhost");
+            assertThrows("SSH2-SETKEYS-ERROR", sub () {
+                sc.setKeys("/nonexistent/path/to/key");
+            });
+        }
+
+        # Test SFTPClient chmod with invalid mode (sticky bits)
+        {
+            SFTPClient sc("sftp://user@localhost");
+            # Note: This test only validates parameter checking before connection
+            # The actual chmod operation would require a connection
+            assertThrows("SFTPCLIENT-PARAMETER-ERROR", sub () {
+                # Mode with sticky bit (01755) should be rejected
+                sc.chmod("/tmp/test", 01755, timeout);
+            });
+        }
+
+        # Test SSH2Client::scpPut with invalid size
+        {
+            SSH2Client sc("ssh://user@localhost");
+            assertThrows("SSH2CLIENT-SCPPUT-ERROR", sub () {
+                sc.scpPut("/tmp/test", 0);  # size cannot be 0
+            });
+
+            assertThrows("SSH2CLIENT-SCPPUT-ERROR", sub () {
+                sc.scpPut("/tmp/test", -1);  # size cannot be negative
+            });
+        }
+
+        # Test SSH2Client::openDirectTcpipChannel with invalid port
+        {
+            SSH2Client sc("ssh://user@localhost");
+            assertThrows("SSH2CLIENT-OPENDIRECTTCPIPCHANNEL-ERROR", sub () {
+                sc.openDirectTcpipChannel("host", 0);  # port cannot be 0
+            });
+
+            assertThrows("SSH2CLIENT-OPENDIRECTTCPIPCHANNEL-ERROR", sub () {
+                sc.openDirectTcpipChannel("host", 80, "127.0.0.1", 0);  # source port cannot be 0
+            });
+        }
+    }
+
+    stateErrorTests() {
+        # Test setUser when connected (should fail)
+        # Note: This requires an actual connection, so we skip if SSH not available
+        {
+            SSH2Client sc("ssh://test@localhost:22");
+            # Before connection, setUser should work
+            assertNothing(sc.setUser("newuser"));
+            assertEq("newuser", sc.getUser());
+        }
+
+        # Test disconnect when not connected
+        {
+            SSH2Client sc("ssh://user@localhost");
+            assertThrows("SSH2CLIENT-NOT-CONNECTED", sub () {
+                sc.disconnect();
+            });
+        }
+
+        # Test SFTPClient disconnect when not connected
+        {
+            SFTPClient sc("sftp://user@localhost");
+            assertThrows("SSH2CLIENT-NOT-CONNECTED", sub () {
+                sc.disconnect();
+            });
+        }
+    }
+
+    cornerCaseTests() {
+        # Test with special characters in username
+        # Note: URL encoding is preserved (not decoded) by the client
+        {
+            SSH2Client sc("ssh://user%40domain@localhost:22");
+            # The URL-encoded value is preserved as-is
+            assertEq("user%40domain", sc.getUser());
+        }
+
+        # Test with password containing special characters
+        # Note: URL encoding is preserved (not decoded) by the client
+        {
+            SFTPClient sc("sftp://user:p%40ss%3Aword@localhost:22");
+            # The URL-encoded value is preserved as-is
+            assertEq("p%40ss%3Aword", sc.getPassword());
+        }
+
+        # Test connection info before connecting
+        {
+            SSH2Client sc("ssh://testuser@localhost:2222");
+            hash<auto> info = sc.info();
+            assertEq("localhost", info.ssh2host);
+            assertEq(2222, info.ssh2port);
+            assertEq("testuser", info.ssh2user);
+            assertFalse(info.connected);
+            assertNothing(info.fingerprint);
+            assertNothing(info.authenticated);
+        }
+
+        # Test connected() before and after connect attempt
+        {
+            SSH2Client sc("ssh://user@localhost:22");
+            # connected() returns 0 (not bool False) when not connected
+            assertTrue(!sc.connected());
+        }
+
+        # Test getter methods
+        {
+            SSH2Client sc("ssh://user:pass@localhost:22");
+            assertEq("localhost", sc.getHost());
+            assertEq(22, sc.getPort());
+            assertEq("user", sc.getUser());
+            assertEq("pass", sc.getPassword());
+            assertNothing(sc.getKeyPriv());  # No keys set
+            assertNothing(sc.getKeyPub());   # No keys set
+            assertNothing(sc.getAuthenticatedWith());  # Not connected
+        }
+
+        # Test with default port
+        {
+            SSH2Client sc("ssh://user@localhost");
+            assertEq(22, sc.getPort());
+        }
+
+        # Test URL with path (for SFTP)
+        {
+            SFTPClient sc("sftp://user@localhost/home/user");
+            assertEq("localhost", sc.getHost());
+        }
+    }
+
+    private usageIntern() {
+        TestReporter::usageIntern(ColumnOffset);
+        printOption("-T,--timeout=ARG", sprintf("set timeout in seconds (def: %ds)", timeout / 1000), ColumnOffset);
+    }
+}
