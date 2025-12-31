@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0.0)
+cmake_minimum_required(VERSION 3.5...3.31)
 
 project(qore-ssh2-module VERSION 1.5.0)
 
@@ -25,7 +25,7 @@ set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 if(CMAKE_USE_PTHREADS_INIT)
     message(STATUS "Found POSIX Threads: TRUE")
-else(CMAKE_USE_PTHREADS_INIT)
+else()
     message(STATUS "Found POSIX Threads: FALSE")
     message(FATAL_ERROR "POSIX threads do not seem to be supported on this platform, aborting")
 endif()
@@ -59,8 +59,8 @@ unset(CMAKE_REQUIRED_LIBRARIES)
 
 check_cxx_compiler_flag(-fvisibility=hidden HAVE_GCC_VISIBILITY)
 
-if(${CMAKE_SYSTEM_NAME} EQUAL "Linux")
-add_definitions(-D_GNU_SOURCE)
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    add_definitions(-D_GNU_SOURCE)
 endif()
 
 configure_file(${CMAKE_SOURCE_DIR}/cmake/config.h.cmake
