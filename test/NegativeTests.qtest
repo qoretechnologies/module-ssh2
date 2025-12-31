@@ -184,11 +184,12 @@ class NegativeTests inherits QUnit::Test {
             });
         }
 
-        # Test SFTPClient operations when not connected
+        # Test SFTPClient disconnect when not connected
         {
             SFTPClient sc("sftp://user@localhost");
-            # Most operations should throw SSH2CLIENT-NOT-CONNECTED or attempt implicit connect
-            # which would then fail with connection error
+            assertThrows("SSH2CLIENT-NOT-CONNECTED", sub () {
+                sc.disconnect();
+            });
         }
     }
 
