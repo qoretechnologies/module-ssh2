@@ -44,8 +44,146 @@ class Ssh2ClientTest inherits QUnit::Test {
         uri = shift ARGV ?? sprintf("%s@localhost", getusername());
 
         addTestCase("Ssh2Client test", \ssh2ClientTest());
+        addTestCase("ParameterValidation", \parameterValidationTests());
+        addTestCase("EdgeCases", \edgeCaseTests());
 
         set_return_value(main());
+    }
+
+    parameterValidationTests() {
+        # Test SSH2Client constructor with empty URL
+        assertThrows("SSH2CLIENT-PARAMETER-ERROR", sub () {
+            new SSH2Client("");
+        });
+
+        # Test SSH2Client with invalid protocol
+        assertThrows("SSH2CLIENT-PARAMETER-ERROR", sub () {
+            new SSH2Client("http://localhost");
+        });
+
+        # Test SSH2Client with ftp protocol (invalid)
+        assertThrows("SSH2CLIENT-PARAMETER-ERROR", sub () {
+            new SSH2Client("ftp://user@localhost");
+        });
+
+        # Test scpPut with zero size
+        {
+            SSH2Client sc1("ssh://test@localhost");
+            assertThrows("SSH2CLIENT-SCPPUT-ERROR", sub () {
+                sc1.scpPut("/tmp/test", 0);
+            });
+        }
+
+        # Test scpPut with negative size
+        {
+            SSH2Client sc1("ssh://test@localhost");
+            assertThrows("SSH2CLIENT-SCPPUT-ERROR", sub () {
+                sc1.scpPut("/tmp/test", -100);
+            });
+        }
+
+        # Test openDirectTcpipChannel with zero port
+        {
+            SSH2Client sc1("ssh://test@localhost");
+            assertThrows("SSH2CLIENT-OPENDIRECTTCPIPCHANNEL-ERROR", sub () {
+                sc1.openDirectTcpipChannel("remotehost", 0);
+            });
+        }
+
+        # Test openDirectTcpipChannel with zero source port
+        {
+            SSH2Client sc1("ssh://test@localhost");
+            assertThrows("SSH2CLIENT-OPENDIRECTTCPIPCHANNEL-ERROR", sub () {
+                sc1.openDirectTcpipChannel("remotehost", 80, "127.0.0.1", 0);
+            });
+        }
+
+        # Test setKeys with non-existent file
+        {
+            SSH2Client sc1("ssh://test@localhost");
+            assertThrows("SSH2-SETKEYS-ERROR", sub () {
+                sc1.setKeys("/nonexistent/path/to/private/key");
+            });
+        }
+    }
+
+    edgeCaseTests() {
+        # Test connection info before connection
+        {
+            SSH2Client sc1("ssh://testuser:testpass@localhost:2222");
+            hash<auto> info = sc1.info();
+            assertEq("localhost", info.ssh2host);
+            assertEq(2222, info.ssh2port);
+            assertEq("testuser", info.ssh2user);
+            assertFalse(info.connected);
+            assertNothing(info.fingerprint);
+            assertNothing(info.authenticated);
+        }
+
+        # Test getters before connection
+        {
+            SSH2Client sc1("ssh://user:pass@localhost:22");
+            assertEq("localhost", sc1.getHost());
+            assertEq(22, sc1.getPort());
+            assertEq("user", sc1.getUser());
+            assertEq("pass", sc1.getPassword());
+            # connected() returns 0 (not bool False) when not connected
+            assertTrue(!sc1.connected());
+            assertNothing(sc1.getKeyPriv());
+            assertNothing(sc1.getKeyPub());
+            assertNothing(sc1.getAuthenticatedWith());
+        }
+
+        # Test URL with encoded special characters in username
+        # Note: URL encoding is preserved (not decoded) by the client
+        {
+            SSH2Client sc1("ssh://user%40domain@localhost:22");
+            assertEq("user%40domain", sc1.getUser());
+        }
+
+        # Test URL with encoded special characters in password
+        # Note: URL encoding is preserved (not decoded) by the client
+        {
+            SSH2Client sc1("ssh://user:p%40ss%3Aword@localhost:22");
+            assertEq("p%40ss%3Aword", sc1.getPassword());
+        }
+
+        # Test disconnect when not connected
+        {
+            SSH2Client sc1("ssh://user@localhost");
+            assertThrows("SSH2CLIENT-NOT-CONNECTED", sub () {
+                sc1.disconnect();
+            });
+        }
+
+        # Test default port
+        {
+            SSH2Client sc1("ssh://user@localhost");
+            assertEq(22, sc1.getPort());
+        }
+
+        # Test ssh2 protocol prefix
+        {
+            SSH2Client sc1("ssh2://user@localhost:22");
+            assertEq("localhost", sc1.getHost());
+            assertEq(22, sc1.getPort());
+        }
+
+        # Test setUser before connection
+        {
+            SSH2Client sc1("ssh://olduser@localhost");
+            assertEq("olduser", sc1.getUser());
+            sc1.setUser("newuser");
+            assertEq("newuser", sc1.getUser());
+        }
+
+        # Test setPassword before connection
+        {
+            SSH2Client sc1("ssh://user:oldpass@localhost");
+            assertEq("oldpass", sc1.getPassword());
+            sc1.setPassword("newpass");
+            assertEq("newpass", sc1.getPassword());
+        }
     }
 
     ssh2ClientTest() {

@@ -57,8 +57,84 @@ class SFTPClientTest inherits QUnit::Test {
         }
 
         addTestCase("SFTPClientTests", \sftpTests());
+        addTestCase("ParameterValidationTests", \parameterValidationTests());
+        addTestCase("EdgeCaseTests", \edgeCaseTests());
 
         set_return_value(main());
+    }
+
+    parameterValidationTests() {
+        # Test SFTPClient constructor with empty URL
+        assertThrows("SFTPCLIENT-PARAMETER-ERROR", sub () {
+            new SFTPClient("");
+        });
+
+        # Test SFTPClient with invalid protocol
+        assertThrows("SFTPCLIENT-PARAMETER-ERROR", sub () {
+            new SFTPClient("http://localhost");
+        });
+
+        # Test chmod with invalid mode (sticky bits not allowed)
+        {
+            SFTPClient sc1("sftp://test@localhost");
+            # Sticky bits should be rejected
+            assertThrows("SFTPCLIENT-PARAMETER-ERROR", sub () {
+                sc1.chmod("/tmp/test", 01755, timeout);
+            });
+        }
+
+        # Test setKeys with non-existent file
+        {
+            SFTPClient sc1("sftp://test@localhost");
+            assertThrows("SSH2-SETKEYS-ERROR", sub () {
+                sc1.setKeys("/nonexistent/path/to/private/key");
+            });
+        }
+    }
+
+    edgeCaseTests() {
+        # Test connection info before connection
+        {
+            SFTPClient sc1("sftp://testuser:testpass@localhost:2222");
+            hash<auto> info = sc1.info();
+            assertEq("localhost", info.ssh2host);
+            assertEq(2222, info.ssh2port);
+            assertEq("testuser", info.ssh2user);
+            assertFalse(info.connected);
+        }
+
+        # Test getters before connection
+        {
+            SFTPClient sc1("sftp://user:pass@localhost:22");
+            assertEq("localhost", sc1.getHost());
+            assertEq(22, sc1.getPort());
+            assertEq("user", sc1.getUser());
+            assertEq("pass", sc1.getPassword());
+            # connected() returns 0 (not bool False) when not connected
+            assertTrue(!sc1.connected());
+        }
+
+        # Test URL with encoded special characters
+        # Note: URL encoding is preserved (not decoded) by the client
+        {
+            SFTPClient sc1("sftp://user%40domain:p%40ss@localhost:22");
+            assertEq("user%40domain", sc1.getUser());
+            assertEq("p%40ss", sc1.getPassword());
+        }
+
+        # Test disconnect when not connected
+        {
+            SFTPClient sc1("sftp://user@localhost");
+            assertThrows("SSH2CLIENT-NOT-CONNECTED", sub () {
+                sc1.disconnect();
+            });
+        }
+
+        # Test default port
+        {
+            SFTPClient sc1("sftp://user@localhost");
+            assertEq(22, sc1.getPort());
+        }
     }
 
     sftpTests() {

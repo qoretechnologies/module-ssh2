@@ -37,6 +37,33 @@
 
     See some examples here: @ref examples
 
+    @section thread_safety Thread Safety
+
+    All classes in this module (@ref Qore::SSH2::SSH2Client "SSH2Client", @ref Qore::SSH2::SFTPClient "SFTPClient", and @ref Qore::SSH2::SSH2Channel "SSH2Channel") are thread-safe. Internal locking ensures that concurrent access from multiple threads is handled correctly.
+
+    However, note the following considerations:
+    - A single connection should not be shared across threads for performance-critical operations, as thread contention may occur
+    - @ref Qore::SSH2::SSH2Channel "SSH2Channel" objects are tied to their parent @ref Qore::SSH2::SSH2Client "SSH2Client" or @ref Qore::SSH2::SFTPClient "SFTPClient" connection and share the same lock
+    - For high-throughput scenarios, consider using separate connection objects per thread
+
+    @section best_practices Best Practices
+
+    @subsection timeout_values Timeout Values
+    - Default connection timeout: 60 seconds
+    - Default operation timeout: 60 seconds (for SFTP operations)
+    - For high-latency networks, consider increasing timeouts
+    - For interactive applications, consider shorter timeouts with retry logic
+
+    @subsection connection_management Connection Management
+    - Use @ref Qore::SSH2::SSH2Base::connected() "connected()" to check connection state before operations
+    - Handle connection failures gracefully; the module will auto-disconnect on timeout errors
+    - For long-running applications, implement reconnection logic
+
+    @subsection error_handling Error Handling
+    - All methods that can fail throw exceptions; use try/catch blocks
+    - Common exceptions: \c SSH2-ERROR, \c SSH2CLIENT-TIMEOUT, \c SFTPCLIENT-TIMEOUT
+    - Check the \c authenticated key in @ref Qore::SSH2::SSH2Client::info() "info()" to verify successful authentication
+
     @section examples Examples
 
     Example of a basic sftp connection:

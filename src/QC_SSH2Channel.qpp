@@ -137,7 +137,7 @@ nothing SSH2Channel::shell(timeout timeout = -1) {
  */
 bool SSH2Channel::eof() {
     bool b = c->eof(xsink);
-    return *xsink ? QoreValue(b) : QoreValue();
+    return *xsink ? QoreValue() : QoreValue(b);
 }
 
 //! Informs the remote end that we are closing the connection
