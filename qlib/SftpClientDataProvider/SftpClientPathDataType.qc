@@ -25,20 +25,23 @@
 public namespace SftpClientDataProvider {
 #! Data type for SFTP client stat request calls
 public class SftpClientPathDataType inherits HashDataType {
-    private {
+    public {
         #! Field descriptions
         const Fields = {
             "path": {
-                "type": StringType,
-                "desc": "The SFTP path for the operation",
+                "display_name": "Path",
+                "short_desc": "The SFTP path for the operation",
+                "desc": "The remote path on the SFTP server for the operation",
+                "type": AbstractDataProviderTypeMap."string",
+                "required": True,
+                "example_value": "/home/user/file.txt",
             },
         };
     }
 
     #! Creates the object
-    constructor() {
-        map addField(new QoreDataField($1.key, $1.value.desc, $1.value.type, $1.value.default_value)),
-            Fields.pairIterator();
+    constructor() : HashDataType("SftpClientPath") {
+        addQoreFields(Fields);
     }
 }
 

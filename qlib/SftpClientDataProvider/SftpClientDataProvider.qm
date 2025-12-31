@@ -38,7 +38,7 @@
 %requires FileLocationHandler
 
 module SftpClientDataProvider {
-    version = "1.0";
+    version = "1.1";
     desc = "user module providing a data provider API for SFTP servers";
     author = "David Nichols <david@qore.org>";
     url = "http://qore.org";
@@ -109,7 +109,58 @@ module SftpClientDataProvider {
             "action_code": DPAT_API,
             "output_type": SftpClientPathDataType,
             "options": DataProviderActionCatalog::getActionOptionFromFields(
-                SftpClientGetFileRequestDataType::Fields{"path",}, {
+                SftpClientPathDataType::Fields{"path",}, {
+                    "preselected": True,
+                    "required": True,
+                },
+            ),
+        });
+
+        DataProviderActionCatalog::registerAction(<DataProviderActionInfo>{
+            "app": SftpClientDataProvider::AppName,
+            "path": "/chmod",
+            "action": "chmod",
+            "display_name": "Change File Permissions With SFTP",
+            "short_desc": "Changes file or directory permissions on an SFTP server",
+            "desc": "Changes file or directory permissions on an SFTP server",
+            "action_code": DPAT_API,
+            "output_type": SftpClientPathDataType,
+            "options": DataProviderActionCatalog::getActionOptionFromFields(
+                SftpClientChmodRequestDataType::Fields, {
+                    "preselected": True,
+                    "required": True,
+                },
+            ),
+        });
+
+        DataProviderActionCatalog::registerAction(<DataProviderActionInfo>{
+            "app": SftpClientDataProvider::AppName,
+            "path": "/rmdir",
+            "action": "rmdir",
+            "display_name": "Remove Directory With SFTP",
+            "short_desc": "Removes an empty directory on an SFTP server",
+            "desc": "Removes an empty directory on an SFTP server",
+            "action_code": DPAT_API,
+            "output_type": SftpClientPathDataType,
+            "options": DataProviderActionCatalog::getActionOptionFromFields(
+                SftpClientPathDataType::Fields{"path",}, {
+                    "preselected": True,
+                    "required": True,
+                },
+            ),
+        });
+
+        DataProviderActionCatalog::registerAction(<DataProviderActionInfo>{
+            "app": SftpClientDataProvider::AppName,
+            "path": "/exists",
+            "action": "exists",
+            "display_name": "Check If Path Exists With SFTP",
+            "short_desc": "Checks if a file or directory exists on an SFTP server",
+            "desc": "Checks if a file or directory exists on an SFTP server",
+            "action_code": DPAT_API,
+            "output_type": new SftpClientExistsResponseDataType(),
+            "options": DataProviderActionCatalog::getActionOptionFromFields(
+                SftpClientPathDataType::Fields{"path",}, {
                     "preselected": True,
                     "required": True,
                 },
@@ -128,11 +179,15 @@ module SftpClientDataProvider {
     @ref dataproviderintro "DataProvider" API.
 
     The following classes are provided by this module:
+    - @ref SftpClientDataProvider::SftpClientChmodDataProvider "SftpClientChmodDataProvider"
+    - @ref SftpClientDataProvider::SftpClientChmodRequestDataType "SftpClientChmodRequestDataType"
     - @ref SftpClientDataProvider::SftpClientCreateFileDataProvider "SftpClientCreateFileDataProvider"
     - @ref SftpClientDataProvider::SftpClientCreateFileRequestDataType "SftpClientCreateFileRequestDataType"
     - @ref SftpClientDataProvider::SftpClientDataProviderFactory "SftpClientDataProviderFactory"
     - @ref SftpClientDataProvider::SftpClientDataProvider "SftpClientDataProvider"
     - @ref SftpClientDataProvider::SftpClientDeleteDataProvider "SftpClientDeleteDataProvider"
+    - @ref SftpClientDataProvider::SftpClientExistsDataProvider "SftpClientExistsDataProvider"
+    - @ref SftpClientDataProvider::SftpClientExistsResponseDataType "SftpClientExistsResponseDataType"
     - @ref SftpClientDataProvider::SftpClientGetFileDataProvider "SftpClientGetFileDataProvider"
     - @ref SftpClientDataProvider::SftpClientGetFileRequestDataType "SftpClientGetFileRequestDataType"
     - @ref SftpClientDataProvider::SftpClientGetFileResponseDataType "SftpClientGetFileResponseDataType"
@@ -141,10 +196,17 @@ module SftpClientDataProvider {
     - @ref SftpClientDataProvider::SftpClientMoveDataProvider "SftpClientMoveDataProvider"
     - @ref SftpClientDataProvider::SftpClientMoveRequestDataType "SftpClientMoveRequestDataType"
     - @ref SftpClientDataProvider::SftpClientPathDataType "SftpClientPathDataType"
+    - @ref SftpClientDataProvider::SftpClientRmdirDataProvider "SftpClientRmdirDataProvider"
     - @ref SftpClientDataProvider::SftpClientStatDataProvider "SftpClientStatDataProvider"
     - @ref SftpClientDataProvider::SftpClientStatResponseDataType "SftpClientStatResponseDataType"
 
     @section sftpclientdataprovider_relnotes Release Notes
+
+    @subsection sftpclientdataprovider_v1_1 SftpClientDataProvider v1.1
+    - added chmod, exists, and rmdir actions
+    - improved documentation with display_name, short_desc, and example_value fields
+    - fixed bug in SftpClientMoveDataProvider where getResponseTypeImpl() returned RequestType
+    - fixed bug in SftpClientListDataProvider where path was not normalized
 
     @subsection sftpclientdataprovider_v1_0 SftpClientDataProvider v1.0
     - initial release of the module

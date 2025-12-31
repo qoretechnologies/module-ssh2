@@ -29,24 +29,32 @@ public class SftpClientGetFileRequestDataType inherits HashDataType {
         #! Field descriptions
         const Fields = {
             "path": {
-                "type": StringType,
-                "desc": "The path on the SFTP server",
+                "display_name": "Path",
+                "short_desc": "The path on the SFTP server",
+                "desc": "The remote path on the SFTP server to the file to retrieve",
+                "type": AbstractDataProviderTypeMap."string",
+                "required": True,
+                "example_value": "/home/user/file.txt",
             },
             "text": {
-                "type": BoolType,
+                "display_name": "Text Mode",
+                "short_desc": "Return file as text string",
                 "desc": "If `True` the file will be returned as a string, `False` (the default) as binary data",
+                "type": AbstractDataProviderTypeMap."bool",
                 "default_value": False,
             },
             "encoding": {
-                "type": StringType,
+                "display_name": "Encoding",
+                "short_desc": "Text encoding for text mode",
                 "desc": "The string encoding to use if `text` = `True` (default: `UTF-8`)",
+                "type": AbstractDataProviderTypeMap."string",
                 "default_value": "UTF-8",
             },
         };
     }
 
     #! Creates the object
-    constructor() {
+    constructor() : HashDataType("SftpClientGetFileRequest") {
         addQoreFields(Fields);
     }
 }
