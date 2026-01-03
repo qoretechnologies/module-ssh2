@@ -132,6 +132,9 @@ stdout.printf("exit status: %d\n", chan.getExitStatus());@endcode
     @section ssh2releasenotes Release Notes
 
     @subsection ssh2v150 ssh Module Version 1.5.0
+    - added support for interruptible I/O for graceful termination of sandboxed programs; interrupt
+      checks are performed before socket connect operations
+      (<a href="https://github.com/qoretechnologies/qore/issues/5116">issue 5116</a>)
     - added the <a href="../../SftpClientDataProvider/html/index.html">SftpClientDataProvider user module</a>
     - added application action support for SFTP polling and SFTP client actions
 
