@@ -419,6 +419,11 @@ int SSH2Client::sshConnectUnlocked(int timeout_ms, ExceptionSink *xsink = 0) {
 
     printd(1, "SSH2Client::connect(%s:%d, %dms)\n", sshhost.c_str(), sshport, timeout_ms);
 
+    // Check for interrupt before connect
+    if (qore_check_io_interrupt(xsink)) {
+        return -1;
+    }
+
     // sanity check of data
     if (sshuser.empty()) {
         xsink && xsink->raiseException(SSH2CLIENT_CONNECT_ERROR, "ssh user must not be NOTHING");

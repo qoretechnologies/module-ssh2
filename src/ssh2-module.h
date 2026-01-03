@@ -30,6 +30,7 @@
 
 // include Qore API
 #include <qore/Qore.h>
+#include <qore/QoreSandboxManager.h>
 
 // include libssh2 API
 #include "ssh2.h"
