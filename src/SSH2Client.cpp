@@ -321,6 +321,13 @@ int SSH2Client::setKeys(const char *priv, const char *pub, ExceptionSink* xsink)
         }
 #endif
 
+        // Check filesystem sandbox access for private key
+        QoreSandboxManager* sm = runtime_get_sandbox_manager();
+        if (sm && !sm->checkFilesystemAccess(sshkeys_priv.c_str(), QSEC_READ, xsink)) {
+            sshkeys_priv.clear();
+            return -1;
+        }
+
         if (pub)
             sshkeys_pub = pub;
         else {
@@ -336,6 +343,13 @@ int SSH2Client::setKeys(const char *priv, const char *pub, ExceptionSink* xsink)
             return -1;
         }
 #endif
+
+        // Check filesystem sandbox access for public key
+        if (sm && !sm->checkFilesystemAccess(sshkeys_pub.c_str(), QSEC_READ, xsink)) {
+            sshkeys_priv.clear();
+            sshkeys_pub.clear();
+            return -1;
+        }
 
     }
     return 0;
@@ -506,6 +520,19 @@ int SSH2Client::sshConnectUnlocked(int timeout_ms, ExceptionSink *xsink = 0) {
     // try auth
     // try publickey if available
     if (!loggedin && (auth_pw & QAUTH_PUBLICKEY)) {
+        // Verify filesystem sandbox access for key files before reading
+        QoreSandboxManager* sm = runtime_get_sandbox_manager();
+        if (sm) {
+            if (!sm->checkFilesystemAccess(sshkeys_priv.c_str(), QSEC_READ, xsink)) {
+                disconnectUnlocked(true);
+                return -1;
+            }
+            if (!sm->checkFilesystemAccess(sshkeys_pub.c_str(), QSEC_READ, xsink)) {
+                disconnectUnlocked(true);
+                return -1;
+            }
+        }
+
         printd(5, "SSH2Client::connect(): try pubkey auth: %s %s\n", sshkeys_priv.c_str(), sshkeys_pub.c_str());
         while ((rc = libssh2_userauth_publickey_fromfile(ssh_session, sshuser.c_str(), sshkeys_pub.c_str(), sshkeys_priv.c_str(), sshpass.c_str())) == LIBSSH2_ERROR_EAGAIN) {
             if (waitSocketUnlocked(xsink, SSH2CLIENT_TIMEOUT, SSH2_ERROR, "SSH2Client::connect", timeout_ms)) {

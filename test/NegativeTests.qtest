@@ -35,6 +35,7 @@ class NegativeTests inherits QUnit::Test {
         addTestCase("Invalid parameter tests", \invalidParameterTests());
         addTestCase("State error tests", \stateErrorTests());
         addTestCase("Corner case tests", \cornerCaseTests());
+        addTestCase("Sandbox key file tests", \sandboxKeyFileTests());
 
         set_return_value(main());
     }
@@ -252,6 +253,70 @@ class NegativeTests inherits QUnit::Test {
             SFTPClient sc("sftp://user@localhost/home/user");
             assertEq("localhost", sc.getHost());
         }
+    }
+
+    sandboxKeyFileTests() {
+        # Test that filesystem sandbox blocks key file access outside allowed paths
+
+        # Create a test key file in /tmp
+        string testKeyPath = "/tmp/ssh2_sandbox_test_key_" + getpid();
+        {
+            File f();
+            f.open2(testKeyPath, O_CREAT | O_WRONLY | O_TRUNC, 0600);
+            f.write("-----BEGIN OPENSSH PRIVATE KEY-----\ntest\n-----END OPENSSH PRIVATE KEY-----\n");
+        }
+        on_exit unlink(testKeyPath);
+
+        string testKeyPubPath = testKeyPath + ".pub";
+        {
+            File f();
+            f.open2(testKeyPubPath, O_CREAT | O_WRONLY | O_TRUNC, 0644);
+            f.write("ssh-rsa AAAAB test\n");
+        }
+        on_exit unlink(testKeyPubPath);
+
+        # Create a sandboxed program with /var as root (so /tmp is outside)
+        Program p(PO_NEW_STYLE | PO_STRICT_ARGS | PO_REQUIRE_TYPES);
+        p.loadModule("ssh2");
+
+        p.parse(sprintf("
+            sub test_setkeys() {
+                SSH2Client sc('ssh://user@localhost');
+                sc.setKeys('%s');
+            }
+        ", testKeyPath), "sandbox_key_test");
+
+        SandboxManager sm();
+        sm.setFilesystemSandboxRoot("/var");
+        p.setSandboxManager(sm);
+
+        # Test that setKeys is blocked when key file is outside sandbox
+        bool caught = False;
+        try {
+            p.callFunction("test_setkeys");
+        } catch (hash<ExceptionInfo> ex) {
+            caught = True;
+            assertEq("FILESYSTEM-ACCESS-DENIED", ex.err, "Key file access blocked with correct error");
+        }
+        assertTrue(caught, "Key file access outside sandbox was blocked");
+
+        # Test that key file access works when in allowed path
+        SandboxManager sm2();
+        sm2.setFilesystemSandboxRoot("/tmp");
+        Program p2(PO_NEW_STYLE | PO_STRICT_ARGS | PO_REQUIRE_TYPES);
+        p2.loadModule("ssh2");
+
+        p2.parse(sprintf("
+            int sub test_setkeys_allowed() {
+                SSH2Client sc('ssh://user@localhost');
+                sc.setKeys('%s');
+                return 1;
+            }
+        ", testKeyPath), "sandbox_key_allowed_test");
+        p2.setSandboxManager(sm2);
+
+        int result = p2.callFunction("test_setkeys_allowed");
+        assertEq(1, result, "Key file access inside sandbox works");
     }
 
     private usageIntern() {
