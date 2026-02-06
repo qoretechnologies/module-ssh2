@@ -41,26 +41,24 @@ static QoreNamespace ssh2ns("Qore::SSH2"); // namespace
 // for verifying the minimum required version of the library
 static const char *qore_libssh2_version = 0;
 
-static QoreStringNode *ssh2_module_init();
-static void ssh2_module_ns_init(QoreNamespace *rns, QoreNamespace *qns);
+static void ssh2_module_init(QoreModuleInitContext& ctx, ExceptionSink& xsink);
+static void ssh2_module_ns_init(QoreNamespace* rns, QoreNamespace* qns, ExceptionSink& xsink);
 static void ssh2_module_delete();
 
-DLLEXPORT char qore_module_name[] = "ssh2";
-DLLEXPORT char qore_module_version[] = PACKAGE_VERSION;
-DLLEXPORT char qore_module_description[] = "SSH2/SFTP client module";
-DLLEXPORT char qore_module_author[] = "Wolfgang Ritzinger";
-DLLEXPORT char qore_module_url[] = "http://qore.org";
-DLLEXPORT int qore_module_api_major = QORE_MODULE_API_MAJOR;
-DLLEXPORT int qore_module_api_minor = QORE_MODULE_API_MINOR;
-DLLEXPORT qore_module_init_t qore_module_init = ssh2_module_init;
-DLLEXPORT qore_module_ns_init_t qore_module_ns_init = ssh2_module_ns_init;
-DLLEXPORT qore_module_delete_t qore_module_delete = ssh2_module_delete;
-#ifdef _QORE_HAS_QL_MIT
-DLLEXPORT qore_license_t qore_module_license = QL_MIT;
-#else
-DLLEXPORT qore_license_t qore_module_license = QL_LGPL;
-#endif
-DLLEXPORT char qore_module_license_str[] = "MIT";
+extern "C" DLLEXPORT void ssh2_qore_module_desc(QoreModuleInfo& mod_info) {
+    mod_info.name = "ssh2";
+    mod_info.version = PACKAGE_VERSION;
+    mod_info.desc = "SSH2/SFTP client module";
+    mod_info.author = "Wolfgang Ritzinger";
+    mod_info.url = "http://qore.org";
+    mod_info.api_major = QORE_MODULE_API_MAJOR;
+    mod_info.api_minor = QORE_MODULE_API_MINOR;
+    mod_info.init = ssh2_module_init;
+    mod_info.ns_init = ssh2_module_ns_init;
+    mod_info.del = ssh2_module_delete;
+    mod_info.license = QL_MIT;
+    mod_info.license_str = "MIT";
+}
 
 emap_t ssh2_emap;
 edmap_t sftp_emap;
@@ -71,14 +69,11 @@ DLLLOCAL const TypedHashDecl* hashdeclSftpConnectionInfo;
 DLLLOCAL const TypedHashDecl* hashdeclSsh2ConnectionInfo;
 DLLLOCAL const TypedHashDecl* hashdeclSsh2StatInfo;
 
-static QoreStringNode *ssh2_module_init() {
+static void ssh2_module_init(QoreModuleInitContext& ctx, ExceptionSink& xsink) {
     qore_libssh2_version = libssh2_version(LIBSSH2_VERSION_NUM);
     if (!qore_libssh2_version) {
-        // unconditionally get the libssh2 version: https://www.libssh2.org/libssh2_version.html
-        QoreStringNode *err = new QoreStringNodeMaker("the runtime version of the library is too old; got '%s', expecting minimum version '", libssh2_version(0));
-        err->concat(LIBSSH2_VERSION);
-        err->concat('\'');
-        return err;
+        xsink.raiseException("MODULE-INIT-ERROR", "the runtime version of the library is too old; got '%s', expecting minimum version '%s'", libssh2_version(0), LIBSSH2_VERSION);
+        return;
     }
 
     // setup ssh2 error map
@@ -193,10 +188,9 @@ static QoreStringNode *ssh2_module_init() {
     // constants
     ssh2ns.addConstant("Version", new QoreStringNode(qore_libssh2_version));
 
-    return nullptr;
 }
 
-static void ssh2_module_ns_init(QoreNamespace *rns, QoreNamespace *qns) {
+static void ssh2_module_ns_init(QoreNamespace* rns, QoreNamespace* qns, ExceptionSink& xsink) {
    QORE_TRACE("ssh2_module_ns_init()");
 
 #ifdef LIBSSH2_INIT_NO_CRYPTO
