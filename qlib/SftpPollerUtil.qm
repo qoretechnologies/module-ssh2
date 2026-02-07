@@ -28,8 +28,7 @@
 # requires ssh2 functionality
 %requires (reexport) ssh2
 
-# assume local vars and do not allow $ chars
-%new-style
+%modern
 
 %requires DataProvider
 

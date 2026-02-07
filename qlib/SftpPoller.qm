@@ -27,8 +27,7 @@
 %requires(reexport) SftpPollerUtil
 %requires(reexport) ssh2
 
-# assume local vars and do not allow $ chars
-%new-style
+%modern
 
 %allow-weak-references
 

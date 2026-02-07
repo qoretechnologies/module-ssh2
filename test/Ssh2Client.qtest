@@ -1,17 +1,13 @@
 #!/usr/bin/env qore
 # -*- mode: qore; indent-tabs-mode: nil -*-
 
-%require-our
+%modern
+
 %requires qore >= 0.8.12
 %requires ssh2 >= 1.2
 
 %requires Util
 %requires QUnit
-
-%new-style
-%require-types
-%strict-args
-%enable-all-warnings
 
 %exec-class Ssh2ClientTest
 

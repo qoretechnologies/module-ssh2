@@ -3,10 +3,7 @@
 
 # Negative and corner case tests for the SSH2 module
 
-%new-style
-%require-types
-%strict-args
-%enable-all-warnings
+%modern
 
 %requires ssh2 >= 1.2
 %requires QUnit

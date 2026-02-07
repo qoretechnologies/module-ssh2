@@ -25,18 +25,10 @@
 # minimum required Qore version
 %requires qore >= 2.0
 
-# require type definitions everywhere
-%require-types
-
-# enable all warnings
-%enable-all-warnings
-
-%strict-args
+%modern
 
 %requires(reexport) ssh2
 %requires(reexport) ConnectionProvider >= 1.4
-
-%new-style
 
 module Ssh2Connections {
     version = "1.4";

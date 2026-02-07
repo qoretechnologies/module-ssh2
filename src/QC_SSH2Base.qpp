@@ -63,7 +63,7 @@ SSH2Base::constructor() {
     @throw SSH2CLIENT-AUTH-ERROR no proper authentication method found
     @throw SFTPCLIENT-CONNECT-ERROR error initializing sftp session or getting remote path (exception only possible when called from an SFTPClient object)
  */
-nothing SSH2Base::connect(timeout timeout = 1m) {
+nothing SSH2Base::connect(timeout timeout = 1m) [dom=NETWORK] {
    myself->connect(timeout, xsink);
 }
 
