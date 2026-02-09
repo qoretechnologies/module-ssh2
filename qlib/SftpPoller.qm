@@ -783,10 +783,10 @@ public class SftpPoller {
             # sort by file name
             case SftpPoller::SortName: {
                 # sort closure
-                code sort = int sub (hash<SftpPollerFileEventInfo> l, hash<SftpPollerFileEventInfo> r) {
+                code sort_func = int sub (hash<SftpPollerFileEventInfo> l, hash<SftpPollerFileEventInfo> r) {
                     return l.name <=> r.name;
                 };
-                l = (order == SftpPoller::OrderAsc ? sort(l, sort) : sort_descending(l, sort));
+                l = (order == SftpPoller::OrderAsc ? Qore::sort(l, sort_func) : Qore::sort_descending(l, sort_func));
                 break;
             }
 
