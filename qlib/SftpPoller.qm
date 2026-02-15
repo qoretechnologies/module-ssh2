@@ -50,6 +50,7 @@ module SftpPoller {
             "display_name": "SFTP Server",
             "short_desc": "Generic SFTP server for exchanging files with SFTP",
             "desc": "Generic SFTP server for exchanging files with SFTP",
+            "groups": (DataProvider::AppGroup::FileTransfer,),
             "scheme": "sftp",
             "logo": SftpWhiteLogo,
             "logo_file_name": "generic-sftp-logo.svg",
