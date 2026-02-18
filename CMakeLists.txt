@@ -80,7 +80,7 @@ set(CPP_SRC
     src/ssh2-module.cpp
 )
 
-qore_wrap_qpp_value(QPP_SOURCES DOXLIST _dox_src ${QPP_SRC})
+qore_wrap_qpp_value(QPP_SOURCES DOXLIST _dox_src METALIST QPP_META_SRC ${QPP_SRC})
 
 set(module_name "ssh2")
 
@@ -102,6 +102,14 @@ qore_external_user_module("qlib/SftpPoller.qm" "SftpPollerUtil")
 qore_external_user_module("qlib/Ssh2Connections.qm" "")
 
 qore_dist(${PROJECT_VERSION})
+
+# install qpp metadata files
+if (COMMAND qore_install_qpp_metadata)
+    qore_install_qpp_metadata(${module_name} ${QPP_META_SRC})
+else()
+    install(FILES ${QPP_META_SRC}
+            DESTINATION ${CMAKE_INSTALL_DATADIR}/qore/metadata)
+endif()
 
 qore_config_info()
 
