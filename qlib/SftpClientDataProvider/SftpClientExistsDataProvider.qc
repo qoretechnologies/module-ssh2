@@ -135,22 +135,22 @@ public class SftpClientExistsResponseDataType inherits HashDataType {
             "exists": {
                 "display_name": "Exists",
                 "short_desc": "Whether the path exists",
-                "desc": "True if the file or directory exists, False otherwise",
+                "desc": "`True` if the file or directory exists, `False` otherwise",
                 "type": AbstractDataProviderTypeMap."bool",
                 "example_value": True,
             },
             "type": {
                 "display_name": "Type",
                 "short_desc": "The type of the path",
-                "desc": "The type of the path: 'file', 'directory', 'symlink', or 'unknown'. "
-                    "Only present if exists=True",
+                "desc": "The type of the path: `file`, `directory`, `symlink`, or `unknown`. "
+                    "Only present if `exists=True`",
                 "type": AbstractDataProviderTypeMap."*string",
                 "example_value": "file",
             },
             "size": {
                 "display_name": "Size",
                 "short_desc": "The size in bytes",
-                "desc": "The size of the file in bytes. Only present if exists=True",
+                "desc": "The size of the file in bytes. Only present if `exists=True`",
                 "type": AbstractDataProviderTypeMap."*int",
                 "example_value": 1024,
             },

@@ -30,7 +30,7 @@ public class SftpClientGetFileResponseDataType inherits HashDataType {
         const Fields = {
             "path": {
                 "type": StringType,
-                "desc": "The sftp path",
+                "desc": "The SFTP path",
             },
             "data": {
                 "type": DataType,
