@@ -170,7 +170,7 @@ protected:
 
     DLLLOCAL int waitSocketUnlocked(ExceptionSink* xsink, const char *toerr, const char *err, const char* m, int timeout_ms = DEFAULT_TIMEOUT_MS, bool in_disconnect = false, AbstractDisconnectionHelper* adh = 0) {
         // check for I/O interrupt before waiting (skip during disconnect to ensure cleanup)
-        if (!in_disconnect && xsink && qore_check_io_interrupt(xsink, m)) {
+        if (!in_disconnect && xsink && qore_check_cancel(xsink, m)) {
             disconnectUnlocked(true, timeout_ms > DEFAULT_TIMEOUT_MS ? timeout_ms : DEFAULT_TIMEOUT_MS, adh, xsink);
             return -1;
         }
