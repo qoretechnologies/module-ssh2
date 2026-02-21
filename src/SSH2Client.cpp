@@ -151,7 +151,7 @@ void SSH2Client::setKeysIntern() {
     // current user will be set automatically) or if the explicit user is the same as the current user
     if (usrpwd && (sshuser.empty() || sshuser == usrpwd->pw_name)) {
         // only set keys if the current user has access to the filesystem
-        if (!(getProgram()->getParseOptions64() & PO_NO_FILESYSTEM)) {
+        if (!(getProgram()->getParseOptions() & PO_NO_FILESYSTEM)) {
             sshkeys_priv = usrpwd->pw_dir;
             sshkeys_priv += "/.ssh/id_rsa";
             if (!q_path_is_readable(sshkeys_priv.c_str())) {
