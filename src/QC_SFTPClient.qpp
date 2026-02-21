@@ -367,8 +367,7 @@ nothing SFTPClient::chmod(string path, int mode, timeout timeout = 60s) {
     @since ssh2 1.1
 */
 int SFTPClient::get(string remote_path, Qore::OutputStream[OutputStream] os, timeout timeout = 60s) {
-    SimpleRefHolder<OutputStream> osHolder(os);
-    return myself->sftpGet(remote_path->c_str(), os, (int) timeout, xsink);
+    return myself->sftpGet(remote_path->c_str(), *os, (int) timeout, xsink);
 }
 
 //! Retrieves a remote file and returns it as a binary object; throws an exception if any errors occur
@@ -571,8 +570,7 @@ int SFTPClient::transferFile(string local_path, string remote_path, timeout time
     @since ssh2 1.1
 */
 int SFTPClient::put(Qore::InputStream[InputStream] is, string remote_path, timeout timeout = 60s, int mode = 0644) {
-    SimpleRefHolder<InputStream> isHolder(is);
-    return myself->sftpPut(is, remote_path->c_str(), (int) mode, (int) timeout, xsink);
+    return myself->sftpPut(*is, remote_path->c_str(), (int) mode, (int) timeout, xsink);
 }
 
 //! Makes a directory on the remote server; throws an exception if any errors occur

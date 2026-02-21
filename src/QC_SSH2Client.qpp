@@ -241,8 +241,7 @@ SSH2Channel SSH2Client::scpGet(string path, timeout timeout = 60s, *reference<ha
     @since ssh2 1.1
  */
 nothing SSH2Client::scpGet(string path, Qore::OutputStream[OutputStream] os, timeout timeout = 60s) {
-    SimpleRefHolder<OutputStream> osHolder(os);
-    c->scpGet(xsink, path->getBuffer(), os, timeout);
+    c->scpGet(xsink, path->getBuffer(), *os, timeout);
 }
 
 //! Opens a channel for sending a file to the remote server; an SSH2Channel object is returned to use to send the file's data
@@ -292,7 +291,6 @@ SSH2Channel SSH2Client::scpPut(string remote_path, softint size, softint mode = 
     @since ssh2 1.1
  */
 nothing SSH2Client::scpPut(string remote_path, Qore::InputStream[InputStream] is, softint size, softint mode = 0644, *date mtime, *date atime, timeout timeout = 60s) {
-    SimpleRefHolder<InputStream> isHolder(is);
     static const char *SSH2CLIENT_SCPPUT_ERR = "SSH2CLIENT-SCPPUT-ERROR";
 
     if (size <= 0) {
@@ -300,5 +298,5 @@ nothing SSH2Client::scpPut(string remote_path, Qore::InputStream[InputStream] is
         return QoreValue();
     }
 
-    c->scpPut(xsink, remote_path->getBuffer(), is, size, (int)mode, mtime ? mtime->getEpochSeconds() : 0, atime ? atime->getEpochSeconds() : 0, timeout);
+    c->scpPut(xsink, remote_path->getBuffer(), *is, size, (int)mode, mtime ? mtime->getEpochSeconds() : 0, atime ? atime->getEpochSeconds() : 0, timeout);
 }
