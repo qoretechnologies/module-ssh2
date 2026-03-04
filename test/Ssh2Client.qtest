@@ -130,15 +130,25 @@ class Ssh2ClientTest inherits QUnit::Test {
 
     # read channel until a prompt is recognized
     private readUntilPrompt(SSH2Channel chan) {
-        string str;
+        string buf;
         do {
-            # read with a 5 second timeout
-            str = chan.read(0, 5s);
+            # read with a 10 second timeout
+            string str = chan.read(0, 10s);
             if (m_options.verbose > 1) {
                 stdout.printf("%s", str);
                 stdout.sync();
             }
-        } while (str !~ /[\#\$\>] *$/);
+            buf += str;
+            # Strip ANSI escape sequences before checking for prompt;
+            # PTY output includes cursor positioning, color codes, and
+            # bracketed paste mode sequences that appear after the prompt
+            string clean = regex_subst(buf, "\x1b\\[[0-9;?]*[a-zA-Z]", "", RE_Global);
+            clean = regex_subst(clean, "\x1b\\][^\x07]*\x07", "", RE_Global);
+            clean = regex_subst(clean, "\x1b[^\\[].?", "", RE_Global);
+            if (clean =~ /[\#\$\%\>] */) {
+                break;
+            }
+        } while (True);
     }
 
     private usageIntern() {
