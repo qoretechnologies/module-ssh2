@@ -6,7 +6,7 @@
     Qore Programming Language
 
     Copyright 2010 Wolfgang Ritzinger
-    Copyright 2010 - 2020 Qore Technologies, s.r.o.
+    Copyright 2010 - 2026 Qore Technologies, s.r.o.
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
@@ -602,3 +602,132 @@ int SSH2Channel::extendedDataIgnore(ExceptionSink *xsink, int timeout_ms) {
    }
    return rc;
 }
+
+int SSH2Channel::requestPtySize(ExceptionSink* xsink, int width, int height, int width_px, int height_px, int timeout_ms) {
+    AutoLocker al(parent->m);
+    if (check_open(xsink)) {
+        return -1;
+    }
+
+    BlockingHelper bh(parent);
+
+    int rc;
+    while (true) {
+        rc = libssh2_channel_request_pty_size_ex(channel, width, height, width_px, height_px);
+        if (rc == LIBSSH2_ERROR_EAGAIN) {
+            if ((rc = parent->waitSocketUnlocked(xsink, SSH2CHANNEL_TIMEOUT, "SSH2CHANNEL-REQUESTPTYSIZE-ERROR", "SSH2Channel::requestPtySize", timeout_ms))) {
+                break;
+            }
+            continue;
+        }
+        if (rc) {
+            parent->doSessionErrUnlocked(xsink);
+        }
+        break;
+    }
+
+    return rc;
+}
+
+#ifdef HAVE_LIBSSH2_GET_EXIT_SIGNAL
+QoreHashNode* SSH2Channel::getExitSignal(ExceptionSink* xsink) {
+    AutoLocker al(parent->m);
+    if (check_open(xsink)) {
+        return nullptr;
+    }
+
+    char* exitsignal = nullptr;
+    size_t exitsignal_len = 0;
+    char* errmsg = nullptr;
+    size_t errmsg_len = 0;
+    char* langtag = nullptr;
+    size_t langtag_len = 0;
+
+    int rc = libssh2_channel_get_exit_signal(channel, &exitsignal, &exitsignal_len, &errmsg, &errmsg_len, &langtag, &langtag_len);
+    if (rc) {
+        parent->doSessionErrUnlocked(xsink);
+        return nullptr;
+    }
+
+    ReferenceHolder<QoreHashNode> ret(new QoreHashNode(hashdeclSsh2ExitSignalInfo, xsink), xsink);
+
+    if (exitsignal && exitsignal_len) {
+        ret->setKeyValue("signal", new QoreStringNode(exitsignal, exitsignal_len, QCS_DEFAULT), xsink);
+    }
+    if (errmsg && errmsg_len) {
+        ret->setKeyValue("errmsg", new QoreStringNode(errmsg, errmsg_len, QCS_DEFAULT), xsink);
+    }
+    if (langtag && langtag_len) {
+        ret->setKeyValue("langtag", new QoreStringNode(langtag, langtag_len, QCS_DEFAULT), xsink);
+    }
+
+    // free strings allocated by libssh2
+    if (exitsignal) {
+        libssh2_free(parent->ssh_session, exitsignal);
+    }
+    if (errmsg) {
+        libssh2_free(parent->ssh_session, errmsg);
+    }
+    if (langtag) {
+        libssh2_free(parent->ssh_session, langtag);
+    }
+
+    return ret.release();
+}
+#endif
+
+#ifdef HAVE_LIBSSH2_CHANNEL_SIGNAL_EX
+int SSH2Channel::sendSignal(const char* signal_name, ExceptionSink* xsink, int timeout_ms) {
+    AutoLocker al(parent->m);
+    if (check_open(xsink)) {
+        return -1;
+    }
+
+    BlockingHelper bh(parent);
+
+    int rc;
+    while (true) {
+        rc = libssh2_channel_signal_ex(channel, signal_name, strlen(signal_name));
+        if (rc == LIBSSH2_ERROR_EAGAIN) {
+            if ((rc = parent->waitSocketUnlocked(xsink, SSH2CHANNEL_TIMEOUT, "SSH2CHANNEL-SENDSIGNAL-ERROR", "SSH2Channel::sendSignal", timeout_ms))) {
+                break;
+            }
+            continue;
+        }
+        if (rc < 0) {
+            parent->doSessionErrUnlocked(xsink);
+        }
+        break;
+    }
+
+    return rc;
+}
+#endif
+
+#ifdef HAVE_LIBSSH2_CHANNEL_REQUEST_AUTH_AGENT
+int SSH2Channel::requestAuthAgent(ExceptionSink* xsink, int timeout_ms) {
+    AutoLocker al(parent->m);
+    if (check_open(xsink)) {
+        return -1;
+    }
+
+    BlockingHelper bh(parent);
+
+    int rc;
+    while (true) {
+        rc = libssh2_channel_request_auth_agent(channel);
+        if (rc == LIBSSH2_ERROR_EAGAIN) {
+            if ((rc = parent->waitSocketUnlocked(xsink, SSH2CHANNEL_TIMEOUT, "SSH2CHANNEL-REQUESTAUTHAGENT-ERROR", "SSH2Channel::requestAuthAgent", timeout_ms))) {
+                break;
+            }
+            continue;
+        }
+        if (rc < 0) {
+            parent->doSessionErrUnlocked(xsink);
+        }
+        break;
+    }
+
+    return rc;
+}
+#endif

@@ -6,7 +6,7 @@
     libssh2 ssh2 client integration into qore
 
     Copyright 2009 Wolfgang Ritzinger
-    Copyright 2010 - 2020 Qore Technologies, s.r.o.
+    Copyright 2010 - 2026 Qore Technologies, s.r.o.
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
@@ -24,9 +24,33 @@
 */
 
 #include "SSH2Client.h"
+#include "SSH2Listener.h"
 
 extern QoreClass* QC_SSH2BASE;
 extern QoreClass* QC_SSH2CHANNEL;
+#ifdef HAVE_LIBSSH2_FORWARD_LISTEN
+extern QoreClass* QC_SSH2LISTENER;
+#endif
+
+//! SSH2 host key info hash
+/** @since ssh2 2.0
+*/
+hashdecl Qore::SSH2::Ssh2HostKeyInfo {
+    //! the MD5 fingerprint of the host key as hex pairs separated by colons
+    string hash_md5;
+
+    //! the SHA1 fingerprint of the host key, if available
+    *string hash_sha1;
+
+    //! the SHA256 fingerprint of the host key, if available
+    *string hash_sha256;
+
+    //! the key type (e.g. "ssh-rsa", "ssh-ed25519", "ecdsa-sha2-nistp256", etc.)
+    string key_type;
+
+    //! the raw key data
+    binary key_data;
+}
 
 //! SSH2 connection info hash
 /**
@@ -192,6 +216,31 @@ SSH2Channel SSH2Client::openDirectTcpipChannel(string host, softint port, string
     return c->openDirectTcpipChannel(xsink, host->getBuffer(), port, source_host->getBuffer(), source_port, timeout);
 }
 
+//! Opens a channel for forwarding to a Unix domain socket on the remote host
+/** @par Example:
+    @code{.py} SSH2Channel chan = ssh2client.openDirectStreamLocalChannel("/var/run/docker.sock"); @endcode
+
+    @param socket_path the path to the Unix domain socket on the remote host
+    @param source_host the host name to report as the source of the connection
+    @param source_port the port number to report as the source of the connection
+    @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds)
+
+    @throw SSH2CLIENT-NOT-CONNECTED client is not connected
+    @throw SSH2CLIENT-TIMEOUT timeout opening channel
+    @throw SSH2-ERROR error opening channel
+    @throw MISSING-FEATURE-ERROR this method is not available; the ssh2 module was compiled with a version of libssh2 that does not support this operation
+
+    @since ssh2 2.0
+*/
+SSH2Channel SSH2Client::openDirectStreamLocalChannel(string socket_path, string source_host = "127.0.0.1", softint source_port = 22, timeout timeout = 60s) {
+#ifdef HAVE_LIBSSH2_CHANNEL_DIRECT_STREAMLOCAL
+    return c->openDirectStreamLocalChannel(xsink, socket_path->c_str(), source_host->c_str(), source_port, timeout);
+#else
+    xsink->raiseException("MISSING-FEATURE-ERROR", "the openDirectStreamLocalChannel() method is not available; the ssh2 module was compiled with a version of libssh2 that does not support this operation");
+    return QoreValue();
+#endif
+}
+
 //! opens a channel for retrieving a remote file with an optional timeout value and an optional reference for returning file status information
 /** @par Example:
     @code{.py}
@@ -299,4 +348,41 @@ nothing SSH2Client::scpPut(string remote_path, Qore::InputStream[InputStream] is
     }
 
     c->scpPut(xsink, remote_path->getBuffer(), *is, size, (int)mode, mtime ? mtime->getEpochSeconds() : 0, atime ? atime->getEpochSeconds() : 0, timeout);
+}
+
+//! Opens a reverse port forwarding listener on the remote server
+/** @par Example:
+    @code{.py}
+SSH2Listener listener = ssh2client.forwardListen("0.0.0.0", 8080, 1, 30s);
+printf("Listening on remote port %d\n", listener.getBoundPort());
+SSH2Channel chan = listener.accept(60s);
+    @endcode
+
+    Asks the remote SSH server to listen on the specified host and port. When a third party
+    connects to that port on the remote server, the connection is tunneled back through the
+    SSH session and can be accepted with @ref SSH2Listener::accept().
+
+    This is equivalent to \c "ssh -R host:port:..." reverse tunneling.
+
+    @param host the host/address on the remote server to bind to (e.g. "0.0.0.0" for all interfaces, "127.0.0.1" for loopback)
+    @param port the port number to listen on; pass 0 to let the server choose an available port
+    @param queue_maxsize the maximum number of pending connections to queue
+    @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds)
+
+    @return an SSH2Listener object for accepting forwarded connections
+
+    @throw SSH2CLIENT-NOT-CONNECTED client is not connected
+    @throw SSH2CLIENT-TIMEOUT timeout opening listener
+    @throw SSH2-ERROR error opening listener
+    @throw MISSING-FEATURE-ERROR this method is not available; the ssh2 module was compiled with a version of libssh2 that does not support this operation
+
+    @since ssh2 2.0
+*/
+SSH2Listener SSH2Client::forwardListen(string host, softint port, softint queue_maxsize = 1, timeout timeout = 60s) {
+#ifdef HAVE_LIBSSH2_FORWARD_LISTEN
+    return c->forwardListen(xsink, host->c_str(), (int)port, (int)queue_maxsize, timeout);
+#else
+    xsink->raiseException("MISSING-FEATURE-ERROR", "the forwardListen() method is not available; the ssh2 module was compiled with a version of libssh2 that does not support this operation");
+    return QoreValue();
+#endif
 }

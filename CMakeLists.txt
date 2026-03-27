@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.5...3.31)
 
-project(qore-ssh2-module VERSION 1.5.0)
+project(qore-ssh2-module VERSION 2.0.0)
 
 include(CheckCXXCompilerFlag)
 include(CheckCXXSymbolExists)
@@ -54,6 +54,19 @@ set(CMAKE_REQUIRED_INCLUDES ${LIBSSH2_INCLUDE_DIRS})
 set(CMAKE_REQUIRED_LIBRARIES ${LIBSSH2_LDFLAGS})
 check_cxx_symbol_exists(libssh2_session_handshake libssh2.h HAVE_LIBSSH2_SESSION_HANDSHAKE)
 check_cxx_symbol_exists(libssh2_keepalive_config libssh2.h HAVE_LIBSSH2_KEEPALIVE_CONFIG)
+check_cxx_symbol_exists(libssh2_agent_init libssh2.h HAVE_LIBSSH2_AGENT_API)
+check_cxx_symbol_exists(libssh2_knownhost_init libssh2.h HAVE_LIBSSH2_KNOWNHOST_API)
+check_cxx_symbol_exists(libssh2_userauth_publickey_frommemory libssh2.h HAVE_LIBSSH2_PUBLICKEY_FROMMEMORY)
+check_cxx_symbol_exists(libssh2_session_supported_algs libssh2.h HAVE_LIBSSH2_SUPPORTED_ALGS)
+check_cxx_symbol_exists(libssh2_channel_signal_ex libssh2.h HAVE_LIBSSH2_CHANNEL_SIGNAL_EX)
+check_cxx_symbol_exists(libssh2_channel_request_auth_agent libssh2.h HAVE_LIBSSH2_CHANNEL_REQUEST_AUTH_AGENT)
+check_cxx_symbol_exists(libssh2_channel_direct_streamlocal_ex libssh2.h HAVE_LIBSSH2_CHANNEL_DIRECT_STREAMLOCAL)
+check_cxx_symbol_exists(libssh2_sftp_statvfs libssh2_sftp.h HAVE_LIBSSH2_SFTP_STATVFS)
+check_cxx_symbol_exists(libssh2_scp_send64 libssh2.h HAVE_LIBSSH2_SCP_SEND64)
+check_cxx_symbol_exists(libssh2_scp_recv2 libssh2.h HAVE_LIBSSH2_SCP_RECV2)
+check_cxx_symbol_exists(libssh2_trace libssh2.h HAVE_LIBSSH2_TRACE)
+check_cxx_symbol_exists(libssh2_channel_forward_listen_ex libssh2.h HAVE_LIBSSH2_FORWARD_LISTEN)
+check_cxx_symbol_exists(libssh2_channel_get_exit_signal libssh2.h HAVE_LIBSSH2_GET_EXIT_SIGNAL)
 unset(CMAKE_REQUIRED_INCLUDES)
 unset(CMAKE_REQUIRED_LIBRARIES)
 
@@ -71,12 +84,14 @@ set(QPP_SRC
     src/QC_SSH2Base.qpp
     src/QC_SSH2Channel.qpp
     src/QC_SSH2Client.qpp
+    src/QC_SSH2Listener.qpp
 )
 
 set(CPP_SRC
     src/SFTPClient.cpp
     src/SSH2Channel.cpp
     src/SSH2Client.cpp
+    src/SSH2Listener.cpp
     src/ssh2-module.cpp
 )
 

@@ -1,0 +1,106 @@
+/* -*- mode: c++; indent-tabs-mode: nil -*- */
+/** @file SSH2Listener.qpp defines the SSH2Listener class */
+/*
+    QC_SSH2Listener.qpp
+
+    libssh2 ssh2 reverse port forwarding listener integration in Qore
+
+    Qore Programming Language
+
+    Copyright (C) 2026 Qore Technologies, s.r.o.
+
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
+
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public
+    License along with this library; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+
+#include "SSH2Listener.h"
+
+#ifdef HAVE_LIBSSH2_FORWARD_LISTEN
+
+extern QoreClass* QC_SSH2CHANNEL;
+
+//! Represents a reverse port forwarding listener on a remote SSH2 server
+/** This class is created by calling @ref SSH2Client::forwardListen() and provides
+    methods to accept forwarded connections and cancel the listener.
+
+    @since ssh2 2.0
+*/
+qclass SSH2Listener [arg=SSH2Listener* c; ns=Qore::SSH2; dom=NETWORK; flags=final];
+
+//! Throws an exception; the constructor cannot be called manually
+/** @throw SSH2LISTENER-CONSTRUCTOR-ERROR this class cannot be directly constructed
+*/
+SSH2Listener::constructor() {
+    xsink->raiseException("SSH2LISTENER-CONSTRUCTOR-ERROR", "this class cannot be directly constructed but is created from SSH2Client::forwardListen()");
+}
+
+//! Throws an exception; SSH2Listener objects cannot be copied
+/** @throw SSH2LISTENER-COPY-ERROR copying SSH2Listener objects is not supported
+*/
+SSH2Listener::copy() {
+    xsink->raiseException("SSH2LISTENER-COPY-ERROR", "copying SSH2Listener objects is not supported");
+}
+
+//! Destroys the listener, cancelling it if still active
+/**
+*/
+SSH2Listener::destructor() {
+    c->destructor();
+    c->deref();
+}
+
+//! Accepts a forwarded connection and returns an SSH2Channel for communication
+/** @par Example:
+    @code{.py} SSH2Channel chan = listener.accept(30s); @endcode
+
+    Blocks until a forwarded connection arrives or the timeout expires.
+
+    @param timeout an integer giving a timeout in milliseconds or a relative date/time value; a negative value means do not time out
+
+    @return an SSH2Channel object for the accepted forwarded connection
+
+    @throw SSH2LISTENER-ERROR the listener has been cancelled or the client is not connected
+    @throw SSH2LISTENER-TIMEOUT timeout waiting for a connection
+    @throw SSH2-ERROR socket error; invalid SSH2 protocol response; server returned an error message
+*/
+SSH2Channel SSH2Listener::accept(timeout timeout = -1) {
+    return c->accept(xsink, timeout);
+}
+
+//! Cancels the reverse port forwarding listener on the remote server
+/** @par Example:
+    @code{.py} listener.cancel(); @endcode
+
+    After calling this method, no new connections will be accepted.
+
+    @throw SSH2LISTENER-ERROR the listener has already been cancelled
+*/
+nothing SSH2Listener::cancel() {
+    c->cancel(xsink);
+}
+
+//! Returns the actual port number bound on the remote server
+/** @par Example:
+    @code{.py} int port = listener.getBoundPort(); @endcode
+
+    If port 0 was passed to @ref SSH2Client::forwardListen(), the server will have
+    chosen an available port, which is returned here.
+
+    @return the port number bound on the remote server
+*/
+int SSH2Listener::getBoundPort() [flags=CONSTANT] {
+    return c->getBoundPort();
+}
+
+#endif // HAVE_LIBSSH2_FORWARD_LISTEN

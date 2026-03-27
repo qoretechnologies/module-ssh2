@@ -63,6 +63,7 @@ public class SftpClientDataProvider inherits AbstractDataProvider {
     private {
         const ChildMap = {
             "chmod": Class::forName("SftpClientDataProvider::SftpClientChmodDataProvider"),
+            "chown": Class::forName("SftpClientDataProvider::SftpClientChownDataProvider"),
             "create-file": Class::forName("SftpClientDataProvider::SftpClientCreateFileDataProvider"),
             "create-file-location": Class::forName("SftpClientDataProvider::SftpClientCreateFileLocationDataProvider"),
             "delete": Class::forName("SftpClientDataProvider::SftpClientDeleteDataProvider"),
@@ -70,10 +71,14 @@ public class SftpClientDataProvider inherits AbstractDataProvider {
             "get-file": Class::forName("SftpClientDataProvider::SftpClientGetFileDataProvider"),
             "get-file-location": Class::forName("SftpClientDataProvider::SftpClientGetFileLocationDataProvider"),
             "list": Class::forName("SftpClientDataProvider::SftpClientListDataProvider"),
+            "lstat": Class::forName("SftpClientDataProvider::SftpClientLstatDataProvider"),
             "mkdir": Class::forName("SftpClientDataProvider::SftpClientMkdirDataProvider"),
             "move": Class::forName("SftpClientDataProvider::SftpClientMoveDataProvider"),
+            "readlink": Class::forName("SftpClientDataProvider::SftpClientReadlinkDataProvider"),
             "rmdir": Class::forName("SftpClientDataProvider::SftpClientRmdirDataProvider"),
             "stat": Class::forName("SftpClientDataProvider::SftpClientStatDataProvider"),
+            "statvfs": Class::forName("SftpClientDataProvider::SftpClientStatvfsDataProvider"),
+            "symlink": Class::forName("SftpClientDataProvider::SftpClientSymlinkDataProvider"),
         };
     }
 

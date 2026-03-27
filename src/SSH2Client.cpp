@@ -24,6 +24,7 @@
 
 #include "SSH2Client.h"
 #include "SSH2Channel.h"
+#include "SSH2Listener.h"
 
 #include <memory>
 #include <string>
@@ -112,7 +113,7 @@ static void map_ssh2_sbuf_to_hash(QoreHashNode *h, struct stat *sbuf, ExceptionS
  *
  * this just prefills the values for connection with hostname and port
  */
-SSH2Client::SSH2Client(const char *hostname, const uint32_t port) : sshhost(hostname), sshport(port), sshauthenticatedwith(0), ssh_session(0) {
+SSH2Client::SSH2Client(const char *hostname, const uint32_t port) : sshhost(hostname), sshport(port), keepalive_interval(QKEEPALIVE_DEFAULT), use_agent(true), verify_host_key(false), host_key_policy(SSH2_HOSTKEY_REJECT), sshauthenticatedwith(0), ssh_session(0) {
     setKeysIntern();
 }
 
@@ -121,6 +122,10 @@ SSH2Client::SSH2Client(QoreURL &url, const uint32_t port) :
     sshuser(url.getUserName() ? url.getUserName()->getBuffer() : ""),
     sshpass(url.getPassword() ? url.getPassword()->getBuffer() : ""),
     sshport(port ? port : (uint32_t)url.getPort()),
+    keepalive_interval(QKEEPALIVE_DEFAULT),
+    use_agent(true),
+    verify_host_key(false),
+    host_key_policy(SSH2_HOSTKEY_REJECT),
     sshauthenticatedwith(0),
     ssh_session(0) {
     if (!sshport)
@@ -186,7 +191,17 @@ void SSH2Client::setKeysIntern() {
  * sets errno
  */
 int SSH2Client::disconnectUnlocked(bool force, int timeout_ms, AbstractDisconnectionHelper* adh, ExceptionSink *xsink) {
-    // first close all open channels
+#ifdef HAVE_LIBSSH2_FORWARD_LISTEN
+    // cancel all active listeners
+    for (auto it = listener_set.begin(); it != listener_set.end(); ) {
+        SSH2Listener* sl = *it;
+        ++it;
+        sl->cancelUnlocked();
+    }
+    listener_set.clear();
+#endif
+
+    // close all open channels
     for (channel_set_t::iterator i = channel_set.begin(), e = channel_set.end(); i != e; ++i) {
         (*i)->closeUnlocked();
     }
@@ -465,6 +480,19 @@ int SSH2Client::sshConnectUnlocked(int timeout_ms, ExceptionSink *xsink = 0) {
         return -1;
     }
 
+    // apply algorithm preferences before handshake
+    for (auto& p : method_prefs) {
+        int prc = libssh2_session_method_pref(ssh_session, p.first, p.second.c_str());
+        if (prc) {
+            printd(5, "SSH2Client::connect(): libssh2_session_method_pref(%d, '%s') returned %d\n", p.first, p.second.c_str(), prc);
+        }
+    }
+
+    // apply banner before handshake
+    if (!ssh_banner.empty()) {
+        libssh2_session_banner_set(ssh_session, ssh_banner.c_str());
+    }
+
     // make sure the connection is made with non-blocking I/O
     setBlockingUnlocked(false);
 
@@ -482,6 +510,100 @@ int SSH2Client::sshConnectUnlocked(int timeout_ms, ExceptionSink *xsink = 0) {
         xsink && xsink->raiseException(SSH2_ERROR, "failure establishing SSH session: %d", rc);
         return -1;
     }
+
+#ifdef HAVE_LIBSSH2_KNOWNHOST_API
+    // verify host key if enabled
+    if (verify_host_key) {
+        size_t hostkey_len;
+        int hostkey_type;
+        const char* hostkey = libssh2_session_hostkey(ssh_session, &hostkey_len, &hostkey_type);
+        if (!hostkey) {
+            disconnectUnlocked(true);
+            xsink && xsink->raiseException("SSH2-HOSTKEY-ERROR", "could not retrieve server host key");
+            return -1;
+        }
+
+        LIBSSH2_KNOWNHOSTS* nh = libssh2_knownhost_init(ssh_session);
+        if (!nh) {
+            disconnectUnlocked(true);
+            xsink && xsink->raiseException("SSH2-HOSTKEY-ERROR", "could not initialize known hosts context");
+            return -1;
+        }
+
+        // load known hosts file if specified
+        if (!known_hosts_file.empty()) {
+            libssh2_knownhost_readfile(nh, known_hosts_file.c_str(), LIBSSH2_KNOWNHOST_FILE_OPENSSH);
+        }
+
+        // determine key type for check
+        int kh_type = LIBSSH2_KNOWNHOST_TYPE_PLAIN | LIBSSH2_KNOWNHOST_KEYENC_RAW;
+        switch (hostkey_type) {
+            case LIBSSH2_HOSTKEY_TYPE_RSA:
+                kh_type |= LIBSSH2_KNOWNHOST_KEY_SSHRSA;
+                break;
+            case LIBSSH2_HOSTKEY_TYPE_DSS:
+                kh_type |= LIBSSH2_KNOWNHOST_KEY_SSHDSS;
+                break;
+#ifdef LIBSSH2_HOSTKEY_TYPE_ECDSA_256
+            case LIBSSH2_HOSTKEY_TYPE_ECDSA_256:
+                kh_type |= LIBSSH2_KNOWNHOST_KEY_ECDSA_256;
+                break;
+            case LIBSSH2_HOSTKEY_TYPE_ECDSA_384:
+                kh_type |= LIBSSH2_KNOWNHOST_KEY_ECDSA_384;
+                break;
+            case LIBSSH2_HOSTKEY_TYPE_ECDSA_521:
+                kh_type |= LIBSSH2_KNOWNHOST_KEY_ECDSA_521;
+                break;
+#endif
+#ifdef LIBSSH2_HOSTKEY_TYPE_ED25519
+            case LIBSSH2_HOSTKEY_TYPE_ED25519:
+                kh_type |= LIBSSH2_KNOWNHOST_KEY_ED25519;
+                break;
+#endif
+            default:
+                kh_type |= LIBSSH2_KNOWNHOST_KEY_UNKNOWN;
+                break;
+        }
+
+        int check = libssh2_knownhost_checkp(nh, sshhost.c_str(), sshport, hostkey, hostkey_len, kh_type, nullptr);
+
+        if (check == LIBSSH2_KNOWNHOST_CHECK_MISMATCH) {
+            libssh2_knownhost_free(nh);
+            disconnectUnlocked(true);
+            xsink && xsink->raiseException("SSH2-HOSTKEY-MISMATCH",
+                "host key for '%s:%d' does not match the key in the known hosts file '%s'; "
+                "this could indicate a man-in-the-middle attack",
+                sshhost.c_str(), sshport, known_hosts_file.c_str());
+            return -1;
+        } else if (check == LIBSSH2_KNOWNHOST_CHECK_NOTFOUND) {
+            if (host_key_policy == SSH2_HOSTKEY_TOFU) {
+                // Trust On First Use: add the key and continue
+                libssh2_knownhost_addc(nh, sshhost.c_str(), nullptr, hostkey, hostkey_len, nullptr, 0, kh_type, nullptr);
+                if (!known_hosts_file.empty()) {
+                    libssh2_knownhost_writefile(nh, known_hosts_file.c_str(), LIBSSH2_KNOWNHOST_FILE_OPENSSH);
+                }
+                printd(5, "SSH2Client::connect(): host key for '%s:%d' added to known hosts (TOFU)\n", sshhost.c_str(), sshport);
+            } else {
+                // REJECT: raise exception
+                libssh2_knownhost_free(nh);
+                disconnectUnlocked(true);
+                xsink && xsink->raiseException("SSH2-HOSTKEY-UNKNOWN",
+                    "host key for '%s:%d' is not in the known hosts file '%s'; "
+                    "use addKnownHost() or setHostKeyPolicy(SSH2_HOSTKEY_TOFU) to accept it",
+                    sshhost.c_str(), sshport, known_hosts_file.c_str());
+                return -1;
+            }
+        } else if (check == LIBSSH2_KNOWNHOST_CHECK_FAILURE) {
+            libssh2_knownhost_free(nh);
+            disconnectUnlocked(true);
+            xsink && xsink->raiseException("SSH2-HOSTKEY-ERROR", "internal error checking known hosts for '%s:%d'", sshhost.c_str(), sshport);
+            return -1;
+        }
+        // LIBSSH2_KNOWNHOST_CHECK_MATCH: host key matches, continue
+
+        libssh2_knownhost_free(nh);
+    }
+#endif
 
     // check what types are available for authentifcation
     while (true) {
@@ -518,7 +640,75 @@ int SSH2Client::sshConnectUnlocked(int timeout_ms, ExceptionSink *xsink = 0) {
     }
 
     // try auth
-    // try publickey if available
+#ifdef HAVE_LIBSSH2_AGENT_API
+    // try SSH agent authentication first (most secure and convenient when available)
+    if (!loggedin && use_agent && userauthlist && strstr(userauthlist, "publickey")) {
+        printd(5, "SSH2Client::connect(): trying SSH agent authentication\n");
+        LIBSSH2_AGENT* agent = libssh2_agent_init(ssh_session);
+        if (agent) {
+            if (!libssh2_agent_connect(agent)) {
+                if (!libssh2_agent_list_identities(agent)) {
+                    struct libssh2_agent_publickey* identity = nullptr;
+                    struct libssh2_agent_publickey* prev_identity = nullptr;
+                    while (!libssh2_agent_get_identity(agent, &identity, prev_identity)) {
+                        while ((rc = libssh2_agent_userauth(agent, sshuser.c_str(), identity)) == LIBSSH2_ERROR_EAGAIN) {
+                            if (waitSocketUnlocked(xsink, SSH2CLIENT_TIMEOUT, SSH2_ERROR, "SSH2Client::connect", timeout_ms)) {
+                                libssh2_agent_disconnect(agent);
+                                libssh2_agent_free(agent);
+                                disconnectUnlocked(true);
+                                return -1;
+                            }
+                        }
+                        if (!rc) {
+                            loggedin = true;
+                            sshauthenticatedwith = "agent";
+                            printd(5, "SSH agent authentication succeeded\n");
+                            break;
+                        }
+                        prev_identity = identity;
+                    }
+                }
+                libssh2_agent_disconnect(agent);
+            }
+            libssh2_agent_free(agent);
+        }
+#ifdef DEBUG
+        if (!loggedin) {
+            printd(5, "SSH agent authentication failed or agent not available\n");
+        }
+#endif
+    }
+#endif
+
+#ifdef HAVE_LIBSSH2_PUBLICKEY_FROMMEMORY
+    // try publickey from memory if key data was provided
+    if (!loggedin && !sshkeys_priv_data.empty() && userauthlist && strstr(userauthlist, "publickey")) {
+        printd(5, "SSH2Client::connect(): try publickey auth from memory\n");
+        const char* passphrase = sshkeys_passphrase.empty() ? (sshpass.empty() ? "" : sshpass.c_str()) : sshkeys_passphrase.c_str();
+        while ((rc = libssh2_userauth_publickey_frommemory(ssh_session, sshuser.c_str(), sshuser.size(),
+                sshkeys_pub_data.empty() ? nullptr : sshkeys_pub_data.c_str(),
+                sshkeys_pub_data.size(),
+                sshkeys_priv_data.c_str(), sshkeys_priv_data.size(),
+                passphrase)) == LIBSSH2_ERROR_EAGAIN) {
+            if (waitSocketUnlocked(xsink, SSH2CLIENT_TIMEOUT, SSH2_ERROR, "SSH2Client::connect", timeout_ms)) {
+                disconnectUnlocked(true);
+                return -1;
+            }
+        }
+        if (!rc) {
+            loggedin = true;
+            sshauthenticatedwith = "publickey";
+            printd(5, "publickey (from memory) authentication succeeded\n");
+        }
+#ifdef DEBUG
+        else {
+            printd(5, "publickey (from memory) authentication failed\n");
+        }
+#endif
+    }
+#endif
+
+    // try publickey from file if available
     if (!loggedin && (auth_pw & QAUTH_PUBLICKEY)) {
         // Verify filesystem sandbox access for key files before reading
         QoreSandboxManagerHelper smh;
@@ -605,11 +795,289 @@ int SSH2Client::sshConnectUnlocked(int timeout_ms, ExceptionSink *xsink = 0) {
 
 #ifdef HAVE_LIBSSH2_KEEPALIVE_CONFIG
     // set keepalive
-    libssh2_keepalive_config(ssh_session, 1, QKEEPALIVE_DEFAULT);
+    if (keepalive_interval > 0) {
+        libssh2_keepalive_config(ssh_session, 1, keepalive_interval);
+    }
 #endif
 
     return 0;
 }
+
+int method_type_from_string(const char* method_type, ExceptionSink* xsink) {
+    if (!strcasecmp(method_type, "KEX")) {
+        return LIBSSH2_METHOD_KEX;
+    } else if (!strcasecmp(method_type, "HOSTKEY")) {
+        return LIBSSH2_METHOD_HOSTKEY;
+    } else if (!strcasecmp(method_type, "CRYPT_CS")) {
+        return LIBSSH2_METHOD_CRYPT_CS;
+    } else if (!strcasecmp(method_type, "CRYPT_SC")) {
+        return LIBSSH2_METHOD_CRYPT_SC;
+    } else if (!strcasecmp(method_type, "MAC_CS")) {
+        return LIBSSH2_METHOD_MAC_CS;
+    } else if (!strcasecmp(method_type, "MAC_SC")) {
+        return LIBSSH2_METHOD_MAC_SC;
+    } else if (!strcasecmp(method_type, "COMP_CS")) {
+        return LIBSSH2_METHOD_COMP_CS;
+    } else if (!strcasecmp(method_type, "COMP_SC")) {
+        return LIBSSH2_METHOD_COMP_SC;
+    }
+    xsink->raiseException("SSH2-METHOD-ERROR", "invalid method type '%s'; expected one of: KEX, HOSTKEY, CRYPT_CS, CRYPT_SC, MAC_CS, MAC_SC, COMP_CS, COMP_SC", method_type);
+    return -1;
+}
+
+int SSH2Client::setMethodPreference(int method_type, const char* prefs, ExceptionSink* xsink) {
+    AutoLocker al(m);
+    if (sshConnectedUnlocked()) {
+        xsink->raiseException(SSH2_CONNECTED, "usage of SSH2Base::setMethodPreference() is not allowed when connected");
+        return -1;
+    }
+    method_prefs[method_type] = prefs;
+    return 0;
+}
+
+QoreListNode* SSH2Client::getSupportedAlgorithms(int method_type, ExceptionSink* xsink) {
+#ifdef HAVE_LIBSSH2_SUPPORTED_ALGS
+    AutoLocker al(m);
+
+    // we need a session to query supported algs; create a temporary one if not connected
+    LIBSSH2_SESSION* session = ssh_session;
+    bool temp_session = false;
+    if (!session) {
+        session = libssh2_session_init();
+        if (!session) {
+            xsink->raiseException(SSH2_ERROR, "could not create temporary session for algorithm query");
+            return nullptr;
+        }
+        temp_session = true;
+    }
+
+    const char** algs = nullptr;
+    int rc = libssh2_session_supported_algs(session, method_type, &algs);
+
+    if (rc <= 0) {
+        if (temp_session) {
+            libssh2_session_free(session);
+        }
+        xsink->raiseException(SSH2_ERROR, "could not get supported algorithms for method type %d", method_type);
+        return nullptr;
+    }
+
+    // copy the algorithm names before freeing the session/algs
+    ReferenceHolder<QoreListNode> ret(new QoreListNode(stringTypeInfo), xsink);
+    for (int i = 0; i < rc; i++) {
+        ret->push(new QoreStringNode(algs[i]), xsink);
+    }
+
+    // free algs before freeing the session that allocated them
+    libssh2_free(session, algs);
+
+    if (temp_session) {
+        libssh2_session_free(session);
+    }
+
+    return ret.release();
+#else
+    xsink->raiseException("MISSING-FEATURE-ERROR", "the getSupportedAlgorithms() method is not available; the ssh2 module was compiled with a version of libssh2 that does not support this operation");
+    return nullptr;
+#endif
+}
+
+int SSH2Client::setBanner(const char* banner, ExceptionSink* xsink) {
+    AutoLocker al(m);
+    if (sshConnectedUnlocked()) {
+        xsink->raiseException(SSH2_CONNECTED, "usage of SSH2Base::setBanner() is not allowed when connected");
+        return -1;
+    }
+    ssh_banner = banner ? banner : "";
+    return 0;
+}
+
+QoreStringNode* SSH2Client::getBannerLocked(ExceptionSink* xsink) {
+    AutoLocker al(m);
+    if (!sshConnectedUnlocked()) {
+        // return the stored banner if not connected
+        return ssh_banner.empty() ? nullptr : new QoreStringNode(ssh_banner);
+    }
+    // when connected, get the server's banner
+    const char* banner = libssh2_session_banner_get(ssh_session);
+    return banner ? new QoreStringNode(banner) : nullptr;
+}
+
+int SSH2Client::setTraceLevelLocked(int bitmask, ExceptionSink* xsink) {
+#ifdef HAVE_LIBSSH2_TRACE
+    AutoLocker al(m);
+    if (!sshConnectedUnlocked()) {
+        xsink->raiseException(SSH2CLIENT_NOT_CONNECTED, "cannot call SSH2Base::setTraceLevel() while client is not connected");
+        return -1;
+    }
+    libssh2_trace(ssh_session, bitmask);
+    return 0;
+#else
+    xsink->raiseException("MISSING-FEATURE-ERROR", "the setTraceLevel() method is not available; the ssh2 module was compiled with a version of libssh2 that does not support this operation");
+    return -1;
+#endif
+}
+
+QoreHashNode* SSH2Client::getHostKeyLocked(ExceptionSink* xsink) {
+    AutoLocker al(m);
+
+    if (!sshConnectedUnlocked()) {
+        xsink->raiseException(SSH2CLIENT_NOT_CONNECTED, "cannot call SSH2Base::getHostKey() while client is not connected");
+        return nullptr;
+    }
+
+    size_t len;
+    int type;
+    const char* hostkey = libssh2_session_hostkey(ssh_session, &len, &type);
+    if (!hostkey) {
+        xsink->raiseException("SSH2-HOSTKEY-ERROR", "could not retrieve server host key");
+        return nullptr;
+    }
+
+    ReferenceHolder<QoreHashNode> ret(new QoreHashNode(hashdeclSsh2HostKeyInfo, xsink), xsink);
+
+    // MD5 fingerprint
+    const char* md5 = libssh2_hostkey_hash(ssh_session, LIBSSH2_HOSTKEY_HASH_MD5);
+    if (md5) {
+        QoreStringNode* fpstr = new QoreStringNode;
+        fpstr->sprintf("%02X", (unsigned char)md5[0]);
+        for (int i = 1; i < 16; i++) {
+            fpstr->sprintf(":%02X", (unsigned char)md5[i]);
+        }
+        ret->setKeyValue("hash_md5", fpstr, xsink);
+    }
+
+    // SHA1 fingerprint
+    const char* sha1 = libssh2_hostkey_hash(ssh_session, LIBSSH2_HOSTKEY_HASH_SHA1);
+    if (sha1) {
+        QoreStringNode* fpstr = new QoreStringNode;
+        fpstr->sprintf("%02X", (unsigned char)sha1[0]);
+        for (int i = 1; i < 20; i++) {
+            fpstr->sprintf(":%02X", (unsigned char)sha1[i]);
+        }
+        ret->setKeyValue("hash_sha1", fpstr, xsink);
+    }
+
+    // SHA256 fingerprint
+#ifdef LIBSSH2_HOSTKEY_HASH_SHA256
+    const char* sha256 = libssh2_hostkey_hash(ssh_session, LIBSSH2_HOSTKEY_HASH_SHA256);
+    if (sha256) {
+        QoreStringNode* fpstr = new QoreStringNode;
+        fpstr->sprintf("%02X", (unsigned char)sha256[0]);
+        for (int i = 1; i < 32; i++) {
+            fpstr->sprintf(":%02X", (unsigned char)sha256[i]);
+        }
+        ret->setKeyValue("hash_sha256", fpstr, xsink);
+    }
+#endif
+
+    // key type
+    const char* type_str;
+    switch (type) {
+        case LIBSSH2_HOSTKEY_TYPE_RSA: type_str = "ssh-rsa"; break;
+        case LIBSSH2_HOSTKEY_TYPE_DSS: type_str = "ssh-dss"; break;
+#ifdef LIBSSH2_HOSTKEY_TYPE_ECDSA_256
+        case LIBSSH2_HOSTKEY_TYPE_ECDSA_256: type_str = "ecdsa-sha2-nistp256"; break;
+        case LIBSSH2_HOSTKEY_TYPE_ECDSA_384: type_str = "ecdsa-sha2-nistp384"; break;
+        case LIBSSH2_HOSTKEY_TYPE_ECDSA_521: type_str = "ecdsa-sha2-nistp521"; break;
+#endif
+#ifdef LIBSSH2_HOSTKEY_TYPE_ED25519
+        case LIBSSH2_HOSTKEY_TYPE_ED25519: type_str = "ssh-ed25519"; break;
+#endif
+        default: type_str = "unknown"; break;
+    }
+    ret->setKeyValue("key_type", new QoreStringNode(type_str), xsink);
+
+    // raw key data
+    SimpleRefHolder<BinaryNode> key_data(new BinaryNode);
+    key_data->append(hostkey, len);
+    ret->setKeyValue("key_data", key_data.release(), xsink);
+
+    return ret.release();
+}
+
+#ifdef HAVE_LIBSSH2_KNOWNHOST_API
+int SSH2Client::addKnownHostLocked(const char* host, int port, ExceptionSink* xsink) {
+    AutoLocker al(m);
+
+    if (!sshConnectedUnlocked()) {
+        xsink->raiseException(SSH2CLIENT_NOT_CONNECTED, "cannot call SSH2Base::addKnownHost() while client is not connected");
+        return -1;
+    }
+
+    if (known_hosts_file.empty()) {
+        xsink->raiseException("SSH2-HOSTKEY-ERROR", "no known hosts file configured; call setKnownHostsFile() first");
+        return -1;
+    }
+
+    size_t hostkey_len;
+    int hostkey_type;
+    const char* hostkey = libssh2_session_hostkey(ssh_session, &hostkey_len, &hostkey_type);
+    if (!hostkey) {
+        xsink->raiseException("SSH2-HOSTKEY-ERROR", "could not retrieve server host key");
+        return -1;
+    }
+
+    LIBSSH2_KNOWNHOSTS* nh = libssh2_knownhost_init(ssh_session);
+    if (!nh) {
+        xsink->raiseException("SSH2-HOSTKEY-ERROR", "could not initialize known hosts context");
+        return -1;
+    }
+
+    // load existing file
+    libssh2_knownhost_readfile(nh, known_hosts_file.c_str(), LIBSSH2_KNOWNHOST_FILE_OPENSSH);
+
+    // determine key type
+    int kh_type = LIBSSH2_KNOWNHOST_TYPE_PLAIN | LIBSSH2_KNOWNHOST_KEYENC_RAW;
+    switch (hostkey_type) {
+        case LIBSSH2_HOSTKEY_TYPE_RSA:
+            kh_type |= LIBSSH2_KNOWNHOST_KEY_SSHRSA;
+            break;
+        case LIBSSH2_HOSTKEY_TYPE_DSS:
+            kh_type |= LIBSSH2_KNOWNHOST_KEY_SSHDSS;
+            break;
+#ifdef LIBSSH2_HOSTKEY_TYPE_ECDSA_256
+        case LIBSSH2_HOSTKEY_TYPE_ECDSA_256:
+            kh_type |= LIBSSH2_KNOWNHOST_KEY_ECDSA_256;
+            break;
+        case LIBSSH2_HOSTKEY_TYPE_ECDSA_384:
+            kh_type |= LIBSSH2_KNOWNHOST_KEY_ECDSA_384;
+            break;
+        case LIBSSH2_HOSTKEY_TYPE_ECDSA_521:
+            kh_type |= LIBSSH2_KNOWNHOST_KEY_ECDSA_521;
+            break;
+#endif
+#ifdef LIBSSH2_HOSTKEY_TYPE_ED25519
+        case LIBSSH2_HOSTKEY_TYPE_ED25519:
+            kh_type |= LIBSSH2_KNOWNHOST_KEY_ED25519;
+            break;
+#endif
+        default:
+            kh_type |= LIBSSH2_KNOWNHOST_KEY_UNKNOWN;
+            break;
+    }
+
+    const char* use_host = host ? host : sshhost.c_str();
+    int use_port = port > 0 ? port : (int)sshport;
+
+    int rc = libssh2_knownhost_addc(nh, use_host, nullptr, hostkey, hostkey_len, nullptr, 0, kh_type, nullptr);
+    if (rc) {
+        libssh2_knownhost_free(nh);
+        xsink->raiseException("SSH2-HOSTKEY-ERROR", "could not add host key for '%s:%d'", use_host, use_port);
+        return -1;
+    }
+
+    rc = libssh2_knownhost_writefile(nh, known_hosts_file.c_str(), LIBSSH2_KNOWNHOST_FILE_OPENSSH);
+    libssh2_knownhost_free(nh);
+
+    if (rc) {
+        xsink->raiseException("SSH2-HOSTKEY-ERROR", "could not write known hosts file '%s'", known_hosts_file.c_str());
+        return -1;
+    }
+
+    return 0;
+}
+#endif
 
 int SSH2Client::sshConnect(int timeout_ms, ExceptionSink *xsink = 0) {
     AutoLocker al(m);
@@ -755,6 +1223,75 @@ QoreObject *SSH2Client::openDirectTcpipChannel(ExceptionSink *xsink, const char 
     return registerChannelUnlocked(channel);
 }
 
+#ifdef HAVE_LIBSSH2_FORWARD_LISTEN
+QoreObject* SSH2Client::forwardListen(ExceptionSink* xsink, const char* host, int port, int queue_maxsize, int timeout_ms) {
+    static const char* SSH2CLIENT_FORWARDLISTEN_ERROR = "SSH2CLIENT-FORWARDLISTEN-ERROR";
+
+    AutoLocker al(m);
+
+    if (!sshConnectedUnlocked()) {
+        xsink->raiseException(SSH2CLIENT_NOT_CONNECTED, "cannot call SSH2Client::forwardListen() while client is not connected");
+        return nullptr;
+    }
+
+    BlockingHelper bh(this);
+
+    int bound_port = 0;
+    LIBSSH2_LISTENER* listener;
+    while (true) {
+        listener = libssh2_channel_forward_listen_ex(ssh_session, host, port, &bound_port, queue_maxsize);
+        if (!listener) {
+            if (libssh2_session_last_error(ssh_session, 0, 0, 0) == LIBSSH2_ERROR_EAGAIN) {
+                if (waitSocketUnlocked(xsink, SSH2CLIENT_TIMEOUT, SSH2CLIENT_FORWARDLISTEN_ERROR, "SSH2Client::forwardListen", timeout_ms)) {
+                    return nullptr;
+                }
+                continue;
+            }
+            doSessionErrUnlocked(xsink);
+            return nullptr;
+        }
+        break;
+    }
+
+    SSH2Listener* sl = new SSH2Listener(listener, this, bound_port);
+    listener_set.insert(sl);
+    return new QoreObject(QC_SSH2LISTENER, getProgram(), sl);
+}
+#endif
+
+#ifdef HAVE_LIBSSH2_CHANNEL_DIRECT_STREAMLOCAL
+QoreObject *SSH2Client::openDirectStreamLocalChannel(ExceptionSink *xsink, const char *socket_path, const char *shost, int sport, int timeout_ms) {
+    static const char *SSH2CLIENT_OPENDIRECTSTREAMLOCALCHANNEL_ERROR = "SSH2CLIENT-OPENDIRECTSTREAMLOCALCHANNEL-ERROR";
+
+    AutoLocker al(m);
+
+    if (!sshConnectedUnlocked()) {
+        xsink->raiseException(SSH2CLIENT_NOT_CONNECTED, "cannot call SSH2Client::openDirectStreamLocalChannel() while client is not connected");
+        return nullptr;
+    }
+
+    BlockingHelper bh(this);
+
+    LIBSSH2_CHANNEL *channel;
+    while (true) {
+        channel = libssh2_channel_direct_streamlocal_ex(ssh_session, socket_path, shost, sport);
+        if (!channel) {
+            if (libssh2_session_last_error(ssh_session, 0, 0, 0) == LIBSSH2_ERROR_EAGAIN) {
+                if (waitSocketUnlocked(xsink, SSH2CLIENT_TIMEOUT, SSH2CLIENT_OPENDIRECTSTREAMLOCALCHANNEL_ERROR, "SSH2Client::openDirectStreamLocalChannel", timeout_ms)) {
+                    return nullptr;
+                }
+                continue;
+            }
+            doSessionErrUnlocked(xsink);
+            return nullptr;
+        }
+        break;
+    }
+
+    return registerChannelUnlocked(channel);
+}
+#endif
+
 LIBSSH2_CHANNEL* SSH2Client::scpGetRaw(ExceptionSink *xsink, const char *path, int timeout_ms, QoreHashNode *statinfo) {
     static const char *SSH2CLIENT_SCPGET_ERROR = "SSH2CLIENT-SCPGET-ERROR";
 
@@ -767,25 +1304,57 @@ LIBSSH2_CHANNEL* SSH2Client::scpGetRaw(ExceptionSink *xsink, const char *path, i
 
     BlockingHelper bh(this);
 
+#ifdef HAVE_LIBSSH2_SCP_RECV2
+    libssh2_struct_stat sb;
+    LIBSSH2_CHANNEL *channel;
+    while (true) {
+        channel = libssh2_scp_recv2(ssh_session, path, &sb);
+        if (!channel) {
+            if (libssh2_session_last_error(ssh_session, 0, 0, 0) == LIBSSH2_ERROR_EAGAIN) {
+                if (waitSocketUnlocked(xsink, SSH2CLIENT_TIMEOUT, SSH2CLIENT_SCPGET_ERROR, "SSH2Client::scpGet", timeout_ms)) {
+                    return nullptr;
+                }
+                continue;
+            }
+            doSessionErrUnlocked(xsink);
+            return nullptr;
+        }
+        break;
+    }
+
+    // write file status info to statinfo if available
+    if (statinfo) {
+        statinfo->setKeyValue("mode", sb.st_mode, xsink);
+        statinfo->setKeyValue("permissions", new QoreStringNode(mode2str(sb.st_mode)), xsink);
+        statinfo->setKeyValue("size", (int64)sb.st_size, xsink);
+        statinfo->setKeyValue("uid", (int64)sb.st_uid, xsink);
+        statinfo->setKeyValue("gid", (int64)sb.st_gid, xsink);
+        statinfo->setKeyValue("atime", DateTimeNode::makeAbsolute(currentTZ(), (int64)sb.st_atime), xsink);
+        statinfo->setKeyValue("mtime", DateTimeNode::makeAbsolute(currentTZ(), (int64)sb.st_mtime), xsink);
+    }
+#else
     struct stat sb;
     LIBSSH2_CHANNEL *channel;
     while (true) {
         channel = libssh2_scp_recv(ssh_session, path, &sb);
         if (!channel) {
             if (libssh2_session_last_error(ssh_session, 0, 0, 0) == LIBSSH2_ERROR_EAGAIN) {
-                if (waitSocketUnlocked(xsink, SSH2CLIENT_TIMEOUT, SSH2CLIENT_SCPGET_ERROR, "SSH2Client::scpGet", timeout_ms))
+                if (waitSocketUnlocked(xsink, SSH2CLIENT_TIMEOUT, SSH2CLIENT_SCPGET_ERROR, "SSH2Client::scpGet", timeout_ms)) {
                     return nullptr;
+                }
                 continue;
             }
             doSessionErrUnlocked(xsink);
-            return 0;
+            return nullptr;
         }
         break;
     }
 
     // write file status info to statinfo if available
-    if (statinfo)
+    if (statinfo) {
         map_ssh2_sbuf_to_hash(statinfo, &sb, xsink);
+    }
+#endif
 
     return channel;
 }
@@ -826,15 +1395,20 @@ LIBSSH2_CHANNEL *SSH2Client::scpPutRaw(ExceptionSink *xsink, const char *path, s
 
     LIBSSH2_CHANNEL *channel;
     while (true) {
+#ifdef HAVE_LIBSSH2_SCP_SEND64
+        channel = libssh2_scp_send64(ssh_session, path, mode, (libssh2_int64_t)size, (time_t)mtime, (time_t)atime);
+#else
         channel = libssh2_scp_send_ex(ssh_session, path, mode, size, mtime, atime);
+#endif
         if (!channel) {
             if (libssh2_session_last_error(ssh_session, 0, 0, 0) == LIBSSH2_ERROR_EAGAIN) {
-                if (waitSocketUnlocked(xsink, SSH2CLIENT_TIMEOUT, SSH2CLIENT_SCPPUT_ERROR, "SSH2Client::scpPut", timeout_ms))
-                return 0;
+                if (waitSocketUnlocked(xsink, SSH2CLIENT_TIMEOUT, SSH2CLIENT_SCPPUT_ERROR, "SSH2Client::scpPut", timeout_ms)) {
+                    return nullptr;
+                }
                 continue;
             }
             doSessionErrUnlocked(xsink);
-            return 0;
+            return nullptr;
         }
         break;
     }

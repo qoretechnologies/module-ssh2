@@ -6,7 +6,7 @@
     Qore Programming Language
 
     Copyright 2010 Wolfgang Ritzinger
-    Copyright 2010 - 2020 Qore Technologies, s.r.o.
+    Copyright 2010 - 2026 Qore Technologies, s.r.o.
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
@@ -108,6 +108,16 @@ public:
     DLLLOCAL int extendedDataNormal(ExceptionSink* xsink, int timeout_ms = -1);
     DLLLOCAL int extendedDataMerge(ExceptionSink* xsink, int timeout_ms = -1);
     DLLLOCAL int extendedDataIgnore(ExceptionSink* xsink, int timeout_ms = -1);
+    DLLLOCAL int requestPtySize(ExceptionSink* xsink, int width, int height, int width_px = 0, int height_px = 0, int timeout_ms = -1);
+#ifdef HAVE_LIBSSH2_GET_EXIT_SIGNAL
+    DLLLOCAL QoreHashNode* getExitSignal(ExceptionSink* xsink);
+#endif
+#ifdef HAVE_LIBSSH2_CHANNEL_SIGNAL_EX
+    DLLLOCAL int sendSignal(const char* signal_name, ExceptionSink* xsink, int timeout_ms = -1);
+#endif
+#ifdef HAVE_LIBSSH2_CHANNEL_REQUEST_AUTH_AGENT
+    DLLLOCAL int requestAuthAgent(ExceptionSink* xsink, int timeout_ms = -1);
+#endif
 };
 
 #endif //_QORE_SSH2CHANNEL_H

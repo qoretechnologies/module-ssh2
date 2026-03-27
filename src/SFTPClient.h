@@ -7,7 +7,7 @@
     Qore Programming Language
 
     Copyright (C) 2009 Wolfgang Ritzinger
-    Copyright (C) 2010 - 2019 Qore Technologies, s.r.o.
+    Copyright (C) 2010 - 2026 Qore Technologies, s.r.o.
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
@@ -180,6 +180,14 @@ public:
     DLLLOCAL int64 sftpPut(InputStream* is, const char* remote_path, int mode, int timeout_ms, ExceptionSink* xsink);
 
     DLLLOCAL int sftpGetAttributes(const char* fname, LIBSSH2_SFTP_ATTRIBUTES* attrs, int timeout_ms, ExceptionSink* xsink);
+    DLLLOCAL int sftpLGetAttributes(const char* fname, LIBSSH2_SFTP_ATTRIBUTES* attrs, int timeout_ms, ExceptionSink* xsink);
+
+    DLLLOCAL int sftpSymlink(const char* target, const char* link_path, int timeout_ms, ExceptionSink* xsink);
+    DLLLOCAL QoreStringNode* sftpReadlink(const char* path, int timeout_ms, ExceptionSink* xsink);
+    DLLLOCAL int sftpChown(const char* path, int uid, int gid, int timeout_ms, ExceptionSink* xsink);
+#ifdef HAVE_LIBSSH2_SFTP_STATVFS
+    DLLLOCAL QoreHashNode* sftpStatvfs(const char* path, int timeout_ms, ExceptionSink* xsink);
+#endif
 
     DLLLOCAL QoreHashNode* sftpInfo(ExceptionSink* xsink);
 };

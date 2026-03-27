@@ -21,6 +21,7 @@
     |Qore::SSH2::SSH2Client|allows Qore programs to establish an ssh2 connection to a remote server
     |Qore::SSH2::SFTPClient|allows Qore programs to use the sftp protocol
     |Qore::SSH2::SSH2Channel|allows Qore programs to send and receive data through an ssh2 channel
+    |Qore::SSH2::SSH2Listener|represents a reverse port forwarding listener (created by SSH2Client::forwardListen())
 
     Also included with the binary ssh2 module:
     - <a href="../../Ssh2Connections/html/index.html">Ssh2Connections user module</a>
@@ -32,8 +33,11 @@
 
     - connect to the server with the given port or with port 22 if no port is given
     - login as the given user (user is set in the URL given to @ref Qore::SSH2::SSH2Client::constructor() "SSH2Client::constructor()" or @ref Qore::SSH2::SFTPClient::constructor() "SFTPClient::constructor()" or can be modified with @ref Qore::SSH2::SSH2Base::setUser() "SSH2Base::setUser()") using:
-      - publickey authentification (public and private key files can be modified with @ref Qore::SSH2::SSH2Base::setKeys() "SSH2Base::setKeys()")
-      - password authentification (password can be set in the URL given to @ref Qore::SSH2::SSH2Client::constructor() "SSH2Client::constructor()" or @ref Qore::SSH2::SFTPClient::constructor() "SFTPClient::constructor()" or can be set afterwards with @ref Qore::SSH2::SSH2Base::setPassword() "SSH2Base::setPassword()")
+      - SSH agent authentication (enabled by default; can be disabled with @ref Qore::SSH2::SSH2Base::setUseAgent() "SSH2Base::setUseAgent()")
+      - publickey authentication from memory (set with @ref Qore::SSH2::SSH2Base::setKeysFromData() "SSH2Base::setKeysFromData()")
+      - publickey authentication from file (public and private key files can be modified with @ref Qore::SSH2::SSH2Base::setKeys() "SSH2Base::setKeys()")
+      - password authentication (password can be set in the URL given to @ref Qore::SSH2::SSH2Client::constructor() "SSH2Client::constructor()" or @ref Qore::SSH2::SFTPClient::constructor() "SFTPClient::constructor()" or can be set afterwards with @ref Qore::SSH2::SSH2Base::setPassword() "SSH2Base::setPassword()")
+      - keyboard-interactive authentication (faked with password)
 
     See some examples here: @ref examples
 
@@ -130,6 +134,76 @@ stdout.printf("exit status: %d\n", chan.getExitStatus());@endcode
     Code with this flag is deprecated and may be removed in a future version of this module; if a variant with this flag is resolved at parse time, a \c "deprecated" warning is raised (assuming this warning is enabled).
 
     @section ssh2releasenotes Release Notes
+
+    @subsection ssh2v200 ssh2 Module Version 2.0.0
+    Major feature release closing all client-side feature gaps in the libssh2 wrapper.
+
+    <b>Authentication Enhancements:</b>
+    - added SSH agent authentication support; tried automatically before other methods
+      (@ref Qore::SSH2::SSH2Base::setUseAgent() "SSH2Base::setUseAgent()")
+    - added public key authentication from memory without temp files
+      (@ref Qore::SSH2::SSH2Base::setKeysFromData() "SSH2Base::setKeysFromData()")
+
+    <b>Security - Known Hosts Verification:</b>
+    - added known hosts file support for host key verification
+      (@ref Qore::SSH2::SSH2Base::setKnownHostsFile() "SSH2Base::setKnownHostsFile()",
+      @ref Qore::SSH2::SSH2Base::setVerifyHostKey() "SSH2Base::setVerifyHostKey()")
+    - configurable host key policy: REJECT (default) or TOFU (Trust On First Use)
+      (@ref Qore::SSH2::SSH2Base::setHostKeyPolicy() "SSH2Base::setHostKeyPolicy()")
+    - added @ref Qore::SSH2::SSH2Base::getHostKey() "SSH2Base::getHostKey()" returning MD5/SHA1/SHA256 fingerprints
+    - added @ref Qore::SSH2::SSH2Base::addKnownHost() "SSH2Base::addKnownHost()" for manual host key management
+    - added \c SSH2_HOSTKEY_REJECT and \c SSH2_HOSTKEY_TOFU constants
+
+    <b>Session Configuration:</b>
+    - added algorithm preference control
+      (@ref Qore::SSH2::SSH2Base::setMethodPreference() "SSH2Base::setMethodPreference()")
+    - added supported algorithm query
+      (@ref Qore::SSH2::SSH2Base::getSupportedAlgorithms() "SSH2Base::getSupportedAlgorithms()")
+    - added SSH banner control
+      (@ref Qore::SSH2::SSH2Base::setBanner() "SSH2Base::setBanner()",
+      @ref Qore::SSH2::SSH2Base::getBanner() "SSH2Base::getBanner()")
+    - added configurable keepalive interval
+      (@ref Qore::SSH2::SSH2Base::setKeepalive() "SSH2Base::setKeepalive()")
+    - added debug/trace support with \c SSH2_TRACE_* constants
+      (@ref Qore::SSH2::SSH2Base::setTraceLevel() "SSH2Base::setTraceLevel()")
+
+    <b>Channel Operations:</b>
+    - added PTY window resize support
+      (@ref Qore::SSH2::SSH2Channel::requestPtySize() "SSH2Channel::requestPtySize()")
+    - added exit signal retrieval
+      (@ref Qore::SSH2::SSH2Channel::getExitSignal() "SSH2Channel::getExitSignal()")
+    - added signal sending to remote processes
+      (@ref Qore::SSH2::SSH2Channel::sendSignal() "SSH2Channel::sendSignal()")
+    - added SSH agent forwarding on channels
+      (@ref Qore::SSH2::SSH2Channel::requestAuthAgent() "SSH2Channel::requestAuthAgent()")
+    - added Unix domain socket forwarding
+      (@ref Qore::SSH2::SSH2Client::openDirectStreamLocalChannel() "SSH2Client::openDirectStreamLocalChannel()")
+
+    <b>Reverse Port Forwarding:</b>
+    - added @ref Qore::SSH2::SSH2Listener "SSH2Listener" class for reverse port forwarding
+    - added @ref Qore::SSH2::SSH2Client::forwardListen() "SSH2Client::forwardListen()" to create remote listeners
+    - equivalent to \c "ssh -R" reverse tunneling
+
+    <b>SFTP Operations:</b>
+    - added @ref Qore::SSH2::SFTPClient::symlink() "SFTPClient::symlink()" - create symbolic links
+    - added @ref Qore::SSH2::SFTPClient::readlink() "SFTPClient::readlink()" - read symlink targets
+    - added @ref Qore::SSH2::SFTPClient::lstat() "SFTPClient::lstat()" - stat without following symlinks
+    - added @ref Qore::SSH2::SFTPClient::chown() "SFTPClient::chown()" - change file ownership
+    - added @ref Qore::SSH2::SFTPClient::statvfs() "SFTPClient::statvfs()" - filesystem statistics
+
+    <b>SCP Improvements:</b>
+    - updated to use \c libssh2_scp_recv2() and \c libssh2_scp_send64() for proper 64-bit file size support
+
+    <b>Data Provider Updates:</b>
+    - added symlink, readlink, chown, lstat, and statvfs data providers
+
+    <b>Connection Module Updates:</b>
+    - added \c known_hosts, \c verify_host_key, \c use_agent, and \c keepalive_interval connection options
+
+    <b>Bug Fixes:</b>
+    - removed stale TODO in mkdir implementation
+    - documented known memory leak in sftp_shutdown timeout (libssh2 limitation)
+    - updated copyright years to 2026
 
     @subsection ssh2v150 ssh Module Version 1.5.0
     - added support for interruptible I/O for graceful termination of sandboxed programs; interrupt

@@ -8,7 +8,7 @@
     Qore Programming Language
 
     Copyright 2009 Wolfgang Ritzinger
-    Copyright 2010 - 2019 Qore Technologies, s.r.o.
+    Copyright 2010 - 2026 Qore Technologies, s.r.o.
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
@@ -315,6 +315,7 @@ int SSH2Base::getPort() {
     - \c "password"
     - \c "publickey"
     - \c "keyboard-interactive"
+    - \c "agent"
 
     @since ssh2 1.3
 */
@@ -322,5 +323,317 @@ int SSH2Base::getPort() {
     SimpleRefHolder<QoreStringNode> rv(new QoreStringNode);
     myself->getAuthenticatedWithLocked(**rv);
     return rv->empty() ? nullptr : rv.release();
+}
+
+//! Sets the path to the known_hosts file for host key verification
+/** @par Example:
+    @code{.py} ssh2client.setKnownHostsFile(ENV.HOME + "/.ssh/known_hosts"); @endcode
+
+    @param path the path to the known_hosts file (OpenSSH format)
+
+    @throw SSH2-CONNECTED this method cannot be called when a connection is established
+
+    @since ssh2 2.0
+*/
+nothing SSH2Base::setKnownHostsFile(string path) [dom=FILESYSTEM] {
+    myself->setKnownHostsFile(path->c_str(), xsink);
+}
+
+//! Returns the known hosts file path if set
+/** @par Example:
+    @code{.py} *string path = ssh2client.getKnownHostsFile(); @endcode
+
+    @return the known hosts file path or \c NOTHING if not set
+
+    @since ssh2 2.0
+*/
+*string SSH2Base::getKnownHostsFile() {
+    SimpleRefHolder<QoreStringNode> rv(new QoreStringNode);
+    myself->getKnownHostsFileLocked(**rv);
+    return rv->empty() ? nullptr : rv.release();
+}
+
+//! Enables or disables host key verification
+/** @par Example:
+    @code{.py}
+ssh2client.setKnownHostsFile(ENV.HOME + "/.ssh/known_hosts");
+ssh2client.setVerifyHostKey(True);
+    @endcode
+
+    When enabled, the server's host key is checked against the known_hosts file during
+    connection. A known_hosts file must be configured with @ref setKnownHostsFile() before
+    enabling verification.
+
+    @param verify set to @ref Qore::True "True" to enable host key verification
+
+    @throw SSH2-CONNECTED this method cannot be called when a connection is established
+
+    @see
+    - @ref setKnownHostsFile()
+    - @ref setHostKeyPolicy()
+
+    @since ssh2 2.0
+*/
+nothing SSH2Base::setVerifyHostKey(bool verify) {
+    myself->setVerifyHostKey(verify, xsink);
+}
+
+//! Returns whether host key verification is enabled
+/** @par Example:
+    @code{.py} bool verify = ssh2client.getVerifyHostKey(); @endcode
+
+    @return @ref Qore::True "True" if host key verification is enabled
+
+    @since ssh2 2.0
+*/
+bool SSH2Base::getVerifyHostKey() [flags=CONSTANT] {
+    return myself->getVerifyHostKey();
+}
+
+//! Sets the host key policy for unknown hosts
+/** @par Example:
+    @code{.py} ssh2client.setHostKeyPolicy(SSH2_HOSTKEY_TOFU); @endcode
+
+    Controls what happens when host key verification is enabled and the server's key is not
+    found in the known_hosts file:
+    - \c SSH2_HOSTKEY_REJECT (default): raise an \c SSH2-HOSTKEY-UNKNOWN exception
+    - \c SSH2_HOSTKEY_TOFU (Trust On First Use): accept the key and add it to the known_hosts file
+
+    @param policy the policy constant: \c SSH2_HOSTKEY_REJECT or \c SSH2_HOSTKEY_TOFU
+
+    @throw SSH2-HOSTKEY-POLICY-ERROR invalid policy value
+
+    @since ssh2 2.0
+*/
+nothing SSH2Base::setHostKeyPolicy(int policy) {
+    myself->setHostKeyPolicy(policy, xsink);
+}
+
+//! Returns the current host key policy
+/** @par Example:
+    @code{.py} int policy = ssh2client.getHostKeyPolicy(); @endcode
+
+    @return the current host key policy: \c SSH2_HOSTKEY_REJECT or \c SSH2_HOSTKEY_TOFU
+
+    @since ssh2 2.0
+*/
+int SSH2Base::getHostKeyPolicy() [flags=CONSTANT] {
+    return myself->getHostKeyPolicy();
+}
+
+//! Returns information about the connected server's host key
+/** @par Example:
+    @code{.py} hash<Ssh2HostKeyInfo> h = ssh2client.getHostKey(); @endcode
+
+    @return a hash with host key information including fingerprints and key type
+
+    @throw SSH2CLIENT-NOT-CONNECTED client is not connected
+    @throw SSH2-HOSTKEY-ERROR could not retrieve host key
+
+    @since ssh2 2.0
+*/
+hash<Ssh2HostKeyInfo> SSH2Base::getHostKey() [flags=RET_VALUE_ONLY] {
+    return myself->getHostKeyLocked(xsink);
+}
+
+//! Adds the current server's host key to the known_hosts file
+/** @par Example:
+    @code{.py}
+ssh2client.setKnownHostsFile("/tmp/known_hosts");
+ssh2client.connect();
+ssh2client.addKnownHost();
+    @endcode
+
+    A known_hosts file must be configured with @ref setKnownHostsFile() before calling this method.
+    The client must be connected.
+
+    @param host optional: the hostname to store; if not given, the connection hostname is used
+    @param port optional: the port to store; if not given or 0, the connection port is used
+
+    @throw SSH2CLIENT-NOT-CONNECTED client is not connected
+    @throw SSH2-HOSTKEY-ERROR could not retrieve host key or write known hosts file
+    @throw MISSING-FEATURE-ERROR this method is not available; the ssh2 module was compiled with a version of libssh2 that does not support this operation
+
+    @since ssh2 2.0
+*/
+nothing SSH2Base::addKnownHost(*string host, softint port = 0) [dom=FILESYSTEM] {
+#ifdef HAVE_LIBSSH2_KNOWNHOST_API
+    myself->addKnownHostLocked(host ? host->c_str() : nullptr, (int)port, xsink);
+#else
+    xsink->raiseException("MISSING-FEATURE-ERROR", "the addKnownHost() method is not available; the ssh2 module was compiled with a version of libssh2 that does not support this operation");
+#endif
+}
+
+//! Sets private and optionally public key data from memory for authentication
+/** @par Example:
+    @code{.py} sftpclient.setKeysFromData(priv_key_data, pub_key_data); @endcode
+
+    This allows key-based authentication without storing keys on the filesystem,
+    which is useful for containerized environments or when keys are stored in
+    a secrets manager.
+
+    @param priv_key the private key data as a binary value (PEM format)
+    @param pub_key optional: the public key data as a binary value
+    @param passphrase optional: the passphrase for the private key; if not given, the password set with @ref setPassword() is used
+
+    @throw SSH2-CONNECTED this method cannot be called when a connection is established
+    @throw MISSING-FEATURE-ERROR this method is not available; the ssh2 module was compiled with a version of libssh2 that does not support this operation
+
+    @since ssh2 2.0
+*/
+nothing SSH2Base::setKeysFromData(binary priv_key, *binary pub_key, *string passphrase) {
+#ifdef HAVE_LIBSSH2_PUBLICKEY_FROMMEMORY
+    myself->setKeysFromData(priv_key, pub_key, passphrase ? passphrase->c_str() : nullptr, xsink);
+#else
+    xsink->raiseException("MISSING-FEATURE-ERROR", "the setKeysFromData() method is not available; the ssh2 module was compiled with a version of libssh2 that does not support this operation");
+#endif
+}
+
+//! Enables or disables SSH agent authentication
+/** @par Example:
+    @code{.py} ssh2client.setUseAgent(False); @endcode
+
+    When enabled (the default), the client will attempt to authenticate using keys
+    from the running SSH agent before trying other authentication methods.
+
+    @param enable set to @ref Qore::True "True" to enable SSH agent authentication, @ref Qore::False "False" to disable it
+
+    @throw SSH2-CONNECTED this method cannot be called when a connection is established
+
+    @since ssh2 2.0
+*/
+nothing SSH2Base::setUseAgent(bool enable) {
+    myself->setUseAgent(enable, xsink);
+}
+
+//! Returns whether SSH agent authentication is enabled
+/** @par Example:
+    @code{.py} bool use_agent = ssh2client.getUseAgent(); @endcode
+
+    @return @ref Qore::True "True" if SSH agent authentication is enabled, @ref Qore::False "False" if not
+
+    @since ssh2 2.0
+*/
+bool SSH2Base::getUseAgent() [flags=CONSTANT] {
+    return myself->getUseAgent();
+}
+
+//! Sets the keepalive interval in seconds for the next connection
+/** @par Example:
+    @code{.py} ssh2client.setKeepalive(30); @endcode
+
+    @param interval the keepalive interval in seconds; 0 disables keepalive
+
+    @throw SSH2-CONNECTED this method cannot be called when a connection is established
+
+    @since ssh2 2.0
+*/
+nothing SSH2Base::setKeepalive(int interval) {
+    myself->setKeepalive(interval, xsink);
+}
+
+//! Returns the keepalive interval in seconds
+/** @par Example:
+    @code{.py} int interval = ssh2client.getKeepalive(); @endcode
+
+    @return the keepalive interval in seconds; 0 means keepalive is disabled
+
+    @since ssh2 2.0
+*/
+int SSH2Base::getKeepalive() [flags=CONSTANT] {
+    return myself->getKeepalive();
+}
+
+//! Sets the preferred algorithms for a given method type
+/** @par Example:
+    @code{.py} ssh2client.setMethodPreference("KEX", "curve25519-sha256,diffie-hellman-group-exchange-sha256"); @endcode
+
+    Must be called before connecting. The preference string is a comma-separated list of
+    algorithm names in order of preference.
+
+    @param method_type the method type: \c "KEX", \c "HOSTKEY", \c "CRYPT_CS", \c "CRYPT_SC", \c "MAC_CS", \c "MAC_SC", \c "COMP_CS", \c "COMP_SC"
+    @param prefs a comma-separated list of algorithm names in order of preference
+
+    @throw SSH2-CONNECTED this method cannot be called when a connection is established
+    @throw SSH2-METHOD-ERROR invalid method type
+
+    @since ssh2 2.0
+*/
+nothing SSH2Base::setMethodPreference(string method_type, string prefs) {
+    int mt = method_type_from_string(method_type->c_str(), xsink);
+    if (*xsink) {
+        return QoreValue();
+    }
+    myself->setMethodPreference(mt, prefs->c_str(), xsink);
+}
+
+//! Returns a list of supported algorithms for a given method type
+/** @par Example:
+    @code{.py} list<string> algs = ssh2client.getSupportedAlgorithms("KEX"); @endcode
+
+    @param method_type the method type: \c "KEX", \c "HOSTKEY", \c "CRYPT_CS", \c "CRYPT_SC", \c "MAC_CS", \c "MAC_SC", \c "COMP_CS", \c "COMP_SC"
+
+    @return a list of supported algorithm names for the given method type
+
+    @throw SSH2-METHOD-ERROR invalid method type
+    @throw SSH2-ERROR error querying supported algorithms
+    @throw MISSING-FEATURE-ERROR this method is not available with the installed version of libssh2
+
+    @since ssh2 2.0
+*/
+list<string> SSH2Base::getSupportedAlgorithms(string method_type) [flags=RET_VALUE_ONLY] {
+    int mt = method_type_from_string(method_type->c_str(), xsink);
+    if (*xsink) {
+        return QoreValue();
+    }
+    return myself->getSupportedAlgorithms(mt, xsink);
+}
+
+//! Sets the SSH banner string for the next connection
+/** @par Example:
+    @code{.py} ssh2client.setBanner("SSH-2.0-MyClient"); @endcode
+
+    @param banner the banner string to send during the SSH handshake
+
+    @throw SSH2-CONNECTED this method cannot be called when a connection is established
+
+    @since ssh2 2.0
+*/
+nothing SSH2Base::setBanner(string banner) {
+    myself->setBanner(banner->c_str(), xsink);
+}
+
+//! Returns the SSH banner
+/** @par Example:
+    @code{.py} *string banner = ssh2client.getBanner(); @endcode
+
+    When connected, returns the server's SSH banner string.
+    When not connected, returns the banner set by @ref setBanner().
+
+    @return the SSH banner string or \c NOTHING if none is available
+
+    @since ssh2 2.0
+*/
+*string SSH2Base::getBanner() {
+    return myself->getBannerLocked(xsink);
+}
+
+//! Sets the trace/debug level for the SSH2 session
+/** @par Example:
+    @code{.py} ssh2client.setTraceLevel(SSH2_TRACE_AUTH | SSH2_TRACE_CONN); @endcode
+
+    Must be called when connected. The trace output goes to stderr.
+
+    @param bitmask a bitmask of trace flags: \c SSH2_TRACE_TRANS, \c SSH2_TRACE_KEX, \c SSH2_TRACE_AUTH,
+    \c SSH2_TRACE_CONN, \c SSH2_TRACE_SCP, \c SSH2_TRACE_SFTP, \c SSH2_TRACE_ERROR,
+    \c SSH2_TRACE_PUBLICKEY, \c SSH2_TRACE_SOCKET
+
+    @throw SSH2CLIENT-NOT-CONNECTED must be connected to set trace level
+    @throw MISSING-FEATURE-ERROR this method is not available with the installed version of libssh2
+
+    @since ssh2 2.0
+*/
+nothing SSH2Base::setTraceLevel(int bitmask) {
+    myself->setTraceLevelLocked((int)bitmask, xsink);
 }
 

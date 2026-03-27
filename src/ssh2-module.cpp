@@ -6,7 +6,7 @@
     Qore Programming Language
 
     Copyright (C) 2009 Wolfgang Ritzinger
-    Copyright (C) 2010 - 2021 Qore Technologies, s.r.o.
+    Copyright (C) 2010 - 2026 Qore Technologies, s.r.o.
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
@@ -30,6 +30,7 @@
 #include "SSH2Client.h"
 #include "SFTPClient.h"
 #include "SSH2Channel.h"
+#include "SSH2Listener.h"
 
 #include <string.h>
 
@@ -68,6 +69,9 @@ DLLLOCAL const TypedHashDecl* hashdeclSftpDirInfo;
 DLLLOCAL const TypedHashDecl* hashdeclSftpConnectionInfo;
 DLLLOCAL const TypedHashDecl* hashdeclSsh2ConnectionInfo;
 DLLLOCAL const TypedHashDecl* hashdeclSsh2StatInfo;
+DLLLOCAL const TypedHashDecl* hashdeclSftpStatVfsInfo;
+DLLLOCAL const TypedHashDecl* hashdeclSsh2ExitSignalInfo;
+DLLLOCAL const TypedHashDecl* hashdeclSsh2HostKeyInfo;
 
 static void ssh2_module_init(QoreModuleInitContext& ctx, ExceptionSink& xsink) {
     qore_libssh2_version = libssh2_version(LIBSSH2_VERSION_NUM);
@@ -178,15 +182,40 @@ static void ssh2_module_init(QoreModuleInitContext& ctx, ExceptionSink& xsink) {
     hashdeclSftpConnectionInfo = init_hashdecl_SftpConnectionInfo(ssh2ns);
     hashdeclSsh2ConnectionInfo = init_hashdecl_Ssh2ConnectionInfo(ssh2ns);
     hashdeclSsh2StatInfo = init_hashdecl_Ssh2StatInfo(ssh2ns);
+    hashdeclSftpStatVfsInfo = init_hashdecl_SftpStatVfsInfo(ssh2ns);
+    hashdeclSsh2ExitSignalInfo = init_hashdecl_Ssh2ExitSignalInfo(ssh2ns);
+    hashdeclSsh2HostKeyInfo = init_hashdecl_Ssh2HostKeyInfo(ssh2ns);
 
     // all classes belonging to here
+    // NOTE: SSH2Listener must be initialized before SSH2Client because SSH2Client
+    // references SSH2Listener as a return type for forwardListen()
     ssh2ns.addSystemClass(initSSH2BaseClass(ssh2ns));
     ssh2ns.addSystemClass(initSSH2ChannelClass(ssh2ns));
+#ifdef HAVE_LIBSSH2_FORWARD_LISTEN
+    ssh2ns.addSystemClass(initSSH2ListenerClass(ssh2ns));
+#endif
     ssh2ns.addSystemClass(initSSH2ClientClass(ssh2ns));
     ssh2ns.addSystemClass(initSFTPClientClass(ssh2ns));
 
     // constants
     ssh2ns.addConstant("Version", new QoreStringNode(qore_libssh2_version));
+
+    // host key policy constants
+    ssh2ns.addConstant("SSH2_HOSTKEY_REJECT", SSH2_HOSTKEY_REJECT);
+    ssh2ns.addConstant("SSH2_HOSTKEY_TOFU", SSH2_HOSTKEY_TOFU);
+
+#ifdef HAVE_LIBSSH2_TRACE
+    // trace bitmask constants
+    ssh2ns.addConstant("SSH2_TRACE_TRANS", (int64)LIBSSH2_TRACE_TRANS);
+    ssh2ns.addConstant("SSH2_TRACE_KEX", (int64)LIBSSH2_TRACE_KEX);
+    ssh2ns.addConstant("SSH2_TRACE_AUTH", (int64)LIBSSH2_TRACE_AUTH);
+    ssh2ns.addConstant("SSH2_TRACE_CONN", (int64)LIBSSH2_TRACE_CONN);
+    ssh2ns.addConstant("SSH2_TRACE_SCP", (int64)LIBSSH2_TRACE_SCP);
+    ssh2ns.addConstant("SSH2_TRACE_SFTP", (int64)LIBSSH2_TRACE_SFTP);
+    ssh2ns.addConstant("SSH2_TRACE_ERROR", (int64)LIBSSH2_TRACE_ERROR);
+    ssh2ns.addConstant("SSH2_TRACE_PUBLICKEY", (int64)LIBSSH2_TRACE_PUBLICKEY);
+    ssh2ns.addConstant("SSH2_TRACE_SOCKET", (int64)LIBSSH2_TRACE_SOCKET);
+#endif
 
 }
 

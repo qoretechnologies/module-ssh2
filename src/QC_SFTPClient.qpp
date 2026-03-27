@@ -6,7 +6,7 @@
     libssh2 SFTP client integration into qore
 
     Copyright 2009 Wolfgang Ritzinger
-    Copyright 2010 - 2021 Qore Technologies, s.r.o.
+    Copyright 2010 - 2026 Qore Technologies, s.r.o.
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
@@ -94,6 +94,44 @@ hashdecl SftpDirInfo {
 
     //! sorted list of symbolic links in the directory
     list<string> links;
+}
+
+//! SFTP filesystem statistics hash
+/** @since ssh2 2.0
+*/
+hashdecl SftpStatVfsInfo {
+    //! filesystem block size
+    int f_bsize;
+
+    //! fragment size
+    int f_frsize;
+
+    //! total data blocks in filesystem
+    int f_blocks;
+
+    //! free blocks in filesystem
+    int f_bfree;
+
+    //! free blocks available to non-root
+    int f_bavail;
+
+    //! total file nodes (inodes) in filesystem
+    int f_files;
+
+    //! free file nodes in filesystem
+    int f_ffree;
+
+    //! free file nodes available to non-root
+    int f_favail;
+
+    //! filesystem ID
+    int f_fsid;
+
+    //! mount flags
+    int f_flag;
+
+    //! maximum filename length
+    int f_namemax;
 }
 
 //! SFTP connection info hash
@@ -661,4 +699,118 @@ bool SFTPClient::isAlive(timeout timeout_ms = 60) {
 */
 bool SFTPClient::isAliveEx(timeout timeout_ms = 60) {
     return myself->sftpIsAliveEx((int)timeout_ms, xsink);
+}
+
+//! Creates a symbolic link on the remote server
+/** @par Example:
+    @code{.py} sftpclient.symlink("/tmp/target", "/tmp/link"); @endcode
+
+    If a connection has not yet been established, it is implicitly attempted here before executing the method.
+
+    @param target the target path that the symlink points to
+    @param link_path the path of the symbolic link to create
+    @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds)
+
+    @throw SFTPCLIENT-SYMLINK-ERROR error creating symlink
+    @throw SFTPCLIENT-TIMEOUT timeout in network operation
+    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message
+
+    @since ssh2 2.0
+*/
+nothing SFTPClient::symlink(string target, string link_path, timeout timeout = 60s) {
+    myself->sftpSymlink(target->c_str(), link_path->c_str(), (int)timeout, xsink);
+}
+
+//! Reads the target of a symbolic link on the remote server
+/** @par Example:
+    @code{.py} string target = sftpclient.readlink("/tmp/link"); @endcode
+
+    If a connection has not yet been established, it is implicitly attempted here before executing the method.
+
+    @param path the path of the symbolic link to read
+    @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds)
+
+    @return the target path of the symbolic link
+
+    @throw SFTPCLIENT-READLINK-ERROR error reading symlink
+    @throw SFTPCLIENT-TIMEOUT timeout in network operation
+    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message
+
+    @since ssh2 2.0
+*/
+string SFTPClient::readlink(string path, timeout timeout = 60s) [flags=RET_VALUE_ONLY] {
+    return myself->sftpReadlink(path->c_str(), (int)timeout, xsink);
+}
+
+//! Returns file status information without following symbolic links
+/** @par Example:
+    @code{.py} *hash<Ssh2StatInfo> h = sftpclient.lstat(path); @endcode
+
+    If a connection has not yet been established, it is implicitly attempted here before executing the method.
+
+    Unlike @ref stat(), this method does not follow symbolic links; if \a path is a symlink, info about
+    the symlink itself is returned, not the target.
+
+    @param path the pathname of the file to stat
+    @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds)
+
+    @return \c NOTHING if the path was not found or a hash with stat info
+
+    @throw SFTPCLIENT-TIMEOUT timeout in network operation
+    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message
+
+    @since ssh2 2.0
+*/
+*hash<Ssh2StatInfo> SFTPClient::lstat(string path, timeout timeout = 60s) [flags=RET_VALUE_ONLY] {
+    LIBSSH2_SFTP_ATTRIBUTES attr;
+    int rc = myself->sftpLGetAttributes(path->c_str(), &attr, (int)timeout, xsink);
+    return rc < 0 ? QoreValue() : attr2hash(attr, xsink);
+}
+
+//! Changes the ownership of a file or directory on the remote server
+/** @par Example:
+    @code{.py} sftpclient.chown("/tmp/file.txt", 1000, 1000); @endcode
+
+    If a connection has not yet been established, it is implicitly attempted here before executing the method.
+
+    @param path the pathname of the file or directory to change ownership of
+    @param uid the new user ID
+    @param gid the new group ID
+    @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds)
+
+    @throw SFTPCLIENT-CHOWN-ERROR error changing ownership
+    @throw SFTPCLIENT-TIMEOUT timeout in network operation
+    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message
+
+    @since ssh2 2.0
+*/
+nothing SFTPClient::chown(string path, int uid, int gid, timeout timeout = 60s) {
+    myself->sftpChown(path->c_str(), (int)uid, (int)gid, (int)timeout, xsink);
+}
+
+//! Returns filesystem statistics for the given path on the remote server
+/** @par Example:
+    @code{.py} hash<SftpStatVfsInfo> h = sftpclient.statvfs("/"); @endcode
+
+    If a connection has not yet been established, it is implicitly attempted here before executing the method.
+
+    @param path the pathname on the remote filesystem to query
+    @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds)
+
+    @return a hash with filesystem statistics
+
+    @throw SFTPCLIENT-STATVFS-ERROR error getting filesystem statistics
+    @throw SFTPCLIENT-TIMEOUT timeout in network operation
+    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SFTP protocol response; server returned an error message
+    @throw MISSING-FEATURE-ERROR this method is not available; the ssh2 module was compiled with a version of libssh2 that does not support this operation
+
+    @since ssh2 2.0
+*/
+hash<SftpStatVfsInfo> SFTPClient::statvfs(string path, timeout timeout = 60s) [flags=RET_VALUE_ONLY] {
+#ifdef HAVE_LIBSSH2_SFTP_STATVFS
+    return myself->sftpStatvfs(path->c_str(), (int)timeout, xsink);
+#else
+    xsink->raiseException("MISSING-FEATURE-ERROR", "the statvfs() method is not available; the ssh2 module was compiled with a version of libssh2 that does not support this operation");
+    return QoreValue();
+#endif
 }

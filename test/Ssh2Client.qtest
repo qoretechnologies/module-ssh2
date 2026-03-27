@@ -4,7 +4,7 @@
 %modern
 
 %requires qore >= 0.8.12
-%requires ssh2 >= 1.2
+%requires ssh2 >= 2.0
 
 %requires Util
 %requires QUnit
@@ -40,6 +40,13 @@ class Ssh2ClientTest inherits QUnit::Test {
         uri = shift ARGV ?? sprintf("%s@localhost", getusername());
 
         addTestCase("Ssh2Client test", \ssh2ClientTest());
+        addTestCase("Host key info test", \hostKeyInfoTest());
+        addTestCase("Known hosts TOFU test", \knownHostsTofuTest());
+        addTestCase("Known hosts reject test", \knownHostsRejectTest());
+        addTestCase("Channel PTY resize test", \channelPtyResizeTest());
+        addTestCase("Channel exit signal test", \channelExitSignalTest());
+        addTestCase("Algorithm query test", \algorithmQueryTest());
+        addTestCase("Trace level test", \traceLevelTest());
         # Note: Parameter validation and edge case tests are in test/NegativeTests.qtest
 
         set_return_value(main());
@@ -111,6 +118,197 @@ class Ssh2ClientTest inherits QUnit::Test {
             stdout.printf("=======================================\n");
             stdout.printf("exit status: %d\n", chan.getExitStatus());
         }
+    }
+
+    hostKeyInfoTest() {
+        SSH2Client sc(uri);
+        setPrivateKey(sc);
+        sc.connect();
+
+        hash<Ssh2HostKeyInfo> hk = sc.getHostKey();
+        assertEq(Type::String, hk.hash_md5.type());
+        assertTrue(hk.hash_md5 =~ /^[0-9A-F]{2}(:[0-9A-F]{2}){15}$/,
+            sprintf("MD5 fingerprint format: %s", hk.hash_md5));
+        assertEq(Type::String, hk.key_type.type());
+        assertTrue(hk.key_type.size() > 0, "key type should not be empty");
+        assertEq(Type::Binary, hk.key_data.type());
+        assertTrue(hk.key_data.size() > 0, "key data should not be empty");
+
+        if (m_options.verbose) {
+            stdout.printf("Host key: type=%s md5=%s sha1=%y sha256=%y\n",
+                hk.key_type, hk.hash_md5, hk.hash_sha1, hk.hash_sha256);
+        }
+    }
+
+    knownHostsTofuTest() {
+        string kh_file = sprintf("%s/ssh2_test_known_hosts_%s", tmp_location(), get_random_string(10));
+        on_exit {
+            if (is_file(kh_file)) {
+                unlink(kh_file);
+            }
+        }
+
+        # Connect with TOFU policy - should auto-add host key
+        {
+            SSH2Client sc(uri);
+            setPrivateKey(sc);
+            sc.setKnownHostsFile(kh_file);
+            sc.setVerifyHostKey(True);
+            sc.setHostKeyPolicy(SSH2_HOSTKEY_TOFU);
+            sc.connect();
+
+            assertEq(True, boolean(sc.connected()), "should be connected after TOFU accept");
+            assertEq(True, is_file(kh_file), "known_hosts file should be created");
+            sc.disconnect();
+        }
+
+        # Connect again with REJECT policy - should succeed (host key now known)
+        {
+            SSH2Client sc(uri);
+            setPrivateKey(sc);
+            sc.setKnownHostsFile(kh_file);
+            sc.setVerifyHostKey(True);
+            sc.setHostKeyPolicy(SSH2_HOSTKEY_REJECT);
+            sc.connect();
+            assertEq(True, boolean(sc.connected()), "should connect with known host key");
+            sc.disconnect();
+        }
+    }
+
+    knownHostsRejectTest() {
+        string kh_file = sprintf("%s/ssh2_test_known_hosts_%s", tmp_location(), get_random_string(10));
+        on_exit {
+            if (is_file(kh_file)) {
+                unlink(kh_file);
+            }
+        }
+
+        # Create empty known_hosts file
+        {
+            File f();
+            f.open2(kh_file, O_CREAT | O_WRONLY | O_TRUNC, 0644);
+        }
+
+        # Connect with REJECT policy and empty known_hosts - should fail
+        {
+            SSH2Client sc(uri);
+            setPrivateKey(sc);
+            sc.setKnownHostsFile(kh_file);
+            sc.setVerifyHostKey(True);
+            sc.setHostKeyPolicy(SSH2_HOSTKEY_REJECT);
+            assertThrows("SSH2-HOSTKEY-UNKNOWN", sub () {
+                sc.connect();
+            });
+        }
+
+        # Connect with verification disabled - should succeed regardless
+        {
+            SSH2Client sc(uri);
+            setPrivateKey(sc);
+            sc.setKnownHostsFile(kh_file);
+            sc.setVerifyHostKey(False);
+            sc.connect();
+            assertEq(True, boolean(sc.connected()));
+            sc.disconnect();
+        }
+    }
+
+    channelPtyResizeTest() {
+        SSH2Client sc(uri);
+        setPrivateKey(sc);
+        sc.connect();
+
+        SSH2Channel chan = sc.openSessionChannel(timeout);
+        chan.requestPty("xterm", "", 80, 24);
+        chan.shell();
+
+        readUntilPrompt(chan);
+
+        # resize PTY - should not throw
+        chan.requestPtySize(120, 40);
+
+        chan.write("echo resized\n");
+        readUntilPrompt(chan);
+
+        chan.sendEof();
+        chan.close();
+    }
+
+    channelExitSignalTest() {
+        SSH2Client sc(uri);
+        setPrivateKey(sc);
+        sc.connect();
+
+        # run a command that exits normally
+        SSH2Channel chan = sc.openSessionChannel(timeout);
+        chan.exec("true");
+        chan.sendEof();
+        chan.waitEof();
+        chan.close();
+        chan.waitClosed();
+
+        assertEq(0, chan.getExitStatus());
+
+        # test getExitSignal - may or may not have signal info depending on how process exited
+        try {
+            hash<Ssh2ExitSignalInfo> sig = chan.getExitSignal();
+            # normal exit should have no signal
+            assertNothing(sig.signal);
+        } catch (hash<ExceptionInfo> ex) {
+            if (ex.err == "MISSING-FEATURE-ERROR") {
+                testSkip("getExitSignal not supported by this build");
+            } else {
+                rethrow;
+            }
+        }
+    }
+
+    algorithmQueryTest() {
+        SSH2Client sc(uri);
+        setPrivateKey(sc);
+
+        # query supported algorithms before connect
+        list<string> kex_algs = sc.getSupportedAlgorithms("KEX");
+        assertGt(0, kex_algs.size(), "KEX algorithms should be non-empty");
+
+        list<string> hostkey_algs = sc.getSupportedAlgorithms("HOSTKEY");
+        assertGt(0, hostkey_algs.size(), "HOSTKEY algorithms should be non-empty");
+
+        # set a method preference using an algorithm we know is supported
+        sc.setMethodPreference("KEX", kex_algs[0]);
+
+        sc.connect();
+
+        # verify connected and algorithm info is available
+        hash<Ssh2ConnectionInfo> info = sc.info();
+        assertEq(True, boolean(info.connected));
+        assertGt(0, info.methods.size());
+
+        if (m_options.verbose) {
+            stdout.printf("Negotiated methods: %N\n", info.methods);
+        }
+
+        sc.disconnect();
+    }
+
+    traceLevelTest() {
+        SSH2Client sc(uri);
+        setPrivateKey(sc);
+
+        # setTraceLevel should fail when not connected
+        assertThrows("SSH2CLIENT-NOT-CONNECTED", sub () {
+            sc.setTraceLevel(SSH2_TRACE_AUTH);
+        });
+
+        sc.connect();
+
+        # setTraceLevel should work when connected (output goes to stderr)
+        sc.setTraceLevel(SSH2_TRACE_ERROR);
+
+        # disable tracing
+        sc.setTraceLevel(0);
+
+        sc.disconnect();
     }
 
     private setPrivateKey(SSH2Client client) {

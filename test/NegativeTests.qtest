@@ -5,7 +5,7 @@
 
 %modern
 
-%requires ssh2 >= 1.2
+%requires ssh2 >= 2.0
 %requires QUnit
 
 %exec-class NegativeTests
@@ -23,7 +23,7 @@ class NegativeTests inherits QUnit::Test {
         const ColumnOffset = 25;
     }
 
-    constructor() : Test("NegativeTests", "1.0", \ARGV, MyOpts) {
+    constructor() : Test("NegativeTests", "2.0", \ARGV, MyOpts) {
         if (m_options.timeout)
             timeout = m_options.timeout * 1000;
 
@@ -33,6 +33,15 @@ class NegativeTests inherits QUnit::Test {
         addTestCase("State error tests", \stateErrorTests());
         addTestCase("Corner case tests", \cornerCaseTests());
         addTestCase("Sandbox key file tests", \sandboxKeyFileTests());
+        addTestCase("Keepalive tests", \keepaliveTests());
+        addTestCase("SSH agent option tests", \agentOptionTests());
+        addTestCase("Known hosts option tests", \knownHostsOptionTests());
+        addTestCase("Algorithm preference tests", \algorithmPreferenceTests());
+        addTestCase("Banner tests", \bannerTests());
+        addTestCase("Host key policy tests", \hostKeyPolicyTests());
+        addTestCase("Keys from data tests", \keysFromDataTests());
+        addTestCase("SSH2Listener constructor tests", \listenerConstructorTests());
+        addTestCase("Module constant tests", \moduleConstantTests());
 
         set_return_value(main());
     }
@@ -314,6 +323,268 @@ class NegativeTests inherits QUnit::Test {
 
         int result = p2.callFunction("test_setkeys_allowed");
         assertEq(1, result, "Key file access inside sandbox works");
+    }
+
+    keepaliveTests() {
+        # Test default keepalive
+        {
+            SSH2Client sc("ssh://user@localhost");
+            assertEq(60, sc.getKeepalive());
+        }
+
+        # Test set/get roundtrip
+        {
+            SSH2Client sc("ssh://user@localhost");
+            sc.setKeepalive(30);
+            assertEq(30, sc.getKeepalive());
+        }
+
+        # Test disable keepalive
+        {
+            SSH2Client sc("ssh://user@localhost");
+            sc.setKeepalive(0);
+            assertEq(0, sc.getKeepalive());
+        }
+
+        # Test SFTPClient inherits keepalive
+        {
+            SFTPClient sc("sftp://user@localhost");
+            assertEq(60, sc.getKeepalive());
+            sc.setKeepalive(120);
+            assertEq(120, sc.getKeepalive());
+        }
+    }
+
+    agentOptionTests() {
+        # Test default is enabled
+        {
+            SSH2Client sc("ssh://user@localhost");
+            assertTrue(sc.getUseAgent());
+        }
+
+        # Test set/get roundtrip
+        {
+            SSH2Client sc("ssh://user@localhost");
+            sc.setUseAgent(False);
+            assertFalse(sc.getUseAgent());
+            sc.setUseAgent(True);
+            assertTrue(sc.getUseAgent());
+        }
+
+        # Test SFTPClient inherits agent option
+        {
+            SFTPClient sc("sftp://user@localhost");
+            assertTrue(sc.getUseAgent());
+            sc.setUseAgent(False);
+            assertFalse(sc.getUseAgent());
+        }
+    }
+
+    knownHostsOptionTests() {
+        # Test default: no known hosts file
+        {
+            SSH2Client sc("ssh://user@localhost");
+            assertNothing(sc.getKnownHostsFile());
+        }
+
+        # Test set/get roundtrip
+        {
+            SSH2Client sc("ssh://user@localhost");
+            sc.setKnownHostsFile("/tmp/known_hosts");
+            assertEq("/tmp/known_hosts", sc.getKnownHostsFile());
+        }
+
+        # Test default verification disabled
+        {
+            SSH2Client sc("ssh://user@localhost");
+            assertFalse(sc.getVerifyHostKey());
+        }
+
+        # Test set/get verify roundtrip
+        {
+            SSH2Client sc("ssh://user@localhost");
+            sc.setVerifyHostKey(True);
+            assertTrue(sc.getVerifyHostKey());
+            sc.setVerifyHostKey(False);
+            assertFalse(sc.getVerifyHostKey());
+        }
+
+        # Test SFTPClient inherits known hosts options
+        {
+            SFTPClient sc("sftp://user@localhost");
+            assertNothing(sc.getKnownHostsFile());
+            assertFalse(sc.getVerifyHostKey());
+            sc.setKnownHostsFile("/tmp/kh");
+            sc.setVerifyHostKey(True);
+            assertEq("/tmp/kh", sc.getKnownHostsFile());
+            assertTrue(sc.getVerifyHostKey());
+        }
+
+        # Test getHostKey when not connected throws
+        {
+            SSH2Client sc("ssh://user@localhost");
+            assertThrows("SSH2CLIENT-NOT-CONNECTED", sub () {
+                sc.getHostKey();
+            });
+        }
+
+        # Test addKnownHost when not connected throws
+        {
+            SSH2Client sc("ssh://user@localhost");
+            sc.setKnownHostsFile("/tmp/test_kh");
+            assertThrows("SSH2CLIENT-NOT-CONNECTED", sub () {
+                sc.addKnownHost();
+            });
+        }
+    }
+
+    algorithmPreferenceTests() {
+        # Test invalid method type
+        {
+            SSH2Client sc("ssh://user@localhost");
+            assertThrows("SSH2-METHOD-ERROR", sub () {
+                sc.setMethodPreference("INVALID", "aes256-ctr");
+            });
+        }
+
+        # Test valid method types don't throw
+        {
+            SSH2Client sc("ssh://user@localhost");
+            assertNothing(sc.setMethodPreference("KEX", "curve25519-sha256"));
+            assertNothing(sc.setMethodPreference("HOSTKEY", "ssh-ed25519"));
+            assertNothing(sc.setMethodPreference("CRYPT_CS", "aes256-ctr"));
+            assertNothing(sc.setMethodPreference("CRYPT_SC", "aes256-ctr"));
+            assertNothing(sc.setMethodPreference("MAC_CS", "hmac-sha2-256"));
+            assertNothing(sc.setMethodPreference("MAC_SC", "hmac-sha2-256"));
+            assertNothing(sc.setMethodPreference("COMP_CS", "none"));
+            assertNothing(sc.setMethodPreference("COMP_SC", "none"));
+        }
+
+        # Test getSupportedAlgorithms with invalid type
+        {
+            SSH2Client sc("ssh://user@localhost");
+            assertThrows("SSH2-METHOD-ERROR", sub () {
+                sc.getSupportedAlgorithms("INVALID");
+            });
+        }
+
+        # Test getSupportedAlgorithms returns non-empty list
+        {
+            SSH2Client sc("ssh://user@localhost");
+            list<string> algs = sc.getSupportedAlgorithms("KEX");
+            assertGt(0, algs.size());
+
+            algs = sc.getSupportedAlgorithms("HOSTKEY");
+            assertGt(0, algs.size());
+
+            algs = sc.getSupportedAlgorithms("CRYPT_CS");
+            assertGt(0, algs.size());
+        }
+    }
+
+    bannerTests() {
+        # Test default: no banner
+        {
+            SSH2Client sc("ssh://user@localhost");
+            assertNothing(sc.getBanner());
+        }
+
+        # Test set banner
+        {
+            SSH2Client sc("ssh://user@localhost");
+            sc.setBanner("SSH-2.0-TestClient");
+            assertEq("SSH-2.0-TestClient", sc.getBanner());
+        }
+    }
+
+    hostKeyPolicyTests() {
+        # Test default policy is REJECT
+        {
+            SSH2Client sc("ssh://user@localhost");
+            assertEq(SSH2_HOSTKEY_REJECT, sc.getHostKeyPolicy());
+        }
+
+        # Test set/get roundtrip
+        {
+            SSH2Client sc("ssh://user@localhost");
+            sc.setHostKeyPolicy(SSH2_HOSTKEY_TOFU);
+            assertEq(SSH2_HOSTKEY_TOFU, sc.getHostKeyPolicy());
+            sc.setHostKeyPolicy(SSH2_HOSTKEY_REJECT);
+            assertEq(SSH2_HOSTKEY_REJECT, sc.getHostKeyPolicy());
+        }
+
+        # Test invalid policy value
+        {
+            SSH2Client sc("ssh://user@localhost");
+            assertThrows("SSH2-HOSTKEY-POLICY-ERROR", sub () {
+                sc.setHostKeyPolicy(99);
+            });
+        }
+
+        # Test constant values
+        {
+            assertEq(0, SSH2_HOSTKEY_REJECT);
+            assertEq(1, SSH2_HOSTKEY_TOFU);
+        }
+    }
+
+    keysFromDataTests() {
+        # Test setKeysFromData with valid binary data (won't authenticate, but should not throw)
+        {
+            SSH2Client sc("ssh://user@localhost");
+            binary priv = binary("-----BEGIN OPENSSH PRIVATE KEY-----\ntest\n-----END OPENSSH PRIVATE KEY-----\n");
+            binary pub = binary("ssh-rsa AAAAB test\n");
+            assertNothing(sc.setKeysFromData(priv, pub));
+        }
+
+        # Test setKeysFromData with only private key
+        {
+            SSH2Client sc("ssh://user@localhost");
+            binary priv = binary("-----BEGIN OPENSSH PRIVATE KEY-----\ntest\n-----END OPENSSH PRIVATE KEY-----\n");
+            assertNothing(sc.setKeysFromData(priv));
+        }
+
+        # Test setKeysFromData with passphrase
+        {
+            SFTPClient sc("sftp://user@localhost");
+            binary priv = binary("-----BEGIN OPENSSH PRIVATE KEY-----\ntest\n-----END OPENSSH PRIVATE KEY-----\n");
+            assertNothing(sc.setKeysFromData(priv, NOTHING, "passphrase"));
+        }
+    }
+
+    listenerConstructorTests() {
+        # Test SSH2Listener cannot be constructed directly
+        assertThrows("SSH2LISTENER-CONSTRUCTOR-ERROR", sub () {
+            new SSH2Listener();
+        });
+
+        # Test forwardListen when not connected
+        {
+            SSH2Client sc("ssh://user@localhost");
+            assertThrows("SSH2CLIENT-NOT-CONNECTED", sub () {
+                sc.forwardListen("0.0.0.0", 8080);
+            });
+        }
+    }
+
+    moduleConstantTests() {
+        # Verify host key policy constants exist
+        assertEq(Type::Int, SSH2_HOSTKEY_REJECT.type());
+        assertEq(Type::Int, SSH2_HOSTKEY_TOFU.type());
+
+        # Verify trace constants exist
+        assertEq(Type::Int, SSH2_TRACE_TRANS.type());
+        assertEq(Type::Int, SSH2_TRACE_KEX.type());
+        assertEq(Type::Int, SSH2_TRACE_AUTH.type());
+        assertEq(Type::Int, SSH2_TRACE_CONN.type());
+        assertEq(Type::Int, SSH2_TRACE_SCP.type());
+        assertEq(Type::Int, SSH2_TRACE_SFTP.type());
+        assertEq(Type::Int, SSH2_TRACE_ERROR.type());
+        assertEq(Type::Int, SSH2_TRACE_PUBLICKEY.type());
+        assertEq(Type::Int, SSH2_TRACE_SOCKET.type());
+
+        # Verify version string exists
+        assertEq(Type::String, Qore::SSH2::Version.type());
     }
 
     private usageIntern() {

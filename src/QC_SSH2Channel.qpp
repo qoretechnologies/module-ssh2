@@ -6,7 +6,7 @@
     libssh2 ssh2 channel integration into qore
 
     Copyright 2010 Wolfgang Ritzinger
-    Copyright 2010 - 2020 Qore Technologies, s.r.o.
+    Copyright 2010 - 2026 Qore Technologies, s.r.o.
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
@@ -24,6 +24,21 @@
 */
 
 #include "SSH2Channel.h"
+#include "ssh2-module.h"
+
+//! SSH2 exit signal info hash
+/** @since ssh2 2.0
+*/
+hashdecl Qore::SSH2::Ssh2ExitSignalInfo {
+    //! the signal name that caused the remote process to exit (e.g. "TERM", "KILL", "SEGV")
+    *string signal;
+
+    //! an error message from the remote process, if any
+    *string errmsg;
+
+    //! language tag for the error message
+    *string langtag;
+}
 
 //! allows Qore programs to send and receive data through an ssh2 channel
 /**
@@ -476,4 +491,107 @@ nothing SSH2Channel::extendedDataMerge(timeout timeout = -1) {
  */
 nothing SSH2Channel::extendedDataIgnore(timeout timeout = -1) {
    c->extendedDataIgnore(xsink, timeout);
+}
+
+//! Requests a change of the terminal window size on the channel
+/** @par Example:
+    @code{.py} chan.requestPtySize(120, 40); @endcode
+
+    @param width width of the pty in characters
+    @param height height of the pty in characters
+    @param width_px width of the pty in pixels
+    @param height_px height of the pty in pixels
+    @param timeout an integer giving a timeout in milliseconds or a relative date/time value; a negative value means do not time out
+
+    @throw SSH2CHANNEL-REQUESTPTYSIZE-ERROR negative terminal or pixel width, height passed; server returned an error
+    @throw SSH2CHANNEL-ERROR the channel has been closed
+    @throw SSH2CHANNEL-TIMEOUT timeout communicating on channel
+    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SSH2 protocol response; server returned an error message
+
+    @since ssh2 2.0
+*/
+nothing SSH2Channel::requestPtySize(softint width, softint height, softint width_px = 0, softint height_px = 0, timeout timeout = -1) {
+    static const char* SSH2CHANNEL_REQUESTPTYSIZE_ERR = "SSH2CHANNEL-REQUESTPTYSIZE-ERROR";
+
+    if (width < 0) {
+        xsink->raiseException(SSH2CHANNEL_REQUESTPTYSIZE_ERR, "terminal width must be non-negative; value given: %d", width);
+        return QoreValue();
+    }
+    if (height < 0) {
+        xsink->raiseException(SSH2CHANNEL_REQUESTPTYSIZE_ERR, "terminal height must be non-negative; value given: %d", height);
+        return QoreValue();
+    }
+
+    c->requestPtySize(xsink, (int)width, (int)height, (int)width_px, (int)height_px, timeout);
+}
+
+//! Returns exit signal information from the remote process
+/** @par Example:
+    @code{.py} hash<Ssh2ExitSignalInfo> h = chan.getExitSignal(); @endcode
+
+    Returns information about the signal (if any) that caused the remote process to terminate.
+
+    @return a hash with exit signal information
+
+    @throw SSH2CHANNEL-ERROR the channel has been closed
+    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SSH2 protocol response
+    @throw MISSING-FEATURE-ERROR this method is not available; the ssh2 module was compiled with a version of libssh2 that does not support this operation
+
+    @since ssh2 2.0
+*/
+hash<Ssh2ExitSignalInfo> SSH2Channel::getExitSignal() [flags=RET_VALUE_ONLY] {
+#ifdef HAVE_LIBSSH2_GET_EXIT_SIGNAL
+    return c->getExitSignal(xsink);
+#else
+    xsink->raiseException("MISSING-FEATURE-ERROR", "the getExitSignal() method is not available; the ssh2 module was compiled with a version of libssh2 that does not support this operation");
+    return QoreValue();
+#endif
+}
+
+//! Sends a signal to the remote process on the channel
+/** @par Example:
+    @code{.py} chan.sendSignal("TERM"); @endcode
+
+    @param signal_name the name of the signal to send (e.g. "TERM", "KILL", "INT", "HUP")
+    @param timeout an integer giving a timeout in milliseconds or a relative date/time value; a negative value means do not time out
+
+    @throw SSH2CHANNEL-SENDSIGNAL-ERROR server returned an error
+    @throw SSH2CHANNEL-ERROR the channel has been closed
+    @throw SSH2CHANNEL-TIMEOUT timeout communicating on channel
+    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SSH2 protocol response
+    @throw MISSING-FEATURE-ERROR this method is not available; the ssh2 module was compiled with a version of libssh2 that does not support this operation
+
+    @since ssh2 2.0
+*/
+nothing SSH2Channel::sendSignal(string signal_name, timeout timeout = -1) {
+#ifdef HAVE_LIBSSH2_CHANNEL_SIGNAL_EX
+    c->sendSignal(signal_name->c_str(), xsink, timeout);
+#else
+    xsink->raiseException("MISSING-FEATURE-ERROR", "the sendSignal() method is not available; the ssh2 module was compiled with a version of libssh2 that does not support this operation");
+#endif
+}
+
+//! Requests agent forwarding on the channel
+/** @par Example:
+    @code{.py} chan.requestAuthAgent(); @endcode
+
+    Requests that the remote server forward SSH agent requests back to the client.
+    This must be called after the channel is opened but before requesting a shell or executing a command.
+
+    @param timeout an integer giving a timeout in milliseconds or a relative date/time value; a negative value means do not time out
+
+    @throw SSH2CHANNEL-REQUESTAUTHAGENT-ERROR server returned an error
+    @throw SSH2CHANNEL-ERROR the channel has been closed
+    @throw SSH2CHANNEL-TIMEOUT timeout communicating on channel
+    @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SSH2 protocol response
+    @throw MISSING-FEATURE-ERROR this method is not available; the ssh2 module was compiled with a version of libssh2 that does not support this operation
+
+    @since ssh2 2.0
+*/
+nothing SSH2Channel::requestAuthAgent(timeout timeout = -1) {
+#ifdef HAVE_LIBSSH2_CHANNEL_REQUEST_AUTH_AGENT
+    c->requestAuthAgent(xsink, timeout);
+#else
+    xsink->raiseException("MISSING-FEATURE-ERROR", "the requestAuthAgent() method is not available; the ssh2 module was compiled with a version of libssh2 that does not support this operation");
+#endif
 }

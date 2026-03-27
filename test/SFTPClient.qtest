@@ -3,7 +3,7 @@
 
 %modern
 
-%requires ssh2 >= 1.2
+%requires ssh2 >= 2.0
 
 %requires Util
 %requires QUnit
@@ -54,6 +54,9 @@ class SFTPClientTest inherits QUnit::Test {
         }
 
         addTestCase("SFTPClientTests", \sftpTests());
+        addTestCase("SFTP symlink/readlink/lstat tests", \symlinkTests());
+        addTestCase("SFTP chown tests", \chownTests());
+        addTestCase("SFTP statvfs tests", \statvfsTests());
         # Note: Parameter validation and edge case tests are in test/NegativeTests.qtest
 
         set_return_value(main());
@@ -242,6 +245,103 @@ class SFTPClientTest inherits QUnit::Test {
 
         # # test alive
         testAssertionValue("SFTPClient:isAlive()", sc.isAlive(), False);
+    }
+
+    symlinkTests() {
+        sc.connect();
+
+        string tmpDir = m_options.dir ? m_options.dir : tmp_location();
+        string target_file = sprintf("%s/ssh2_symlink_target_%s", tmpDir, get_random_string(10));
+        string link_file = sprintf("%s/ssh2_symlink_link_%s", tmpDir, get_random_string(10));
+
+        # create a target file
+        sc.putFile("symlink test content", target_file, 0644, timeout);
+        on_exit {
+            try { sc.removeFile(target_file, timeout); } catch () {}
+            try { sc.removeFile(link_file, timeout); } catch () {}
+        }
+
+        # create symlink
+        sc.symlink(target_file, link_file, timeout);
+
+        # readlink should return the target
+        string read_target = sc.readlink(link_file, timeout);
+        assertEq(target_file, read_target);
+
+        # stat follows symlinks - should show REGULAR file
+        *hash<Ssh2StatInfo> stat_info = sc.stat(link_file, timeout);
+        assertEq(True, exists stat_info);
+        # the stat follows the symlink, so the mode should be a regular file mode
+        assertGt(0, stat_info.size);
+
+        # lstat does NOT follow symlinks - should show SYMBOLIC-LINK
+        *hash<Ssh2StatInfo> lstat_info = sc.lstat(link_file, timeout);
+        assertEq(True, exists lstat_info);
+        # verify the lstat mode indicates a symlink (S_ISLNK)
+        # symlink mode bit: 0120000
+        assertEq(True, (lstat_info.mode & 0170000) == 0120000,
+            sprintf("Expected symlink mode, got: %o", lstat_info.mode));
+
+        # lstat on the target should show a regular file
+        *hash<Ssh2StatInfo> lstat_target = sc.lstat(target_file, timeout);
+        assertEq(True, exists lstat_target);
+        assertEq(True, (lstat_target.mode & 0170000) == 0100000,
+            sprintf("Expected regular file mode, got: %o", lstat_target.mode));
+
+        # lstat on non-existent file returns NOTHING
+        assertNothing(sc.lstat(sprintf("%s/nonexistent_%s", tmpDir, get_random_string(10)), timeout));
+
+        # readlink on a non-symlink should throw
+        assertThrows("SSH2-ERROR", sub () {
+            sc.readlink(target_file, timeout);
+        });
+    }
+
+    chownTests() {
+        sc.connect();
+
+        string tmpDir = m_options.dir ? m_options.dir : tmp_location();
+        string test_file = sprintf("%s/ssh2_chown_test_%s", tmpDir, get_random_string(10));
+
+        sc.putFile("chown test", test_file, 0644, timeout);
+        on_exit {
+            try { sc.removeFile(test_file, timeout); } catch () {}
+        }
+
+        # get current uid/gid
+        *hash<Ssh2StatInfo> info = sc.stat(test_file, timeout);
+        assertEq(True, exists info);
+        int orig_uid = info.uid;
+        int orig_gid = info.gid;
+
+        # chown to same uid/gid should succeed (no permission issues)
+        sc.chown(test_file, orig_uid, orig_gid, timeout);
+
+        # verify ownership unchanged
+        info = sc.stat(test_file, timeout);
+        assertEq(orig_uid, info.uid);
+        assertEq(orig_gid, info.gid);
+    }
+
+    statvfsTests() {
+        sc.connect();
+
+        # statvfs on root should return valid data
+        try {
+            hash<SftpStatVfsInfo> vfs = sc.statvfs("/", timeout);
+            assertGt(0, vfs.f_bsize, "block size should be positive");
+            assertGt(0, vfs.f_blocks, "total blocks should be positive");
+            assertGt(0, vfs.f_namemax, "max filename length should be positive");
+            # free blocks should not exceed total blocks
+            assertTrue(vfs.f_bfree <= vfs.f_blocks, "free blocks <= total blocks");
+            assertTrue(vfs.f_bavail <= vfs.f_blocks, "available blocks <= total blocks");
+        } catch (hash<ExceptionInfo> ex) {
+            if (ex.err == "MISSING-FEATURE-ERROR") {
+                testSkip("statvfs not supported by this build");
+            } else {
+                rethrow;
+            }
+        }
     }
 
     private usageIntern() {

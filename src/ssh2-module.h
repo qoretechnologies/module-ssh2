@@ -4,7 +4,7 @@
     SSH2/SFTP integration to QORE
 
     Copyright 2009 Wolfgang Ritzinger
-    Copyright (C) 2010 - 2019 Qore Technologies, s.r.o.
+    Copyright (C) 2010 - 2026 Qore Technologies, s.r.o.
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
@@ -56,11 +56,21 @@ DLLLOCAL TypedHashDecl* init_hashdecl_SftpDirInfo(QoreNamespace& ns);
 DLLLOCAL TypedHashDecl* init_hashdecl_SftpConnectionInfo(QoreNamespace& ns);
 DLLLOCAL TypedHashDecl* init_hashdecl_Ssh2ConnectionInfo(QoreNamespace& ns);
 DLLLOCAL TypedHashDecl* init_hashdecl_Ssh2StatInfo(QoreNamespace& ns);
+DLLLOCAL TypedHashDecl* init_hashdecl_SftpStatVfsInfo(QoreNamespace& ns);
+DLLLOCAL TypedHashDecl* init_hashdecl_Ssh2ExitSignalInfo(QoreNamespace& ns);
+DLLLOCAL TypedHashDecl* init_hashdecl_Ssh2HostKeyInfo(QoreNamespace& ns);
 
 DLLLOCAL extern const TypedHashDecl* hashdeclSftpFileInfo;
 DLLLOCAL extern const TypedHashDecl* hashdeclSftpDirInfo;
 DLLLOCAL extern const TypedHashDecl* hashdeclSftpConnectionInfo;
 DLLLOCAL extern const TypedHashDecl* hashdeclSsh2ConnectionInfo;
 DLLLOCAL extern const TypedHashDecl* hashdeclSsh2StatInfo;
+DLLLOCAL extern const TypedHashDecl* hashdeclSftpStatVfsInfo;
+DLLLOCAL extern const TypedHashDecl* hashdeclSsh2ExitSignalInfo;
+DLLLOCAL extern const TypedHashDecl* hashdeclSsh2HostKeyInfo;
+
+// host key policy constants
+#define SSH2_HOSTKEY_REJECT 0
+#define SSH2_HOSTKEY_TOFU   1
 
 #endif
