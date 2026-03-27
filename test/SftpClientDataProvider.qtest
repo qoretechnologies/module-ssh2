@@ -90,8 +90,9 @@ class SftpClientDataProviderTest inherits QUnit::Test {
 
         # Check all child providers exist
         list<string> expectedChildren = (
-            "chmod", "create-file", "create-file-location", "delete", "exists",
-            "get-file", "get-file-location", "list", "mkdir", "move", "rmdir", "stat"
+            "chmod", "chown", "create-file", "create-file-location", "delete", "exists",
+            "get-file", "get-file-location", "list", "lstat", "mkdir", "move",
+            "readlink", "rmdir", "stat", "statvfs", "symlink"
         );
 
         *list<string> children = provider.getChildProviderNames();
