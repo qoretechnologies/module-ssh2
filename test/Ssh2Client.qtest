@@ -93,7 +93,32 @@ class Ssh2ClientTest inherits QUnit::Test {
         any rc = chan.getExitStatus();
         assertEq(Type::Int, rc.type());
 
-        chan = sc.openSessionChannel();
+        # clean up the test file via exec (deterministic, no prompt detection needed)
+        {
+            SSH2Channel rm_chan = sc.openSessionChannel(timeout);
+            rm_chan.exec(sprintf("/bin/rm -f %s", fn));
+            rm_chan.sendEof();
+            rm_chan.waitEof();
+            rm_chan.close();
+            rm_chan.waitClosed();
+        }
+
+        # test exec with output
+        {
+            SSH2Channel ls_chan = sc.openSessionChannel(timeout);
+            ls_chan.exec("ls -l | head -5");
+            string ls_out = ls_chan.read(0, timeout);
+            if (m_options.verbose > 1) {
+                stdout.printf("ls output: %s\n", ls_out);
+            }
+            assertEq(Type::String, ls_out.type());
+            ls_chan.sendEof();
+            ls_chan.close();
+            ls_chan.waitClosed();
+        }
+
+        # test interactive shell session (PTY + shell)
+        chan = sc.openSessionChannel(timeout);
         chan.requestPty("vt100");
         chan.shell();
 
@@ -104,9 +129,7 @@ class Ssh2ClientTest inherits QUnit::Test {
         }
 
         readUntilPrompt(chan);
-        chan.write(sprintf("/bin/rm %s\n", fn));
-        readUntilPrompt(chan);
-        chan.write("ls -l | head -5\n");
+        chan.write("echo hello\n");
         readUntilPrompt(chan);
 
         chan.sendEof();
