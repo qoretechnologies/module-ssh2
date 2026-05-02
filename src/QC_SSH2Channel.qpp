@@ -339,8 +339,8 @@ nothing SSH2Channel::write(data data, softint stream_id = 0, timeout timeout_ms 
 
    TempEncodingHelper tmp;
    if (t == NT_STRING) {
-      const QoreStringNode *str = data.get<const QoreStringNode>();
-      tmp.set(str, c->getEncoding(), xsink);
+      QoreStringNodeValueHelper str(data);
+      tmp.set(*str, c->getEncoding(), xsink);
       if (*xsink)
 	 return 0;
 
