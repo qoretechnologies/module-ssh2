@@ -351,8 +351,12 @@ public:
 
     DLLLOCAL int setHostKeyPolicy(int policy, ExceptionSink* xsink) {
         AutoLocker al(m);
-        if (policy != SSH2_HOSTKEY_REJECT && policy != SSH2_HOSTKEY_TOFU) {
-            xsink->raiseException("SSH2-HOSTKEY-POLICY-ERROR", "invalid host key policy %d; expected SSH2_HOSTKEY_REJECT (%d) or SSH2_HOSTKEY_TOFU (%d)", policy, SSH2_HOSTKEY_REJECT, SSH2_HOSTKEY_TOFU);
+        if (policy != SSH2_HOSTKEY_REJECT && policy != SSH2_HOSTKEY_TOFU
+            && policy != SSH2_HOSTKEY_TOFU_SESSION) {
+            xsink->raiseException("SSH2-HOSTKEY-POLICY-ERROR",
+                "invalid host key policy %d; expected SSH2_HOSTKEY_REJECT (%d), SSH2_HOSTKEY_TOFU "
+                "(%d), or SSH2_HOSTKEY_TOFU_SESSION (%d)", policy, SSH2_HOSTKEY_REJECT,
+                SSH2_HOSTKEY_TOFU, SSH2_HOSTKEY_TOFU_SESSION);
             return -1;
         }
         host_key_policy = policy;

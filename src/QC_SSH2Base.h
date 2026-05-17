@@ -7,6 +7,7 @@
   Qore Programming Language
 
   Copyright 2009 Wolfgang Ritzinger
+  Copyright 2010 - 2026 Qore Technologies, s.r.o.
 
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -31,5 +32,6 @@
 
 DLLLOCAL QoreClass* initSSH2BaseClass(QoreNamespace& ns);
 DLLLOCAL extern QoreClass* QC_SSH2BASE;
+DLLLOCAL extern QoreEnumDecl* enumSsh2HostKeyPolicy;
 
 #endif

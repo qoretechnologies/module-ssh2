@@ -524,16 +524,29 @@ class NegativeTests inherits QUnit::Test {
         # Test default policy is TOFU (secure by default)
         {
             SSH2Client sc("ssh://user@localhost");
-            assertEq(SSH2_HOSTKEY_TOFU, sc.getHostKeyPolicy());
+            assertEq(Ssh2HostKeyPolicy::TrustOnFirstUse, sc.getHostKeyPolicy());
         }
 
         # Test set/get roundtrip
         {
             SSH2Client sc("ssh://user@localhost");
+            sc.setHostKeyPolicy(Ssh2HostKeyPolicy::TrustOnFirstUse);
+            assertEq(Ssh2HostKeyPolicy::TrustOnFirstUse, sc.getHostKeyPolicy());
+            sc.setHostKeyPolicy(Ssh2HostKeyPolicy::Reject);
+            assertEq(Ssh2HostKeyPolicy::Reject, sc.getHostKeyPolicy());
+            sc.setHostKeyPolicy(Ssh2HostKeyPolicy::TrustOnFirstUseSession);
+            assertEq(Ssh2HostKeyPolicy::TrustOnFirstUseSession, sc.getHostKeyPolicy());
+        }
+
+        # Test legacy integer constants still work
+        {
+            SSH2Client sc("ssh://user@localhost");
             sc.setHostKeyPolicy(SSH2_HOSTKEY_TOFU);
-            assertEq(SSH2_HOSTKEY_TOFU, sc.getHostKeyPolicy());
+            assertEq(Ssh2HostKeyPolicy::TrustOnFirstUse, sc.getHostKeyPolicy());
             sc.setHostKeyPolicy(SSH2_HOSTKEY_REJECT);
-            assertEq(SSH2_HOSTKEY_REJECT, sc.getHostKeyPolicy());
+            assertEq(Ssh2HostKeyPolicy::Reject, sc.getHostKeyPolicy());
+            sc.setHostKeyPolicy(SSH2_HOSTKEY_TOFU_SESSION);
+            assertEq(Ssh2HostKeyPolicy::TrustOnFirstUseSession, sc.getHostKeyPolicy());
         }
 
         # Test invalid policy value
@@ -548,6 +561,7 @@ class NegativeTests inherits QUnit::Test {
         {
             assertEq(0, SSH2_HOSTKEY_REJECT);
             assertEq(1, SSH2_HOSTKEY_TOFU);
+            assertEq(2, SSH2_HOSTKEY_TOFU_SESSION);
         }
     }
 
@@ -556,14 +570,14 @@ class NegativeTests inherits QUnit::Test {
         # built-in defaults) would fail
         on_exit {
             SSH2Base::setDefaultVerifyHostKey(True);
-            SSH2Base::setDefaultHostKeyPolicy(SSH2_HOSTKEY_TOFU);
+            SSH2Base::setDefaultHostKeyPolicy(Ssh2HostKeyPolicy::TrustOnFirstUse);
             SSH2Base::setDefaultKnownHostsFile();
         }
 
         # built-in defaults
         {
             assertTrue(SSH2Base::getDefaultVerifyHostKey(), "built-in default: verify on");
-            assertEq(SSH2_HOSTKEY_TOFU, SSH2Base::getDefaultHostKeyPolicy(), "built-in default: TOFU");
+            assertEq(Ssh2HostKeyPolicy::TrustOnFirstUse, SSH2Base::getDefaultHostKeyPolicy(), "built-in default: TOFU");
             assertNothing(SSH2Base::getDefaultKnownHostsFile(), "built-in default: AUTO (per-user)");
         }
 
@@ -580,14 +594,19 @@ class NegativeTests inherits QUnit::Test {
 
         # setDefaultHostKeyPolicy + invalid value
         {
-            SSH2Base::setDefaultHostKeyPolicy(SSH2_HOSTKEY_REJECT);
-            assertEq(SSH2_HOSTKEY_REJECT, SSH2Base::getDefaultHostKeyPolicy());
+            SSH2Base::setDefaultHostKeyPolicy(Ssh2HostKeyPolicy::Reject);
+            assertEq(Ssh2HostKeyPolicy::Reject, SSH2Base::getDefaultHostKeyPolicy());
             SSH2Client sc("ssh://user@localhost");
-            assertEq(SSH2_HOSTKEY_REJECT, sc.getHostKeyPolicy(), "new object inherits global policy default");
+            assertEq(Ssh2HostKeyPolicy::Reject, sc.getHostKeyPolicy(), "new object inherits global policy default");
+            SSH2Base::setDefaultHostKeyPolicy(Ssh2HostKeyPolicy::TrustOnFirstUseSession);
+            assertEq(Ssh2HostKeyPolicy::TrustOnFirstUseSession, SSH2Base::getDefaultHostKeyPolicy());
+            SSH2Client sc_session("ssh://user@localhost");
+            assertEq(Ssh2HostKeyPolicy::TrustOnFirstUseSession, sc_session.getHostKeyPolicy(),
+                "new object inherits session-only TOFU global policy default");
             assertThrows("SSH2-HOSTKEY-POLICY-ERROR", sub () {
                 SSH2Base::setDefaultHostKeyPolicy(99);
             });
-            SSH2Base::setDefaultHostKeyPolicy(SSH2_HOSTKEY_TOFU);
+            SSH2Base::setDefaultHostKeyPolicy(Ssh2HostKeyPolicy::TrustOnFirstUse);
         }
 
         # known_hosts tri-state: DISABLED -> no implicit file
@@ -600,12 +619,12 @@ class NegativeTests inherits QUnit::Test {
 
         # known_hosts tri-state: EXPLICIT -> configured path
         {
-            SSH2Base::setDefaultKnownHostsFile("/tmp/qorus_managed_known_hosts");
-            assertEq("/tmp/qorus_managed_known_hosts", SSH2Base::getDefaultKnownHostsFile());
+            SSH2Base::setDefaultKnownHostsFile("/tmp/application_managed_known_hosts");
+            assertEq("/tmp/application_managed_known_hosts", SSH2Base::getDefaultKnownHostsFile());
             SSH2Client sc("ssh://user@localhost");
-            assertEq("/tmp/qorus_managed_known_hosts", sc.getKnownHostsFile(), "EXPLICIT -> object uses configured path");
+            assertEq("/tmp/application_managed_known_hosts", sc.getKnownHostsFile(), "EXPLICIT -> object uses configured path");
             SFTPClient fc("sftp://user@localhost");
-            assertEq("/tmp/qorus_managed_known_hosts", fc.getKnownHostsFile(), "EXPLICIT default also applies to SFTPClient");
+            assertEq("/tmp/application_managed_known_hosts", fc.getKnownHostsFile(), "EXPLICIT default also applies to SFTPClient");
         }
 
         # known_hosts tri-state: back to AUTO
@@ -703,6 +722,10 @@ class NegativeTests inherits QUnit::Test {
         # Verify host key policy constants exist
         assertEq(Type::Int, SSH2_HOSTKEY_REJECT.type());
         assertEq(Type::Int, SSH2_HOSTKEY_TOFU.type());
+        assertEq(Type::Int, SSH2_HOSTKEY_TOFU_SESSION.type());
+        assertEq(Ssh2HostKeyPolicy::Reject, SSH2_HOSTKEY_REJECT);
+        assertEq(Ssh2HostKeyPolicy::TrustOnFirstUse, SSH2_HOSTKEY_TOFU);
+        assertEq(Ssh2HostKeyPolicy::TrustOnFirstUseSession, SSH2_HOSTKEY_TOFU_SESSION);
 
         # Verify trace constants exist
         assertEq(Type::Int, SSH2_TRACE_TRANS.type());

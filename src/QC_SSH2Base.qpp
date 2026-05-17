@@ -35,6 +35,21 @@ static AbstractQoreNode *missing_method_error(const char *meth, const char *qv, 
 }
 #endif
 
+//! SSH host-key policy enum
+/** Controls how host keys that are not already known are handled when host-key verification is
+    enabled.
+
+    @since ssh2 2.0
+*/
+enum Qore::SSH2::Ssh2HostKeyPolicy : int {
+    //! Reject unknown host keys
+    Reject = SSH2_HOSTKEY_REJECT,
+    //! Trust unknown host keys on first use and persist them to a configured known_hosts file
+    TrustOnFirstUse = SSH2_HOSTKEY_TOFU,
+    //! Trust unknown host keys for the current connection only if no known_hosts file is configured
+    TrustOnFirstUseSession = SSH2_HOSTKEY_TOFU_SESSION,
+};
+
 //! base class for SFTPClient and SSH2Client
 /** The SSH2Base class provides common methods to the SSH2Client and SFTPClient classes
  */
@@ -370,7 +385,11 @@ ssh2client.setVerifyHostKey(True);
     When enabled, the server's host key is checked against the known_hosts file during
     connection. Host key verification is <b>enabled by default</b> with the
     @ref SSH2_HOSTKEY_TOFU policy and the local user's <tt>~/.ssh/known_hosts</tt> file (see
-    @ref setKnownHostsFile() and @ref setHostKeyPolicy()).
+    @ref setKnownHostsFile() and @ref setHostKeyPolicy()). If verification is enabled and no
+    known_hosts file is configured, the default persistent \c SSH2_HOSTKEY_TOFU policy fails
+    closed with \c SSH2-HOSTKEY-ERROR. Use
+    @ref Qore::SSH2::Ssh2HostKeyPolicy::TrustOnFirstUseSession "TrustOnFirstUseSession" only when
+    session-only trust is explicitly required.
 
     @warning Disabling host key verification (passing @ref Qore::False "False") makes the
     connection vulnerable to man-in-the-middle attacks, as the identity of the server is no longer
@@ -407,34 +426,46 @@ bool SSH2Base::getVerifyHostKey() [flags=CONSTANT] {
 
 //! Sets the host key policy for unknown hosts
 /** @par Example:
-    @code{.py} ssh2client.setHostKeyPolicy(SSH2_HOSTKEY_TOFU); @endcode
+    @code{.py} ssh2client.setHostKeyPolicy(Ssh2HostKeyPolicy::TrustOnFirstUse); @endcode
 
     Controls what happens when host key verification is enabled and the server's key is not
-    found in the known_hosts file:
+    found in the known_hosts file or current known-hosts context:
     - \c SSH2_HOSTKEY_REJECT: raise an \c SSH2-HOSTKEY-UNKNOWN exception
-    - \c SSH2_HOSTKEY_TOFU (default, Trust On First Use): accept the key and add it to the known_hosts file
+    - \c SSH2_HOSTKEY_TOFU (default, Trust On First Use): accept the key and add it to the
+      configured known_hosts file; fail closed if no known_hosts file is configured
+    - \c SSH2_HOSTKEY_TOFU_SESSION: accept the key and add it to the configured known_hosts file;
+      if no known_hosts file is configured, trust the key for the current connection only
 
-    @param policy the policy constant: \c SSH2_HOSTKEY_REJECT or \c SSH2_HOSTKEY_TOFU
+    @param policy the host key policy
 
     @throw SSH2-HOSTKEY-POLICY-ERROR invalid policy value
 
     @since ssh2 2.0
 */
+nothing SSH2Base::setHostKeyPolicy(enum<Ssh2HostKeyPolicy> policy) {
+    myself->setHostKeyPolicy((int)policy, xsink);
+}
+
+//! Sets the host key policy for unknown hosts using legacy integer constants
+/** @see setHostKeyPolicy()
+
+    @since ssh2 2.0
+*/
 nothing SSH2Base::setHostKeyPolicy(int policy) {
-    myself->setHostKeyPolicy(policy, xsink);
+    myself->setHostKeyPolicy((int)policy, xsink);
 }
 
 //! Returns the current host key policy
 /** @par Example:
-    @code{.py} int policy = ssh2client.getHostKeyPolicy(); @endcode
+    @code{.py} Ssh2HostKeyPolicy policy = ssh2client.getHostKeyPolicy(); @endcode
 
-    @return the current host key policy: \c SSH2_HOSTKEY_REJECT or \c SSH2_HOSTKEY_TOFU; the
-    default is \c SSH2_HOSTKEY_TOFU
+    @return the current host key policy; the default is
+    @ref Qore::SSH2::Ssh2HostKeyPolicy::TrustOnFirstUse "TrustOnFirstUse"
 
     @since ssh2 2.0
 */
-int SSH2Base::getHostKeyPolicy() [flags=CONSTANT] {
-    return myself->getHostKeyPolicy();
+enum<Ssh2HostKeyPolicy> SSH2Base::getHostKeyPolicy() [flags=CONSTANT] {
+    return (int64)myself->getHostKeyPolicy();
 }
 
 //! Sets the process-global default for host key verification for subsequently-created objects
@@ -482,14 +513,15 @@ static bool SSH2Base::getDefaultVerifyHostKey() [flags=CONSTANT] {
 
 //! Sets the process-global default host key policy for subsequently-created objects
 /** @par Example:
-    @code{.py} SSH2Base::setDefaultHostKeyPolicy(SSH2_HOSTKEY_REJECT); @endcode
+    @code{.py} SSH2Base::setDefaultHostKeyPolicy(Ssh2HostKeyPolicy::Reject); @endcode
 
     Sets the process-global default policy applied to every @ref SSH2Client and @ref SFTPClient
     object constructed afterwards, unless overridden on the object with @ref setHostKeyPolicy().
     Can also be set with the \c QORE_SSH2_DEFAULT_HOST_KEY_POLICY environment variable
-    (\c "reject" or \c "tofu"); an explicit call to this method overrides the environment variable.
+    (\c "reject", \c "tofu", or \c "tofu-session"); an explicit call to this method overrides the
+    environment variable.
 
-    @param policy the policy constant: \c SSH2_HOSTKEY_REJECT or \c SSH2_HOSTKEY_TOFU
+    @param policy the host key policy
 
     @throw SSH2-HOSTKEY-POLICY-ERROR invalid policy value
 
@@ -501,25 +533,42 @@ static bool SSH2Base::getDefaultVerifyHostKey() [flags=CONSTANT] {
 
     @since ssh2 2.0
 */
+static nothing SSH2Base::setDefaultHostKeyPolicy(enum<Ssh2HostKeyPolicy> policy) {
+    if (ssh2_set_default_host_key_policy((int)policy)) {
+        xsink->raiseException("SSH2-HOSTKEY-POLICY-ERROR",
+            "invalid host key policy %d; expected SSH2_HOSTKEY_REJECT (%d), SSH2_HOSTKEY_TOFU "
+            "(%d), or SSH2_HOSTKEY_TOFU_SESSION (%d)", (int)policy,
+            SSH2_HOSTKEY_REJECT, SSH2_HOSTKEY_TOFU, SSH2_HOSTKEY_TOFU_SESSION);
+    }
+}
+
+//! Sets the process-global default host key policy using legacy integer constants
+/** @see setDefaultHostKeyPolicy()
+
+    @since ssh2 2.0
+*/
 static nothing SSH2Base::setDefaultHostKeyPolicy(int policy) {
     if (ssh2_set_default_host_key_policy((int)policy)) {
-        xsink->raiseException("SSH2-HOSTKEY-POLICY-ERROR", "invalid host key policy %d; expected SSH2_HOSTKEY_REJECT (%d) or SSH2_HOSTKEY_TOFU (%d)", (int)policy, SSH2_HOSTKEY_REJECT, SSH2_HOSTKEY_TOFU);
+        xsink->raiseException("SSH2-HOSTKEY-POLICY-ERROR",
+            "invalid host key policy %d; expected SSH2_HOSTKEY_REJECT (%d), SSH2_HOSTKEY_TOFU "
+            "(%d), or SSH2_HOSTKEY_TOFU_SESSION (%d)", (int)policy, SSH2_HOSTKEY_REJECT,
+            SSH2_HOSTKEY_TOFU, SSH2_HOSTKEY_TOFU_SESSION);
     }
 }
 
 //! Returns the process-global default host key policy
 /** @par Example:
-    @code{.py} int policy = SSH2Base::getDefaultHostKeyPolicy(); @endcode
+    @code{.py} Ssh2HostKeyPolicy policy = SSH2Base::getDefaultHostKeyPolicy(); @endcode
 
-    @return the process-global default host key policy: \c SSH2_HOSTKEY_REJECT or
-    \c SSH2_HOSTKEY_TOFU (the built-in default is \c SSH2_HOSTKEY_TOFU)
+    @return the process-global default host key policy; the built-in default is
+    @ref Qore::SSH2::Ssh2HostKeyPolicy::TrustOnFirstUse "TrustOnFirstUse"
 
     @see @ref setDefaultHostKeyPolicy()
 
     @since ssh2 2.0
 */
-static int SSH2Base::getDefaultHostKeyPolicy() [flags=CONSTANT] {
-    return ssh2_get_default_host_key_policy();
+static enum<Ssh2HostKeyPolicy> SSH2Base::getDefaultHostKeyPolicy() [flags=CONSTANT] {
+    return (int64)ssh2_get_default_host_key_policy();
 }
 
 //! Sets the process-global default known_hosts file behavior for subsequently-created objects
@@ -535,9 +584,11 @@ SSH2Base::setDefaultKnownHostsFile("");
     - \a path = @ref nothing "NOTHING": use the built-in default (the local OS user's
       <tt>~/.ssh/known_hosts</tt>, when filesystem access is permitted)
     - \a path = an empty string (\c ""): do not use any implicit known_hosts file; intended for
-      embedding applications (e.g. Qorus) where the OS user running the process is unrelated to
-      the logical user making the connection, so the OS user's <tt>~/.ssh/known_hosts</tt> must
-      not be used (host key trust should then be managed per connection)
+      embedding applications where the OS user running the process is unrelated to the logical user
+      making the connection, so the OS user's <tt>~/.ssh/known_hosts</tt> must not be used. Host
+      key trust should then be managed per connection. With the default persistent
+      \c SSH2_HOSTKEY_TOFU policy and no per-object known_hosts file, connections fail closed.
+      Use \c SSH2_HOSTKEY_TOFU_SESSION explicitly for compatibility with session-only trust.
     - \a path = a non-empty string: use this path as the default known_hosts file for all
       subsequently-created objects
 
@@ -808,4 +859,3 @@ nothing SSH2Base::setBanner(string banner) {
 nothing SSH2Base::setTraceLevel(int bitmask) {
     myself->setTraceLevelLocked((int)bitmask, xsink);
 }
-

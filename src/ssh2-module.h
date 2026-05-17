@@ -59,6 +59,7 @@ DLLLOCAL TypedHashDecl* init_hashdecl_Ssh2StatInfo(QoreNamespace& ns);
 DLLLOCAL TypedHashDecl* init_hashdecl_SftpStatVfsInfo(QoreNamespace& ns);
 DLLLOCAL TypedHashDecl* init_hashdecl_Ssh2ExitSignalInfo(QoreNamespace& ns);
 DLLLOCAL TypedHashDecl* init_hashdecl_Ssh2HostKeyInfo(QoreNamespace& ns);
+DLLLOCAL QoreEnumDecl* init_enum_Ssh2HostKeyPolicy(QoreNamespace& ns);
 
 DLLLOCAL extern const TypedHashDecl* hashdeclSftpFileInfo;
 DLLLOCAL extern const TypedHashDecl* hashdeclSftpDirInfo;
@@ -70,8 +71,9 @@ DLLLOCAL extern const TypedHashDecl* hashdeclSsh2ExitSignalInfo;
 DLLLOCAL extern const TypedHashDecl* hashdeclSsh2HostKeyInfo;
 
 // host key policy constants
-#define SSH2_HOSTKEY_REJECT 0
-#define SSH2_HOSTKEY_TOFU   1
+#define SSH2_HOSTKEY_REJECT       0
+#define SSH2_HOSTKEY_TOFU         1
+#define SSH2_HOSTKEY_TOFU_SESSION 2
 
 // process-global default known_hosts handling modes (see ssh2-module.cpp)
 #define SSH2_KH_DEFAULT_AUTO     0   //!< built-in: the local OS user's ~/.ssh/known_hosts (filesystem-gated)
@@ -88,7 +90,7 @@ DLLLOCAL bool ssh2_get_default_verify_host_key();
 //! sets the process-global default for host key verification
 DLLLOCAL void ssh2_set_default_verify_host_key(bool verify);
 
-//! returns the process-global default host key policy (SSH2_HOSTKEY_REJECT or SSH2_HOSTKEY_TOFU)
+//! returns the process-global default host key policy
 DLLLOCAL int ssh2_get_default_host_key_policy();
 //! sets the process-global default host key policy; returns 0 on success, -1 if the policy is invalid
 DLLLOCAL int ssh2_set_default_host_key_policy(int policy);

@@ -43,7 +43,8 @@ TLKeyboardPassword keyboardPassword;
 //
 // precedence (highest to lowest): explicit per-object setter (SSH2Base instance methods) >
 // process-global programmatic setter (SSH2Base::setDefault*()) > QORE_SSH2_DEFAULT_* environment
-// variable > built-in default (verification on, TOFU policy, per-OS-user ~/.ssh/known_hosts).
+// variable > built-in default (verification on, persistent TOFU policy,
+// per-OS-user ~/.ssh/known_hosts).
 //
 // the environment variables are parsed once as the baseline in ssh2_module_init(); programmatic
 // setters called later override that baseline; per-object instance setters always win as they set
@@ -58,6 +59,7 @@ struct Ssh2HostKeyDefaults {
 }
 static QoreThreadLock ssh2_defaults_lock;
 static Ssh2HostKeyDefaults ssh2_defaults;
+QoreEnumDecl* enumSsh2HostKeyPolicy = nullptr;
 
 static bool ssh2_parse_env_bool(const char* val, bool def) {
     if (!val || !val[0]) {
@@ -86,6 +88,9 @@ void ssh2_init_host_key_defaults() {
             ssh2_defaults.policy = SSH2_HOSTKEY_REJECT;
         } else if (!strcasecmp(v, "tofu") || !strcasecmp(v, "1")) {
             ssh2_defaults.policy = SSH2_HOSTKEY_TOFU;
+        } else if (!strcasecmp(v, "tofu-session") || !strcasecmp(v, "tofu_session")
+            || !strcasecmp(v, "session") || !strcasecmp(v, "2")) {
+            ssh2_defaults.policy = SSH2_HOSTKEY_TOFU_SESSION;
         }
     }
 
@@ -118,7 +123,8 @@ int ssh2_get_default_host_key_policy() {
 }
 
 int ssh2_set_default_host_key_policy(int policy) {
-    if (policy != SSH2_HOSTKEY_REJECT && policy != SSH2_HOSTKEY_TOFU) {
+    if (policy != SSH2_HOSTKEY_REJECT && policy != SSH2_HOSTKEY_TOFU
+        && policy != SSH2_HOSTKEY_TOFU_SESSION) {
         return -1;
     }
     AutoLocker al(ssh2_defaults_lock);
@@ -298,6 +304,8 @@ static void ssh2_module_init(QoreModuleInitContext& ctx, ExceptionSink& xsink) {
     hashdeclSsh2HostKeyInfo = init_hashdecl_Ssh2HostKeyInfo(ssh2ns);
 
     // all classes belonging to here
+    enumSsh2HostKeyPolicy = init_enum_Ssh2HostKeyPolicy(ssh2ns);
+
     // NOTE: SSH2Listener must be initialized before SSH2Client because SSH2Client
     // references SSH2Listener as a return type for forwardListen()
     ssh2ns.addSystemClass(initSSH2BaseClass(ssh2ns));
@@ -314,6 +322,7 @@ static void ssh2_module_init(QoreModuleInitContext& ctx, ExceptionSink& xsink) {
     // host key policy constants
     ssh2ns.addConstant("SSH2_HOSTKEY_REJECT", SSH2_HOSTKEY_REJECT);
     ssh2ns.addConstant("SSH2_HOSTKEY_TOFU", SSH2_HOSTKEY_TOFU);
+    ssh2ns.addConstant("SSH2_HOSTKEY_TOFU_SESSION", SSH2_HOSTKEY_TOFU_SESSION);
 
 #ifdef HAVE_LIBSSH2_TRACE
     // trace bitmask constants

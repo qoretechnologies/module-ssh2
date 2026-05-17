@@ -223,9 +223,9 @@ void SSH2Client::setKnownHostsIntern() {
     int mode = ssh2_get_default_known_hosts(explicit_path);
 
     if (mode == SSH2_KH_DEFAULT_DISABLED) {
-        // no implicit known_hosts file; used by embedding applications (e.g. Qorus) where the OS
-        // user running the process differs from the logical user making the connection, so the
-        // OS user's ~/.ssh/known_hosts must not be used
+        // no implicit known_hosts file; used by embedding applications where the OS user running
+        // the process differs from the logical user making the connection, so the OS user's
+        // ~/.ssh/known_hosts must not be used
         return;
     }
 
@@ -604,10 +604,20 @@ int SSH2Client::sshConnectUnlocked(int timeout_ms, ExceptionSink *xsink = 0) {
             return -1;
         }
 
-        // load the known hosts file if specified; a non-existent file is normal for the first
-        // connection under the SSH2_HOSTKEY_TOFU policy (the file is created on first use), but a
-        // file that exists and cannot be read or parsed must NOT be silently ignored, as that
-        // would bypass host key verification entirely (degrading to "trust anything")
+        if (known_hosts_file.empty() && host_key_policy == SSH2_HOSTKEY_TOFU) {
+            libssh2_knownhost_free(nh);
+            disconnectUnlocked(true);
+            xsink && xsink->raiseException("SSH2-HOSTKEY-ERROR",
+                "host key verification is enabled with persistent TOFU, but no known_hosts file "
+                "is configured; configure a known_hosts file with setKnownHostsFile(), use "
+                "SSH2_HOSTKEY_TOFU_SESSION for explicit session-only trust, or disable "
+                "verification with setVerifyHostKey(False)");
+            return -1;
+        }
+
+        // Load the known_hosts file if one is configured. A non-existent file is normal for the
+        // first connection under the SSH2_HOSTKEY_TOFU policy because it is created on first use,
+        // but a file that exists and cannot be read or parsed must not be silently ignored.
         if (!known_hosts_file.empty()) {
             struct stat sb;
             if (!stat(known_hosts_file.c_str(), &sb)) {
@@ -623,11 +633,10 @@ int SSH2Client::sshConnectUnlocked(int timeout_ms, ExceptionSink *xsink = 0) {
                     return -1;
                 }
             } else if (errno != ENOENT) {
-                // only a genuine "file does not exist" (ENOENT) is the legitimate TOFU first-use
-                // case; any other stat() failure (EACCES on the file or a parent directory,
-                // ENOTDIR, EIO, ...) means the file may exist but is inaccessible - continuing
-                // with an empty known-hosts set would silently bypass host key verification, so
-                // fail closed instead
+                // Only a genuine "file does not exist" (ENOENT) is the legitimate TOFU first-use
+                // case. Any other stat() failure (EACCES on the file or a parent directory, ENOTDIR,
+                // EIO, ...) means the file may exist but is inaccessible; continuing with an empty
+                // known-hosts set would silently bypass host key verification.
                 int stat_errno = errno;
                 libssh2_knownhost_free(nh);
                 disconnectUnlocked(true);
@@ -680,11 +689,10 @@ int SSH2Client::sshConnectUnlocked(int timeout_ms, ExceptionSink *xsink = 0) {
                 sshhost.c_str(), sshport, known_hosts_file.c_str());
             return -1;
         } else if (check == LIBSSH2_KNOWNHOST_CHECK_NOTFOUND) {
-            if (host_key_policy == SSH2_HOSTKEY_TOFU) {
-                // Trust On First Use: record the key and persist it. The key MUST be persisted -
-                // if it is not, every subsequent connection is again a first-use and therefore a
-                // fresh man-in-the-middle opportunity, so any failure to persist fails the
-                // connection closed rather than continuing with a key that will be forgotten.
+            if (host_key_policy == SSH2_HOSTKEY_TOFU || host_key_policy == SSH2_HOSTKEY_TOFU_SESSION) {
+                // Trust On First Use: record the key in this known-hosts context. If a known_hosts
+                // file is configured, persist it. SSH2_HOSTKEY_TOFU_SESSION also allows
+                // session-only trust when no known_hosts file is configured.
                 int add_rc = libssh2_knownhost_addc(nh, sshhost.c_str(), nullptr, hostkey,
                     hostkey_len, nullptr, 0, kh_type, nullptr);
                 if (add_rc) {
@@ -695,11 +703,9 @@ int SSH2Client::sshConnectUnlocked(int timeout_ms, ExceptionSink *xsink = 0) {
                         "error code %d)", sshhost.c_str(), sshport, add_rc);
                     return -1;
                 }
-                // an empty known_hosts file is a deliberate embedder choice (e.g. Qorus, where
-                // the OS user's file must not be used): the key is trusted for this session only
                 if (!known_hosts_file.empty()) {
-                    // on a fresh account the parent directory (typically ~/.ssh) may not exist
-                    // yet; create it (mode 0700) so the key can actually be written
+                    // On a fresh account the parent directory (typically ~/.ssh) may not exist yet;
+                    // create it (mode 0700) so the key can actually be written.
                     if (ensure_parent_dir(known_hosts_file.c_str())) {
                         int dir_errno = errno;
                         libssh2_knownhost_free(nh);
@@ -725,15 +731,19 @@ int SSH2Client::sshConnectUnlocked(int timeout_ms, ExceptionSink *xsink = 0) {
                             sshhost.c_str(), sshport, known_hosts_file.c_str(), write_rc);
                         return -1;
                     }
+                    printd(5, "SSH2Client::connect(): host key for '%s:%d' added to known hosts (TOFU)\n", sshhost.c_str(), sshport);
+                } else {
+                    printd(5, "SSH2Client::connect(): host key for '%s:%d' accepted for this connection only (TOFU)\n", sshhost.c_str(), sshport);
                 }
-                printd(5, "SSH2Client::connect(): host key for '%s:%d' added to known hosts (TOFU)\n", sshhost.c_str(), sshport);
             } else {
                 // REJECT: raise exception
                 libssh2_knownhost_free(nh);
                 disconnectUnlocked(true);
                 xsink && xsink->raiseException("SSH2-HOSTKEY-UNKNOWN",
                     "host key for '%s:%d' is not in the known hosts file '%s'; "
-                    "use addKnownHost() or setHostKeyPolicy(SSH2_HOSTKEY_TOFU) to accept it",
+                    "use addKnownHost(), setHostKeyPolicy(SSH2_HOSTKEY_TOFU) with a configured "
+                    "known_hosts file, or setHostKeyPolicy(SSH2_HOSTKEY_TOFU_SESSION) for "
+                    "session-only trust",
                     sshhost.c_str(), sshport, known_hosts_file.c_str());
                 return -1;
             }

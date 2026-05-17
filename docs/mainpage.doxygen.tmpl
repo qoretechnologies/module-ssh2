@@ -73,8 +73,8 @@
       (Trust On First Use) policy and the local user's <tt>~/.ssh/known_hosts</tt> file; this
       protects against man-in-the-middle attacks on all but the first connection to a given host
     - For strict checking, pre-populate the known_hosts file and set
-      @ref Qore::SSH2::SSH2Base::setHostKeyPolicy() "setHostKeyPolicy(SSH2_HOSTKEY_REJECT)" so
-      that any unknown host key is rejected
+      @ref Qore::SSH2::SSH2Base::setHostKeyPolicy() "setHostKeyPolicy(Ssh2HostKeyPolicy::Reject)"
+      so that any unknown host key is rejected
     - Disabling verification with
       @ref Qore::SSH2::SSH2Base::setVerifyHostKey() "setVerifyHostKey(False)" removes
       man-in-the-middle protection entirely and should only be done if the risk is fully
@@ -85,24 +85,28 @@
 
     @subsection embedding_multitenant Embedding in Multi-Tenant Applications
     In an embedding application where the OS/UNIX user running the process is unrelated to the
-    logical user making SSH/SFTP connections (for example, an integration server such as Qorus),
-    the OS user's <tt>~/.ssh/known_hosts</tt> file must not be used: it is shared across all
-    logical users and host keys accepted (and persisted via @ref SSH2_HOSTKEY_TOFU "TOFU") for one
-    logical user would be trusted for all of them.
+    logical user making SSH/SFTP connections, the OS user's <tt>~/.ssh/known_hosts</tt> file may be
+    the wrong trust domain: it is shared across all logical users, and host keys accepted (and
+    persisted via @ref SSH2_HOSTKEY_TOFU "TOFU") for one logical user would be trusted for all of
+    them.
 
     Such applications should change the <b>process-global</b> defaults once at startup instead of
     relying on every call site:
     - @ref Qore::SSH2::SSH2Base::setDefaultKnownHostsFile() "SSH2Base::setDefaultKnownHostsFile(\"\")"
-      disables use of any implicit known_hosts file (host key trust should then be managed per
-      connection, e.g. via the \c known_hosts connection option); passing a path makes that path
-      the default instead
+      disables use of any implicit known_hosts file. Host key trust should then be managed per
+      connection, e.g. via the \c known_hosts connection option. With the default persistent TOFU
+      policy, connections fail closed if no known_hosts file is configured. Applications that need
+      the legacy session-only behavior while migrating to an application-managed trust store must
+      set @ref Qore::SSH2::SSH2Base::setDefaultHostKeyPolicy()
+      "SSH2Base::setDefaultHostKeyPolicy(Ssh2HostKeyPolicy::TrustOnFirstUseSession)" explicitly.
+      Passing a path makes that path the default instead
     - @ref Qore::SSH2::SSH2Base::setDefaultVerifyHostKey() "SSH2Base::setDefaultVerifyHostKey()"
       and @ref Qore::SSH2::SSH2Base::setDefaultHostKeyPolicy() "SSH2Base::setDefaultHostKeyPolicy()"
       change the global verification and policy defaults
     - the same defaults can be set at deployment time with the \c QORE_SSH2_DEFAULT_KNOWN_HOSTS
       (unset = built-in per-user default; empty = disabled; a path = that path),
-      \c QORE_SSH2_DEFAULT_VERIFY_HOST_KEY, and \c QORE_SSH2_DEFAULT_HOST_KEY_POLICY environment
-      variables
+      \c QORE_SSH2_DEFAULT_VERIFY_HOST_KEY, and \c QORE_SSH2_DEFAULT_HOST_KEY_POLICY
+      (\c reject, \c tofu, or \c tofu-session) environment variables
 
     Precedence (highest to lowest): a per-object setter (e.g. @ref Qore::SSH2::SSH2Base::setKnownHostsFile()
     "setKnownHostsFile()") > a process-global \c setDefault*() call > the \c QORE_SSH2_DEFAULT_*
@@ -194,15 +198,21 @@ stdout.printf("exit status: %d\n", chan.getExitStatus());@endcode
     - added known hosts file support for host key verification
       (@ref Qore::SSH2::SSH2Base::setKnownHostsFile() "SSH2Base::setKnownHostsFile()",
       @ref Qore::SSH2::SSH2Base::setVerifyHostKey() "SSH2Base::setVerifyHostKey()")
-    - configurable host key policy: TOFU (default, Trust On First Use) or REJECT
+    - configurable host key policy:
+      @ref Qore::SSH2::Ssh2HostKeyPolicy::TrustOnFirstUse "TrustOnFirstUse" (default, persistent
+      TOFU), @ref Qore::SSH2::Ssh2HostKeyPolicy::Reject "Reject", or
+      @ref Qore::SSH2::Ssh2HostKeyPolicy::TrustOnFirstUseSession "TrustOnFirstUseSession"
       (@ref Qore::SSH2::SSH2Base::setHostKeyPolicy() "SSH2Base::setHostKeyPolicy()")
     - a configured known_hosts file that exists but cannot be read or parsed now causes the
       connection to fail with \c SSH2-HOSTKEY-ERROR instead of silently connecting without
       verification (fail closed)
+    - verification-enabled persistent TOFU connections with no configured known_hosts file fail
+      closed with \c SSH2-HOSTKEY-ERROR; set
+      @ref Qore::SSH2::Ssh2HostKeyPolicy::TrustOnFirstUseSession "TrustOnFirstUseSession"
+      explicitly for legacy session-only trust
     - the plaintext authentication password is no longer written to debug output
-    - added process-global default controls for embedding applications (e.g. multi-tenant hosts
-      where the OS user differs from the logical user, where the OS user's
-      <tt>~/.ssh/known_hosts</tt> must not be used):
+    - added process-global default controls for embedding applications where the OS user differs
+      from the logical user and the OS user's <tt>~/.ssh/known_hosts</tt> must not be used:
       @ref Qore::SSH2::SSH2Base::setDefaultVerifyHostKey() "SSH2Base::setDefaultVerifyHostKey()",
       @ref Qore::SSH2::SSH2Base::setDefaultHostKeyPolicy() "SSH2Base::setDefaultHostKeyPolicy()",
       @ref Qore::SSH2::SSH2Base::setDefaultKnownHostsFile() "SSH2Base::setDefaultKnownHostsFile()"
@@ -211,7 +221,8 @@ stdout.printf("exit status: %d\n", chan.getExitStatus());@endcode
       variables; see @ref embedding_multitenant
     - added @ref Qore::SSH2::SSH2Base::getHostKey() "SSH2Base::getHostKey()" returning MD5/SHA1/SHA256 fingerprints
     - added @ref Qore::SSH2::SSH2Base::addKnownHost() "SSH2Base::addKnownHost()" for manual host key management
-    - added \c SSH2_HOSTKEY_REJECT and \c SSH2_HOSTKEY_TOFU constants
+    - added the @ref Qore::SSH2::Ssh2HostKeyPolicy "Ssh2HostKeyPolicy" enum and legacy
+      \c SSH2_HOSTKEY_REJECT, \c SSH2_HOSTKEY_TOFU, and \c SSH2_HOSTKEY_TOFU_SESSION constants
 
     <b>Session Configuration:</b>
     - added algorithm preference control

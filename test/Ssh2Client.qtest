@@ -43,6 +43,7 @@ class Ssh2ClientTest inherits QUnit::Test {
         addTestCase("Host key info test", \hostKeyInfoTest());
         addTestCase("Known hosts TOFU test", \knownHostsTofuTest());
         addTestCase("Known hosts reject test", \knownHostsRejectTest());
+        addTestCase("Disabled default known_hosts policy test", \disabledDefaultKnownHostsPolicyTest());
         addTestCase("Secure defaults and fail-closed test", \secureDefaultsAndFailClosedTest());
         addTestCase("Known hosts TOFU creates parent dir test", \knownHostsTofuCreatesParentDirTest());
         addTestCase("Known hosts stat error fail-closed test", \knownHostsStatErrorFailClosedTest());
@@ -235,6 +236,59 @@ class Ssh2ClientTest inherits QUnit::Test {
             sc.setVerifyHostKey(False);
             sc.connect();
             assertEq(True, boolean(sc.connected()));
+            sc.disconnect();
+        }
+    }
+
+    disabledDefaultKnownHostsPolicyTest() {
+        on_exit {
+            SSH2Base::setDefaultKnownHostsFile();
+            SSH2Base::setDefaultHostKeyPolicy(Ssh2HostKeyPolicy::TrustOnFirstUse);
+        }
+
+        SSH2Base::setDefaultKnownHostsFile("");
+
+        {
+            SSH2Client sc(uri);
+            setPrivateKey(sc);
+            assertNothing(sc.getKnownHostsFile(), "disabled default must not configure an implicit known_hosts file");
+            assertTrue(sc.getVerifyHostKey(), "host key verification stays enabled when only implicit known_hosts is disabled");
+            assertEq(Ssh2HostKeyPolicy::TrustOnFirstUse, sc.getHostKeyPolicy(), "persistent TOFU remains the default host key policy");
+            assertThrows("SSH2-HOSTKEY-ERROR", "no known_hosts file", sub () {
+                sc.connect();
+            });
+            assertEq(False, boolean(sc.connected()), "persistent TOFU must fail closed without a known host source");
+        }
+
+        SSH2Base::setDefaultHostKeyPolicy(Ssh2HostKeyPolicy::TrustOnFirstUseSession);
+        {
+            SSH2Client sc(uri);
+            setPrivateKey(sc);
+            assertNothing(sc.getKnownHostsFile(), "session TOFU must not re-enable an implicit known_hosts file");
+            assertEq(Ssh2HostKeyPolicy::TrustOnFirstUseSession, sc.getHostKeyPolicy(),
+                "new objects inherit the explicit session-only TOFU default");
+            sc.connect();
+            assertEq(True, boolean(sc.connected()),
+                "session-only TOFU accepts the host key for this connection without an implicit known_hosts file");
+            sc.disconnect();
+        }
+
+        {
+            SSH2Client sc(uri);
+            setPrivateKey(sc);
+            sc.setHostKeyPolicy(Ssh2HostKeyPolicy::Reject);
+            assertThrows("SSH2-HOSTKEY-UNKNOWN", sub () {
+                sc.connect();
+            });
+            assertEq(False, boolean(sc.connected()), "REJECT still fails without a known host source");
+        }
+
+        {
+            SSH2Client sc(uri);
+            setPrivateKey(sc);
+            sc.setVerifyHostKey(False);
+            sc.connect();
+            assertEq(True, boolean(sc.connected()), "explicitly disabled verification is the unverified bypass");
             sc.disconnect();
         }
     }
