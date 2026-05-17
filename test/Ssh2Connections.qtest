@@ -4,7 +4,7 @@
 %modern
 
 %requires ../qlib/Ssh2Connections.qm
-%requires ssh2 >= 1.2
+%requires ssh2 >= 2.0
 
 %requires Util
 %requires QUnit
@@ -35,6 +35,7 @@ class Ssh2ConnectionsTest inherits QUnit::Test {
 
         addTestCase("SftpConnection test", \sftpTest());
         addTestCase("Ssh2Connection test", \ssh2Test());
+        addTestCase("Scheme metadata reflects module default", \schemeMetadataTest());
 
         set_return_value(main());
     }
@@ -91,6 +92,32 @@ class Ssh2ConnectionsTest inherits QUnit::Test {
         # issue #3696: test connection serialization
         Ssh2ClientConnection conn2 = Serializable::deserialize(conn.serialize());
         assertEq(conn.url, conn2.url);
+    }
+
+    schemeMetadataTest() {
+        # restore the process-global default regardless of assertion outcome
+        on_exit SSH2Base::setDefaultVerifyHostKey(True);
+
+        SftpConnection sconn("test", "test", uri, {}, getOptions());
+        Ssh2ClientConnection cconn("test", "test", uri, {}, getOptions());
+
+        # by default the connection scheme advertises verify_host_key default_value = True
+        assertEq(True, sconn.getConnectionSchemeInfo().options.verify_host_key.default_value,
+            "SftpConnection scheme reflects secure default");
+        assertEq(True, cconn.getConnectionSchemeInfo().options.verify_host_key.default_value,
+            "Ssh2ClientConnection scheme reflects secure default");
+
+        # when an embedding application changes the module-global default, connection
+        # introspection must reflect it (issue: OS user != logical user)
+        SSH2Base::setDefaultVerifyHostKey(False);
+        assertEq(False, sconn.getConnectionSchemeInfo().options.verify_host_key.default_value,
+            "SftpConnection scheme reflects overridden module default");
+        assertEq(False, cconn.getConnectionSchemeInfo().options.verify_host_key.default_value,
+            "Ssh2ClientConnection scheme reflects overridden module default");
+
+        SSH2Base::setDefaultVerifyHostKey(True);
+        assertEq(True, sconn.getConnectionSchemeInfo().options.verify_host_key.default_value,
+            "scheme reflects restored module default");
     }
 
     private usageIntern() {

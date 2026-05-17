@@ -329,6 +329,10 @@ int SSH2Base::getPort() {
 /** @par Example:
     @code{.py} ssh2client.setKnownHostsFile(ENV.HOME + "/.ssh/known_hosts"); @endcode
 
+    By default (i.e. if this method is not called), the local user's <tt>~/.ssh/known_hosts</tt>
+    file is used automatically when filesystem access is permitted; call this method only to
+    override that default with a different path.
+
     @param path the path to the known_hosts file (OpenSSH format)
 
     @throw SSH2-CONNECTED this method cannot be called when a connection is established
@@ -343,7 +347,10 @@ nothing SSH2Base::setKnownHostsFile(string path) [dom=FILESYSTEM] {
 /** @par Example:
     @code{.py} *string path = ssh2client.getKnownHostsFile(); @endcode
 
-    @return the known hosts file path or \c NOTHING if not set
+    @return the known hosts file path or \c NOTHING if not set; note that by default this is the
+    local user's <tt>~/.ssh/known_hosts</tt> file (resolved at object creation when filesystem
+    access is permitted), so this normally returns that path even if @ref setKnownHostsFile() was
+    never called
 
     @since ssh2 2.0
 */
@@ -361,10 +368,17 @@ ssh2client.setVerifyHostKey(True);
     @endcode
 
     When enabled, the server's host key is checked against the known_hosts file during
-    connection. A known_hosts file must be configured with @ref setKnownHostsFile() before
-    enabling verification.
+    connection. Host key verification is <b>enabled by default</b> with the
+    @ref SSH2_HOSTKEY_TOFU policy and the local user's <tt>~/.ssh/known_hosts</tt> file (see
+    @ref setKnownHostsFile() and @ref setHostKeyPolicy()).
 
-    @param verify set to @ref Qore::True "True" to enable host key verification
+    @warning Disabling host key verification (passing @ref Qore::False "False") makes the
+    connection vulnerable to man-in-the-middle attacks, as the identity of the server is no longer
+    verified and credentials may be sent to an attacker; only disable verification if you fully
+    understand and accept this risk.
+
+    @param verify set to @ref Qore::True "True" to enable host key verification (the default) or
+    @ref Qore::False "False" to disable it
 
     @throw SSH2-CONNECTED this method cannot be called when a connection is established
 
@@ -382,7 +396,8 @@ nothing SSH2Base::setVerifyHostKey(bool verify) {
 /** @par Example:
     @code{.py} bool verify = ssh2client.getVerifyHostKey(); @endcode
 
-    @return @ref Qore::True "True" if host key verification is enabled
+    @return @ref Qore::True "True" if host key verification is enabled; note that host key
+    verification is enabled by default
 
     @since ssh2 2.0
 */
@@ -396,8 +411,8 @@ bool SSH2Base::getVerifyHostKey() [flags=CONSTANT] {
 
     Controls what happens when host key verification is enabled and the server's key is not
     found in the known_hosts file:
-    - \c SSH2_HOSTKEY_REJECT (default): raise an \c SSH2-HOSTKEY-UNKNOWN exception
-    - \c SSH2_HOSTKEY_TOFU (Trust On First Use): accept the key and add it to the known_hosts file
+    - \c SSH2_HOSTKEY_REJECT: raise an \c SSH2-HOSTKEY-UNKNOWN exception
+    - \c SSH2_HOSTKEY_TOFU (default, Trust On First Use): accept the key and add it to the known_hosts file
 
     @param policy the policy constant: \c SSH2_HOSTKEY_REJECT or \c SSH2_HOSTKEY_TOFU
 
@@ -413,12 +428,169 @@ nothing SSH2Base::setHostKeyPolicy(int policy) {
 /** @par Example:
     @code{.py} int policy = ssh2client.getHostKeyPolicy(); @endcode
 
-    @return the current host key policy: \c SSH2_HOSTKEY_REJECT or \c SSH2_HOSTKEY_TOFU
+    @return the current host key policy: \c SSH2_HOSTKEY_REJECT or \c SSH2_HOSTKEY_TOFU; the
+    default is \c SSH2_HOSTKEY_TOFU
 
     @since ssh2 2.0
 */
 int SSH2Base::getHostKeyPolicy() [flags=CONSTANT] {
     return myself->getHostKeyPolicy();
+}
+
+//! Sets the process-global default for host key verification for subsequently-created objects
+/** @par Example:
+    @code{.py} SSH2Base::setDefaultVerifyHostKey(False); @endcode
+
+    This sets a process-global default that is applied to every @ref SSH2Client and @ref SFTPClient
+    object constructed afterwards (anywhere in the process), unless overridden on the object itself
+    with @ref setVerifyHostKey(). It is intended for embedding applications (for example, where the
+    OS user running the process differs from the logical user making connections) that need to
+    change the secure-by-default behavior globally rather than at every call site.
+
+    The process-global default can also be set with the \c QORE_SSH2_DEFAULT_VERIFY_HOST_KEY
+    environment variable; an explicit call to this method overrides the environment variable, and
+    a per-object call to @ref setVerifyHostKey() overrides this default.
+
+    @param verify @ref Qore::True "True" to verify host keys by default, @ref Qore::False "False" to disable
+
+    @note this affects only objects created after this call; existing objects are unaffected
+
+    @see
+    - @ref setVerifyHostKey()
+    - @ref getDefaultVerifyHostKey()
+
+    @since ssh2 2.0
+*/
+static nothing SSH2Base::setDefaultVerifyHostKey(bool verify) {
+    ssh2_set_default_verify_host_key(verify);
+}
+
+//! Returns the process-global default for host key verification
+/** @par Example:
+    @code{.py} bool verify = SSH2Base::getDefaultVerifyHostKey(); @endcode
+
+    @return @ref Qore::True "True" if host key verification is enabled by default (the built-in
+    default); @ref Qore::False "False" if it has been disabled globally
+
+    @see @ref setDefaultVerifyHostKey()
+
+    @since ssh2 2.0
+*/
+static bool SSH2Base::getDefaultVerifyHostKey() [flags=CONSTANT] {
+    return ssh2_get_default_verify_host_key();
+}
+
+//! Sets the process-global default host key policy for subsequently-created objects
+/** @par Example:
+    @code{.py} SSH2Base::setDefaultHostKeyPolicy(SSH2_HOSTKEY_REJECT); @endcode
+
+    Sets the process-global default policy applied to every @ref SSH2Client and @ref SFTPClient
+    object constructed afterwards, unless overridden on the object with @ref setHostKeyPolicy().
+    Can also be set with the \c QORE_SSH2_DEFAULT_HOST_KEY_POLICY environment variable
+    (\c "reject" or \c "tofu"); an explicit call to this method overrides the environment variable.
+
+    @param policy the policy constant: \c SSH2_HOSTKEY_REJECT or \c SSH2_HOSTKEY_TOFU
+
+    @throw SSH2-HOSTKEY-POLICY-ERROR invalid policy value
+
+    @note this affects only objects created after this call; existing objects are unaffected
+
+    @see
+    - @ref setHostKeyPolicy()
+    - @ref getDefaultHostKeyPolicy()
+
+    @since ssh2 2.0
+*/
+static nothing SSH2Base::setDefaultHostKeyPolicy(int policy) {
+    if (ssh2_set_default_host_key_policy((int)policy)) {
+        xsink->raiseException("SSH2-HOSTKEY-POLICY-ERROR", "invalid host key policy %d; expected SSH2_HOSTKEY_REJECT (%d) or SSH2_HOSTKEY_TOFU (%d)", (int)policy, SSH2_HOSTKEY_REJECT, SSH2_HOSTKEY_TOFU);
+    }
+}
+
+//! Returns the process-global default host key policy
+/** @par Example:
+    @code{.py} int policy = SSH2Base::getDefaultHostKeyPolicy(); @endcode
+
+    @return the process-global default host key policy: \c SSH2_HOSTKEY_REJECT or
+    \c SSH2_HOSTKEY_TOFU (the built-in default is \c SSH2_HOSTKEY_TOFU)
+
+    @see @ref setDefaultHostKeyPolicy()
+
+    @since ssh2 2.0
+*/
+static int SSH2Base::getDefaultHostKeyPolicy() [flags=CONSTANT] {
+    return ssh2_get_default_host_key_policy();
+}
+
+//! Sets the process-global default known_hosts file behavior for subsequently-created objects
+/** @par Example:
+    @code{.py}
+# disable use of any implicit known_hosts file (e.g. in a multi-tenant host where the OS user
+# differs from the logical user making connections)
+SSH2Base::setDefaultKnownHostsFile("");
+    @endcode
+
+    Controls which known_hosts file newly-constructed @ref SSH2Client and @ref SFTPClient objects
+    use by default (unless overridden on the object with @ref setKnownHostsFile()):
+    - \a path = @ref nothing "NOTHING": use the built-in default (the local OS user's
+      <tt>~/.ssh/known_hosts</tt>, when filesystem access is permitted)
+    - \a path = an empty string (\c ""): do not use any implicit known_hosts file; intended for
+      embedding applications (e.g. Qorus) where the OS user running the process is unrelated to
+      the logical user making the connection, so the OS user's <tt>~/.ssh/known_hosts</tt> must
+      not be used (host key trust should then be managed per connection)
+    - \a path = a non-empty string: use this path as the default known_hosts file for all
+      subsequently-created objects
+
+    Can also be set with the \c QORE_SSH2_DEFAULT_KNOWN_HOSTS environment variable (unset = built-in
+    default; set but empty = disabled; set to a path = that path); an explicit call to this method
+    overrides the environment variable, and a per-object call to @ref setKnownHostsFile() overrides
+    this default.
+
+    @param path @ref nothing "NOTHING" for the built-in default, an empty string to disable any
+    implicit known_hosts file, or a path to use as the default
+
+    @note this affects only objects created after this call; existing objects are unaffected
+
+    @see
+    - @ref setKnownHostsFile()
+    - @ref getDefaultKnownHostsFile()
+
+    @since ssh2 2.0
+*/
+static nothing SSH2Base::setDefaultKnownHostsFile(*string path) [dom=FILESYSTEM] {
+    if (!path) {
+        ssh2_set_default_known_hosts(SSH2_KH_DEFAULT_AUTO, nullptr);
+    } else if (path->empty()) {
+        ssh2_set_default_known_hosts(SSH2_KH_DEFAULT_DISABLED, nullptr);
+    } else {
+        ssh2_set_default_known_hosts(SSH2_KH_DEFAULT_EXPLICIT, path->c_str());
+    }
+}
+
+//! Returns the process-global default known_hosts file configuration
+/** @par Example:
+    @code{.py} *string def = SSH2Base::getDefaultKnownHostsFile(); @endcode
+
+    @return one of:
+    - @ref nothing "NOTHING": the built-in default is in effect (the local OS user's
+      <tt>~/.ssh/known_hosts</tt>, resolved per object when filesystem access is permitted)
+    - an empty string (\c ""): use of any implicit known_hosts file has been disabled globally
+    - a non-empty string: the configured default known_hosts file path
+
+    @see @ref setDefaultKnownHostsFile()
+
+    @since ssh2 2.0
+*/
+static *string SSH2Base::getDefaultKnownHostsFile() [flags=CONSTANT] {
+    std::string path;
+    int mode = ssh2_get_default_known_hosts(path);
+    if (mode == SSH2_KH_DEFAULT_DISABLED) {
+        return new QoreStringNode;
+    }
+    if (mode == SSH2_KH_DEFAULT_EXPLICIT) {
+        return new QoreStringNode(path.c_str());
+    }
+    return (QoreStringNode*)nullptr;
 }
 
 //! Returns information about the connected server's host key

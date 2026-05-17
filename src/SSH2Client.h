@@ -141,6 +141,10 @@ protected:
 
     DLLLOCAL void setKeysIntern();
 
+    // sets the default known_hosts file (the local OS user's ~/.ssh/known_hosts) when filesystem
+    // access is permitted; used to enable secure host key verification by default
+    DLLLOCAL void setKnownHostsIntern();
+
     DLLLOCAL virtual void deref(ExceptionSink*);
 
     DLLLOCAL int startupUnlocked();

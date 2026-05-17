@@ -65,6 +65,18 @@ module Ssh2Connections {
 
     @section ssh2connections_relnotes Ssh2Connections Module Release History
 
+    @subsection ssh2connections_v2_0 Ssh2Connections v2.0
+    - the \c verify_host_key connection option now defaults to @ref Qore::True "True" (secure by
+      default) and an explicit @ref Qore::False "False" is honored, consistent with the ssh2
+      client classes
+    - the \c verify_host_key option's reported default in connection introspection now reflects
+      the ssh2 module's effective process-global host key verification default (which an embedding
+      application may change via \c SSH2Base::setDefaultVerifyHostKey() or the
+      \c QORE_SSH2_DEFAULT_VERIFY_HOST_KEY environment variable)
+    - if the \c known_hosts option is not set, the ssh2 module default applies (normally the local
+      user's <tt>~/.ssh/known_hosts</tt> file, unless the embedding application has changed or
+      disabled the module default)
+
     @subsection ssh2connections_v1_4 Ssh2Connections v1.4
     - implemented support for a data provider scheme cache and rich option information for connections
       (<a href="https://github.com/qorelanguage/qore/issues/4025">issue 4025</a>)
@@ -153,15 +165,21 @@ public class Ssh2ClientConnection inherits AbstractSsh2Connection {
                     "short_desc": "A path to an OpenSSH known_hosts file for host key verification",
                     "type": "string",
                     "desc": "A path to an OpenSSH known_hosts file for host key verification; "
-                        "environment variables can be prefixed with '$' in the path",
+                        "environment variables can be prefixed with '$' in the path; if not set, "
+                        "the ssh2 module default applies (normally the local user's "
+                        "~/.ssh/known_hosts file, unless the embedding application has changed or "
+                        "disabled the module default)",
                 },
                 "verify_host_key": <ConnectionOptionInfo>{
                     "display_name": "Verify Host Key",
                     "short_desc": "Enable host key verification against the known_hosts file",
                     "type": "bool",
-                    "desc": "Enable host key verification against the known_hosts file; "
-                        "requires the 'known_hosts' option to be set",
-                    "default_value": False,
+                    "desc": "Enable host key verification against the known_hosts file; enabled by "
+                        "default; the effective default follows the ssh2 module's process-global "
+                        "default, which an embedding application may change via "
+                        "SSH2Base::setDefaultVerifyHostKey() or the "
+                        "QORE_SSH2_DEFAULT_VERIFY_HOST_KEY environment variable",
+                    "default_value": True,
                 },
                 "use_agent": <ConnectionOptionInfo>{
                     "display_name": "Use SSH Agent",
@@ -238,7 +256,7 @@ public class Ssh2ClientConnection inherits AbstractSsh2Connection {
         if (opts.known_hosts) {
             sc.setKnownHostsFile(substitute_env_vars(opts.known_hosts));
         }
-        if (opts.verify_host_key) {
+        if (exists opts.verify_host_key) {
             sc.setVerifyHostKey(opts.verify_host_key);
         }
         if (exists opts.use_agent) {
@@ -255,7 +273,13 @@ public class Ssh2ClientConnection inherits AbstractSsh2Connection {
 
     #! Returns the ConnectionSchemeInfo hash for this object
     private hash<ConnectionSchemeInfo> getConnectionSchemeInfoImpl() {
-        return ConnectionScheme;
+        # reflect the ssh2 module's process-global host key verification default so that
+        # connection introspection is consistent with the effective runtime default (which an
+        # embedding application may have changed via SSH2Base::setDefaultVerifyHostKey() or the
+        # QORE_SSH2_DEFAULT_VERIFY_HOST_KEY environment variable)
+        hash<ConnectionSchemeInfo> scheme = ConnectionScheme;
+        scheme.options.verify_host_key.default_value = SSH2Base::getDefaultVerifyHostKey();
+        return scheme;
     }
 }
 
@@ -287,15 +311,21 @@ public class SftpConnection inherits AbstractSsh2Connection {
                     "short_desc": "A path to an OpenSSH known_hosts file for host key verification",
                     "type": "string",
                     "desc": "A path to an OpenSSH known_hosts file for host key verification; "
-                        "environment variables can be prefixed with '$' in the path",
+                        "environment variables can be prefixed with '$' in the path; if not set, "
+                        "the ssh2 module default applies (normally the local user's "
+                        "~/.ssh/known_hosts file, unless the embedding application has changed or "
+                        "disabled the module default)",
                 },
                 "verify_host_key": <ConnectionOptionInfo>{
                     "display_name": "Verify Host Key",
                     "short_desc": "Enable host key verification against the known_hosts file",
                     "type": "bool",
-                    "desc": "Enable host key verification against the known_hosts file; "
-                        "requires the 'known_hosts' option to be set",
-                    "default_value": False,
+                    "desc": "Enable host key verification against the known_hosts file; enabled by "
+                        "default; the effective default follows the ssh2 module's process-global "
+                        "default, which an embedding application may change via "
+                        "SSH2Base::setDefaultVerifyHostKey() or the "
+                        "QORE_SSH2_DEFAULT_VERIFY_HOST_KEY environment variable",
+                    "default_value": True,
                 },
                 "use_agent": <ConnectionOptionInfo>{
                     "display_name": "Use SSH Agent",
@@ -500,7 +530,7 @@ public class SftpConnection inherits AbstractSsh2Connection {
         if (opts.known_hosts) {
             sc.setKnownHostsFile(substitute_env_vars(opts.known_hosts));
         }
-        if (opts.verify_host_key) {
+        if (exists opts.verify_host_key) {
             sc.setVerifyHostKey(opts.verify_host_key);
         }
         if (exists opts.use_agent) {
@@ -530,7 +560,13 @@ public class SftpConnection inherits AbstractSsh2Connection {
 
     #! Returns the ConnectionSchemeInfo hash for this object
     private hash<ConnectionSchemeInfo> getConnectionSchemeInfoImpl() {
-        return ConnectionScheme;
+        # reflect the ssh2 module's process-global host key verification default so that
+        # connection introspection is consistent with the effective runtime default (which an
+        # embedding application may have changed via SSH2Base::setDefaultVerifyHostKey() or the
+        # QORE_SSH2_DEFAULT_VERIFY_HOST_KEY environment variable)
+        hash<ConnectionSchemeInfo> scheme = ConnectionScheme;
+        scheme.options.verify_host_key.default_value = SSH2Base::getDefaultVerifyHostKey();
+        return scheme;
     }
 }
 }

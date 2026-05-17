@@ -99,10 +99,10 @@ static void map_ssh2_sbuf_to_hash(QoreHashNode *h, struct stat *sbuf, ExceptionS
     // note that dev_t on Linux is an unsigned 64-bit integer, so we could lose precision here
     h->setKeyValue("mode",        sbuf->st_mode, xsink);
     h->setKeyValue("permissions", new QoreStringNode(mode2str(sbuf->st_mode)), xsink);
-    h->setKeyValue("size",        sbuf->st_size, xsink);
+    h->setKeyValue("size",        (int64)sbuf->st_size, xsink);
 
-    h->setKeyValue("uid",         sbuf->st_uid, xsink);
-    h->setKeyValue("gid",         sbuf->st_gid, xsink);
+    h->setKeyValue("uid",         (int64)sbuf->st_uid, xsink);
+    h->setKeyValue("gid",         (int64)sbuf->st_gid, xsink);
 
     h->setKeyValue("atime",       DateTimeNode::makeAbsolute(currentTZ(), (int64)sbuf->st_atime), xsink);
     h->setKeyValue("mtime",       DateTimeNode::makeAbsolute(currentTZ(), (int64)sbuf->st_mtime), xsink);
@@ -113,25 +113,27 @@ static void map_ssh2_sbuf_to_hash(QoreHashNode *h, struct stat *sbuf, ExceptionS
  *
  * this just prefills the values for connection with hostname and port
  */
-SSH2Client::SSH2Client(const char *hostname, const uint32_t port) : sshhost(hostname), sshport(port), keepalive_interval(QKEEPALIVE_DEFAULT), use_agent(true), verify_host_key(false), host_key_policy(SSH2_HOSTKEY_REJECT), sshauthenticatedwith(0), ssh_session(0) {
+SSH2Client::SSH2Client(const char *hostname, const uint32_t port) : sshhost(hostname), verify_host_key(ssh2_get_default_verify_host_key()), host_key_policy(ssh2_get_default_host_key_policy()), sshport(port), keepalive_interval(QKEEPALIVE_DEFAULT), use_agent(true), sshauthenticatedwith(0), ssh_session(0) {
     setKeysIntern();
+    setKnownHostsIntern();
 }
 
 SSH2Client::SSH2Client(QoreURL &url, const uint32_t port) :
     sshhost(url.getHost() ? url.getHost()->getBuffer() : ""),
     sshuser(url.getUserName() ? url.getUserName()->getBuffer() : ""),
     sshpass(url.getPassword() ? url.getPassword()->getBuffer() : ""),
+    verify_host_key(ssh2_get_default_verify_host_key()),
+    host_key_policy(ssh2_get_default_host_key_policy()),
     sshport(port ? port : (uint32_t)url.getPort()),
     keepalive_interval(QKEEPALIVE_DEFAULT),
     use_agent(true),
-    verify_host_key(false),
-    host_key_policy(SSH2_HOSTKEY_REJECT),
     sshauthenticatedwith(0),
     ssh_session(0) {
     if (!sshport)
         sshport = DEFAULT_SSH_PORT;
 
     setKeysIntern();
+    setKnownHostsIntern();
 }
 
 /*
@@ -178,6 +180,44 @@ void SSH2Client::setKeysIntern() {
         if (sshuser.empty()) {
             sshuser = usrpwd->pw_name;
         }
+    }
+#endif
+}
+
+void SSH2Client::setKnownHostsIntern() {
+    std::string explicit_path;
+    int mode = ssh2_get_default_known_hosts(explicit_path);
+
+    if (mode == SSH2_KH_DEFAULT_DISABLED) {
+        // no implicit known_hosts file; used by embedding applications (e.g. Qorus) where the OS
+        // user running the process differs from the logical user making the connection, so the
+        // OS user's ~/.ssh/known_hosts must not be used
+        return;
+    }
+
+    if (mode == SSH2_KH_DEFAULT_EXPLICIT) {
+        // an explicitly-configured default path is a deliberate choice and is honored regardless
+        // of PO_NO_FILESYSTEM (sandboxing is still enforced at actual file-access time)
+        known_hosts_file = explicit_path;
+        printd(5, "SSH2Client::setKnownHostsIntern() set configured default known_hosts file: '%s'\n", known_hosts_file.c_str());
+        return;
+    }
+
+    // SSH2_KH_DEFAULT_AUTO: the local OS user's ~/.ssh/known_hosts
+#ifdef HAVE_PWD_H
+    // do not access the filesystem to find the known_hosts file if filesystem access is not allowed
+    if (getProgram()->getParseOptions() & PO_NO_FILESYSTEM) {
+        return;
+    }
+
+    // the known_hosts file belongs to the local OS user running the program, not the remote SSH
+    // user, so it is resolved independently of sshuser; the file does not need to exist (it will be
+    // created on first use with the default SSH2_HOSTKEY_TOFU policy)
+    struct passwd* usrpwd = getpwuid(getuid());
+    if (usrpwd && usrpwd->pw_dir && usrpwd->pw_dir[0]) {
+        known_hosts_file = usrpwd->pw_dir;
+        known_hosts_file += "/.ssh/known_hosts";
+        printd(5, "SSH2Client::setKnownHostsIntern() set default known_hosts file: '%s'\n", known_hosts_file.c_str());
     }
 #endif
 }
@@ -530,9 +570,25 @@ int SSH2Client::sshConnectUnlocked(int timeout_ms, ExceptionSink *xsink = 0) {
             return -1;
         }
 
-        // load known hosts file if specified
+        // load the known hosts file if specified; a non-existent file is normal for the first
+        // connection under the SSH2_HOSTKEY_TOFU policy (the file is created on first use), but a
+        // file that exists and cannot be read or parsed must NOT be silently ignored, as that
+        // would bypass host key verification entirely (degrading to "trust anything")
         if (!known_hosts_file.empty()) {
-            libssh2_knownhost_readfile(nh, known_hosts_file.c_str(), LIBSSH2_KNOWNHOST_FILE_OPENSSH);
+            struct stat sb;
+            if (!stat(known_hosts_file.c_str(), &sb)) {
+                int read_rc = libssh2_knownhost_readfile(nh, known_hosts_file.c_str(),
+                    LIBSSH2_KNOWNHOST_FILE_OPENSSH);
+                if (read_rc < 0) {
+                    libssh2_knownhost_free(nh);
+                    disconnectUnlocked(true);
+                    xsink && xsink->raiseException("SSH2-HOSTKEY-ERROR",
+                        "the configured known_hosts file '%s' exists but could not be read or "
+                        "parsed (libssh2 error code %d); refusing to connect to avoid bypassing "
+                        "host key verification", known_hosts_file.c_str(), read_rc);
+                    return -1;
+                }
+            }
         }
 
         // determine key type for check
@@ -745,7 +801,7 @@ int SSH2Client::sshConnectUnlocked(int timeout_ms, ExceptionSink *xsink = 0) {
 
     // try password and keyboard-interactive first if a password was given
     if (!loggedin && (auth_pw & QAUTH_PASSWORD)) {
-        printd(5, "SSH2Client::connect(): try user/pass auth: %s/%s\n", sshuser.c_str(), sshpass.c_str());
+        printd(5, "SSH2Client::connect(): try user/pass auth: %s/<redacted>\n", sshuser.c_str());
         while ((rc = libssh2_userauth_password(ssh_session, sshuser.c_str(), sshpass.c_str())) == LIBSSH2_ERROR_EAGAIN) {
             if (waitSocketUnlocked(xsink, SSH2CLIENT_TIMEOUT, SSH2_ERROR, "SSH2Client::connect", timeout_ms)) {
                 disconnectUnlocked(true); // clean up connection
@@ -764,7 +820,7 @@ int SSH2Client::sshConnectUnlocked(int timeout_ms, ExceptionSink *xsink = 0) {
     }
 
     if (!loggedin && (auth_pw & QAUTH_KEYBOARD_INTERACTIVE)) {
-        printd(5, "SSH2Client::connect(): try user/pass with keyboard-interactive auth: %s/%s\n", sshuser.c_str(), sshpass.c_str());
+        printd(5, "SSH2Client::connect(): try user/pass with keyboard-interactive auth: %s/<redacted>\n", sshuser.c_str());
         // thread thread-local storage for password for fake keyboard-interactive authentication
         keyboardPassword.set(sshpass.c_str());
         while ((rc = libssh2_userauth_keyboard_interactive(ssh_session, sshuser.c_str(), &kbd_callback)) == LIBSSH2_ERROR_EAGAIN) {
@@ -1024,8 +1080,22 @@ int SSH2Client::addKnownHostLocked(const char* host, int port, ExceptionSink* xs
         return -1;
     }
 
-    // load existing file
-    libssh2_knownhost_readfile(nh, known_hosts_file.c_str(), LIBSSH2_KNOWNHOST_FILE_OPENSSH);
+    // load the existing known hosts file if present; if it exists but cannot be read or parsed,
+    // fail rather than silently overwriting it (which would discard or mask existing entries)
+    {
+        struct stat sb;
+        if (!stat(known_hosts_file.c_str(), &sb)) {
+            int read_rc = libssh2_knownhost_readfile(nh, known_hosts_file.c_str(),
+                LIBSSH2_KNOWNHOST_FILE_OPENSSH);
+            if (read_rc < 0) {
+                libssh2_knownhost_free(nh);
+                xsink->raiseException("SSH2-HOSTKEY-ERROR",
+                    "the known_hosts file '%s' exists but could not be read or parsed (libssh2 "
+                    "error code %d)", known_hosts_file.c_str(), read_rc);
+                return -1;
+            }
+        }
+    }
 
     // determine key type
     int kh_type = LIBSSH2_KNOWNHOST_TYPE_PLAIN | LIBSSH2_KNOWNHOST_KEYENC_RAW;
@@ -1324,13 +1394,7 @@ LIBSSH2_CHANNEL* SSH2Client::scpGetRaw(ExceptionSink *xsink, const char *path, i
 
     // write file status info to statinfo if available
     if (statinfo) {
-        statinfo->setKeyValue("mode", sb.st_mode, xsink);
-        statinfo->setKeyValue("permissions", new QoreStringNode(mode2str(sb.st_mode)), xsink);
-        statinfo->setKeyValue("size", (int64)sb.st_size, xsink);
-        statinfo->setKeyValue("uid", (int64)sb.st_uid, xsink);
-        statinfo->setKeyValue("gid", (int64)sb.st_gid, xsink);
-        statinfo->setKeyValue("atime", DateTimeNode::makeAbsolute(currentTZ(), (int64)sb.st_atime), xsink);
-        statinfo->setKeyValue("mtime", DateTimeNode::makeAbsolute(currentTZ(), (int64)sb.st_mtime), xsink);
+        map_ssh2_sbuf_to_hash(statinfo, &sb, xsink);
     }
 #else
     struct stat sb;

@@ -73,4 +73,29 @@ DLLLOCAL extern const TypedHashDecl* hashdeclSsh2HostKeyInfo;
 #define SSH2_HOSTKEY_REJECT 0
 #define SSH2_HOSTKEY_TOFU   1
 
+// process-global default known_hosts handling modes (see ssh2-module.cpp)
+#define SSH2_KH_DEFAULT_AUTO     0   //!< built-in: the local OS user's ~/.ssh/known_hosts (filesystem-gated)
+#define SSH2_KH_DEFAULT_DISABLED 1   //!< no implicit known_hosts file is used
+#define SSH2_KH_DEFAULT_EXPLICIT 2   //!< use the explicitly-configured default path
+
+#include <string>
+
+//! parses the QORE_SSH2_DEFAULT_* environment variables into the process-global defaults; called once from ssh2_module_init()
+DLLLOCAL void ssh2_init_host_key_defaults();
+
+//! returns the process-global default for host key verification
+DLLLOCAL bool ssh2_get_default_verify_host_key();
+//! sets the process-global default for host key verification
+DLLLOCAL void ssh2_set_default_verify_host_key(bool verify);
+
+//! returns the process-global default host key policy (SSH2_HOSTKEY_REJECT or SSH2_HOSTKEY_TOFU)
+DLLLOCAL int ssh2_get_default_host_key_policy();
+//! sets the process-global default host key policy; returns 0 on success, -1 if the policy is invalid
+DLLLOCAL int ssh2_set_default_host_key_policy(int policy);
+
+//! returns the process-global default known_hosts mode; if SSH2_KH_DEFAULT_EXPLICIT, \a path is set to the configured path
+DLLLOCAL int ssh2_get_default_known_hosts(std::string& path);
+//! sets the process-global default known_hosts mode; \a path is only used when \a mode is SSH2_KH_DEFAULT_EXPLICIT
+DLLLOCAL void ssh2_set_default_known_hosts(int mode, const char* path);
+
 #endif

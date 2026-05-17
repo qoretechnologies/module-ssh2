@@ -43,6 +43,7 @@ class Ssh2ClientTest inherits QUnit::Test {
         addTestCase("Host key info test", \hostKeyInfoTest());
         addTestCase("Known hosts TOFU test", \knownHostsTofuTest());
         addTestCase("Known hosts reject test", \knownHostsRejectTest());
+        addTestCase("Secure defaults and fail-closed test", \secureDefaultsAndFailClosedTest());
         addTestCase("Channel PTY resize test", \channelPtyResizeTest());
         addTestCase("Channel exit signal test", \channelExitSignalTest());
         addTestCase("Algorithm query test", \algorithmQueryTest());
@@ -233,6 +234,55 @@ class Ssh2ClientTest inherits QUnit::Test {
             sc.connect();
             assertEq(True, boolean(sc.connected()));
             sc.disconnect();
+        }
+    }
+
+    secureDefaultsAndFailClosedTest() {
+        string kh_file = sprintf("%s/ssh2_test_known_hosts_%s", tmp_location(), get_random_string(10));
+        string bad_kh = sprintf("%s/ssh2_test_unreadable_kh_%s", tmp_location(), get_random_string(10));
+        on_exit {
+            if (is_file(kh_file)) {
+                unlink(kh_file);
+            }
+            unlink(bad_kh);
+        }
+
+        # a client with no explicit host key configuration must be secure by default:
+        # verification enabled, TOFU policy; only the known_hosts path is overridden so the test
+        # does not pollute the real ~/.ssh/known_hosts file
+        {
+            SSH2Client sc(uri);
+            setPrivateKey(sc);
+            assertTrue(sc.getVerifyHostKey(), "host key verification must be enabled by default");
+            assertEq(SSH2_HOSTKEY_TOFU, sc.getHostKeyPolicy(), "default host key policy must be TOFU");
+
+            sc.setKnownHostsFile(kh_file);
+            assertFalse(is_file(kh_file), "known_hosts file must not exist before first connect");
+            sc.connect();
+            assertEq(True, boolean(sc.connected()), "secure defaults must allow first connect (TOFU)");
+            assertEq(True, is_file(kh_file), "TOFU on a non-existent known_hosts path must create the file");
+            sc.disconnect();
+        }
+
+        # an existing known_hosts file that cannot be read must fail closed (SSH2-HOSTKEY-ERROR)
+        # rather than silently connecting without host key verification; running as root bypasses
+        # filesystem permission checks, so only assert this when not root
+        if (getuid() != 0) {
+            # create the file with mode 0000 so it exists but cannot be read
+            {
+                File f();
+                f.open2(bad_kh, O_CREAT | O_WRONLY | O_TRUNC, 0000);
+                f.write("# unreadable\n");
+            }
+            assertFalse(is_readable(bad_kh), "known_hosts file must be unreadable for this check");
+
+            SSH2Client sc(uri);
+            setPrivateKey(sc);
+            sc.setKnownHostsFile(bad_kh);
+            assertThrows("SSH2-HOSTKEY-ERROR", "could not be read or parsed", sub () {
+                sc.connect();
+            });
+            assertEq(False, boolean(sc.connected()), "must not be connected after fail-closed");
         }
     }
 
