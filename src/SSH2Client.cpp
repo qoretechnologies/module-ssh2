@@ -30,6 +30,7 @@
 #include <string>
 #include <map>
 #include <utility>
+#include <cstring>
 #include <sys/types.h>
 #ifdef HAVE_PWD_H
 #include <pwd.h>
@@ -106,6 +107,39 @@ static void map_ssh2_sbuf_to_hash(QoreHashNode *h, struct stat *sbuf, ExceptionS
 
     h->setKeyValue("atime",       DateTimeNode::makeAbsolute(currentTZ(), (int64)sbuf->st_atime), xsink);
     h->setKeyValue("mtime",       DateTimeNode::makeAbsolute(currentTZ(), (int64)sbuf->st_mtime), xsink);
+}
+
+// ensure the parent directory of the given file path exists, creating it with mode 0700 if it
+// does not. This is needed for the auto-resolved ~/.ssh/known_hosts file under the TOFU policy:
+// on a fresh account ~/.ssh may not exist yet, and without it libssh2_knownhost_writefile()
+// fails and the accepted host key is never persisted, leaving every subsequent connection a
+// first-use (and therefore man-in-the-middle) opportunity. Returns 0 if the parent directory
+// exists or was created, -1 with errno set otherwise.
+static int ensure_parent_dir(const char* path) {
+    const char* slash = strrchr(path, '/');
+    if (!slash || slash == path) {
+        // no parent component (a bare relative name, or the filesystem root itself): nothing to
+        // create - leave any failure to be reported by the subsequent write
+        return 0;
+    }
+    std::string dir(path, slash - path);
+    struct stat sb;
+    if (!stat(dir.c_str(), &sb)) {
+        if (S_ISDIR(sb.st_mode)) {
+            return 0;
+        }
+        errno = ENOTDIR;
+        return -1;
+    }
+    if (errno != ENOENT) {
+        // the parent itself is inaccessible (EACCES, ENOTDIR on a path component, ...)
+        return -1;
+    }
+    // 0700: the known_hosts directory (typically ~/.ssh) must not be group- or world-accessible
+    if (mkdir(dir.c_str(), 0700) && errno != EEXIST) {
+        return -1;
+    }
+    return 0;
 }
 
 /**
@@ -588,6 +622,20 @@ int SSH2Client::sshConnectUnlocked(int timeout_ms, ExceptionSink *xsink = 0) {
                         "host key verification", known_hosts_file.c_str(), read_rc);
                     return -1;
                 }
+            } else if (errno != ENOENT) {
+                // only a genuine "file does not exist" (ENOENT) is the legitimate TOFU first-use
+                // case; any other stat() failure (EACCES on the file or a parent directory,
+                // ENOTDIR, EIO, ...) means the file may exist but is inaccessible - continuing
+                // with an empty known-hosts set would silently bypass host key verification, so
+                // fail closed instead
+                int stat_errno = errno;
+                libssh2_knownhost_free(nh);
+                disconnectUnlocked(true);
+                xsink && xsink->raiseException("SSH2-HOSTKEY-ERROR",
+                    "the configured known_hosts file '%s' could not be accessed (%s); refusing "
+                    "to connect to avoid bypassing host key verification",
+                    known_hosts_file.c_str(), strerror(stat_errno));
+                return -1;
             }
         }
 
@@ -633,10 +681,50 @@ int SSH2Client::sshConnectUnlocked(int timeout_ms, ExceptionSink *xsink = 0) {
             return -1;
         } else if (check == LIBSSH2_KNOWNHOST_CHECK_NOTFOUND) {
             if (host_key_policy == SSH2_HOSTKEY_TOFU) {
-                // Trust On First Use: add the key and continue
-                libssh2_knownhost_addc(nh, sshhost.c_str(), nullptr, hostkey, hostkey_len, nullptr, 0, kh_type, nullptr);
+                // Trust On First Use: record the key and persist it. The key MUST be persisted -
+                // if it is not, every subsequent connection is again a first-use and therefore a
+                // fresh man-in-the-middle opportunity, so any failure to persist fails the
+                // connection closed rather than continuing with a key that will be forgotten.
+                int add_rc = libssh2_knownhost_addc(nh, sshhost.c_str(), nullptr, hostkey,
+                    hostkey_len, nullptr, 0, kh_type, nullptr);
+                if (add_rc) {
+                    libssh2_knownhost_free(nh);
+                    disconnectUnlocked(true);
+                    xsink && xsink->raiseException("SSH2-HOSTKEY-ERROR",
+                        "trust-on-first-use: could not record the host key for '%s:%d' (libssh2 "
+                        "error code %d)", sshhost.c_str(), sshport, add_rc);
+                    return -1;
+                }
+                // an empty known_hosts file is a deliberate embedder choice (e.g. Qorus, where
+                // the OS user's file must not be used): the key is trusted for this session only
                 if (!known_hosts_file.empty()) {
-                    libssh2_knownhost_writefile(nh, known_hosts_file.c_str(), LIBSSH2_KNOWNHOST_FILE_OPENSSH);
+                    // on a fresh account the parent directory (typically ~/.ssh) may not exist
+                    // yet; create it (mode 0700) so the key can actually be written
+                    if (ensure_parent_dir(known_hosts_file.c_str())) {
+                        int dir_errno = errno;
+                        libssh2_knownhost_free(nh);
+                        disconnectUnlocked(true);
+                        xsink && xsink->raiseException("SSH2-HOSTKEY-ERROR",
+                            "trust-on-first-use: could not create the directory for the "
+                            "known_hosts file '%s' (%s); refusing to connect because the "
+                            "accepted host key could not be persisted, which would leave every "
+                            "subsequent connection vulnerable to a man-in-the-middle attack",
+                            known_hosts_file.c_str(), strerror(dir_errno));
+                        return -1;
+                    }
+                    int write_rc = libssh2_knownhost_writefile(nh, known_hosts_file.c_str(),
+                        LIBSSH2_KNOWNHOST_FILE_OPENSSH);
+                    if (write_rc) {
+                        libssh2_knownhost_free(nh);
+                        disconnectUnlocked(true);
+                        xsink && xsink->raiseException("SSH2-HOSTKEY-ERROR",
+                            "trust-on-first-use: the host key for '%s:%d' was accepted but could "
+                            "not be written to the known_hosts file '%s' (libssh2 error code "
+                            "%d); refusing to connect because every subsequent connection would "
+                            "again be a first-use and vulnerable to a man-in-the-middle attack",
+                            sshhost.c_str(), sshport, known_hosts_file.c_str(), write_rc);
+                        return -1;
+                    }
                 }
                 printd(5, "SSH2Client::connect(): host key for '%s:%d' added to known hosts (TOFU)\n", sshhost.c_str(), sshport);
             } else {
@@ -658,6 +746,22 @@ int SSH2Client::sshConnectUnlocked(int timeout_ms, ExceptionSink *xsink = 0) {
         // LIBSSH2_KNOWNHOST_CHECK_MATCH: host key matches, continue
 
         libssh2_knownhost_free(nh);
+    }
+#else
+    // this build of the ssh2 module was compiled against a libssh2 library without the
+    // known-host API (added in libssh2 1.2), so host key verification cannot be performed at
+    // all. verify_host_key now defaults to enabled, so silently connecting here would give a
+    // false sense of security; fail closed instead. Verification can be explicitly disabled
+    // (e.g. with setVerifyHostKey(False)) to connect against such a libssh2 build.
+    if (verify_host_key) {
+        disconnectUnlocked(true);
+        xsink && xsink->raiseException("SSH2-HOSTKEY-ERROR",
+            "host key verification is enabled but this build of the ssh2 module was compiled "
+            "against a libssh2 library without the known-host API (libssh2 >= 1.2 is required "
+            "for host key verification); refusing to connect unverified - rebuild the ssh2 "
+            "module against a newer libssh2, or explicitly disable verification with "
+            "setVerifyHostKey(False)");
+        return -1;
     }
 #endif
 
@@ -1094,6 +1198,17 @@ int SSH2Client::addKnownHostLocked(const char* host, int port, ExceptionSink* xs
                     "error code %d)", known_hosts_file.c_str(), read_rc);
                 return -1;
             }
+        } else if (errno != ENOENT) {
+            // only ENOENT (the file does not yet exist) is a legitimate "create on first add"
+            // case; any other stat() failure means the file may exist but is inaccessible -
+            // proceeding would silently overwrite it (discarding or masking existing entries),
+            // so fail instead
+            int stat_errno = errno;
+            libssh2_knownhost_free(nh);
+            xsink->raiseException("SSH2-HOSTKEY-ERROR",
+                "the known_hosts file '%s' could not be accessed (%s); refusing to overwrite it",
+                known_hosts_file.c_str(), strerror(stat_errno));
+            return -1;
         }
     }
 

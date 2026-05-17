@@ -44,6 +44,8 @@ class Ssh2ClientTest inherits QUnit::Test {
         addTestCase("Known hosts TOFU test", \knownHostsTofuTest());
         addTestCase("Known hosts reject test", \knownHostsRejectTest());
         addTestCase("Secure defaults and fail-closed test", \secureDefaultsAndFailClosedTest());
+        addTestCase("Known hosts TOFU creates parent dir test", \knownHostsTofuCreatesParentDirTest());
+        addTestCase("Known hosts stat error fail-closed test", \knownHostsStatErrorFailClosedTest());
         addTestCase("Channel PTY resize test", \channelPtyResizeTest());
         addTestCase("Channel exit signal test", \channelExitSignalTest());
         addTestCase("Algorithm query test", \algorithmQueryTest());
@@ -284,6 +286,89 @@ class Ssh2ClientTest inherits QUnit::Test {
             });
             assertEq(False, boolean(sc.connected()), "must not be connected after fail-closed");
         }
+    }
+
+    knownHostsTofuCreatesParentDirTest() {
+        # F3: under TOFU the accepted host key MUST be persisted; on a fresh account the parent
+        # directory of the known_hosts file (typically ~/.ssh) may not exist yet. The module must
+        # create it (mode 0700) so the key is written - otherwise every subsequent connection is
+        # again a first-use and vulnerable to a man-in-the-middle attack.
+        string kh_dir = sprintf("%s/ssh2_test_khdir_%s", tmp_location(), get_random_string(10));
+        string kh_file = kh_dir + "/known_hosts";
+        on_exit {
+            if (is_file(kh_file)) {
+                unlink(kh_file);
+            }
+            if (is_dir(kh_dir)) {
+                rmdir(kh_dir);
+            }
+        }
+
+        assertFalse(is_dir(kh_dir), "the known_hosts parent directory must not exist before connect");
+
+        # first connection: TOFU must create the missing parent directory and persist the key
+        {
+            SSH2Client sc(uri);
+            setPrivateKey(sc);
+            sc.setKnownHostsFile(kh_file);
+            sc.setVerifyHostKey(True);
+            sc.setHostKeyPolicy(SSH2_HOSTKEY_TOFU);
+            sc.connect();
+            assertEq(True, boolean(sc.connected()), "TOFU must connect on first use");
+            sc.disconnect();
+        }
+
+        assertEq(True, is_dir(kh_dir), "TOFU must create the missing known_hosts parent directory");
+        assertEq(0700, hstat(kh_dir).mode & 0777, "the created known_hosts directory must be mode 0700");
+        assertEq(True, is_file(kh_file), "TOFU must persist the host key to the known_hosts file");
+
+        # second connection with REJECT policy: succeeds only if the key was actually persisted
+        {
+            SSH2Client sc(uri);
+            setPrivateKey(sc);
+            sc.setKnownHostsFile(kh_file);
+            sc.setVerifyHostKey(True);
+            sc.setHostKeyPolicy(SSH2_HOSTKEY_REJECT);
+            sc.connect();
+            assertEq(True, boolean(sc.connected()),
+                "persisted key must satisfy a later REJECT-policy connect");
+            sc.disconnect();
+        }
+    }
+
+    knownHostsStatErrorFailClosedTest() {
+        # F1: only ENOENT (the file genuinely does not exist) is the legitimate TOFU first-use
+        # case. If stat() on the configured known_hosts file fails for any other reason - here a
+        # parent directory with no search permission yields EACCES - the file may exist but be
+        # inaccessible, so the module must fail closed instead of silently connecting unverified.
+        # Running as root bypasses filesystem permission checks, so skip the assertion as root.
+        if (getuid() == 0) {
+            testSkip("cannot test EACCES fail-closed as root");
+        }
+
+        string kh_dir = sprintf("%s/ssh2_test_noexec_%s", tmp_location(), get_random_string(10));
+        string kh_file = kh_dir + "/known_hosts";
+        mkdir(kh_dir, 0700);
+        # drop search (execute) permission so stat() on a path inside it fails with EACCES (not
+        # ENOENT) - this is distinct from the unreadable-file case, which fails in readfile()
+        chmod(kh_dir, 0000);
+        on_exit {
+            chmod(kh_dir, 0700);
+            if (is_file(kh_file)) {
+                unlink(kh_file);
+            }
+            rmdir(kh_dir);
+        }
+
+        SSH2Client sc(uri);
+        setPrivateKey(sc);
+        sc.setKnownHostsFile(kh_file);
+        sc.setVerifyHostKey(True);
+        sc.setHostKeyPolicy(SSH2_HOSTKEY_TOFU);
+        assertThrows("SSH2-HOSTKEY-ERROR", "could not be accessed", sub () {
+            sc.connect();
+        });
+        assertEq(False, boolean(sc.connected()), "must not be connected after stat() fail-closed");
     }
 
     channelPtyResizeTest() {

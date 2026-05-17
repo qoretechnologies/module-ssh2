@@ -382,12 +382,18 @@ class NegativeTests inherits QUnit::Test {
     }
 
     knownHostsOptionTests() {
-        # Test default: no known hosts file
+        # Test default known hosts file. AUTO resolution of the per-user ~/.ssh/known_hosts is
+        # compiled inside #ifdef HAVE_PWD_H, so it is only available on platforms with <pwd.h>;
+        # on Windows (no <pwd.h>) the compiled behavior is no implicit file (NOTHING).
         {
             SSH2Client sc("ssh://user@localhost");
             *string khf = sc.getKnownHostsFile();
-            assertTrue(exists khf, "default known_hosts file must be set (secure by default)");
-            assertRegex("\\.ssh/known_hosts$", khf);
+            if (PlatformOS == "Windows") {
+                assertNothing(khf, "no <pwd.h> on Windows: AUTO known_hosts is not auto-resolved");
+            } else {
+                assertTrue(exists khf, "default known_hosts file must be set (secure by default)");
+                assertRegex("\\.ssh/known_hosts$", khf);
+            }
         }
 
         # Test default known hosts file is not set when filesystem access is not allowed
@@ -424,7 +430,12 @@ class NegativeTests inherits QUnit::Test {
         # Test SFTPClient inherits known hosts options
         {
             SFTPClient sc("sftp://user@localhost");
-            assertRegex("\\.ssh/known_hosts$", sc.getKnownHostsFile());
+            # AUTO ~/.ssh/known_hosts resolution requires <pwd.h> (absent on Windows)
+            if (PlatformOS == "Windows") {
+                assertNothing(sc.getKnownHostsFile(), "no <pwd.h> on Windows: not auto-resolved");
+            } else {
+                assertRegex("\\.ssh/known_hosts$", sc.getKnownHostsFile());
+            }
             assertTrue(sc.getVerifyHostKey());
             sc.setKnownHostsFile("/tmp/kh");
             sc.setVerifyHostKey(False);
@@ -602,7 +613,12 @@ class NegativeTests inherits QUnit::Test {
             SSH2Base::setDefaultKnownHostsFile();
             assertNothing(SSH2Base::getDefaultKnownHostsFile());
             SSH2Client sc("ssh://user@localhost");
-            assertRegex("\\.ssh/known_hosts$", sc.getKnownHostsFile(), "AUTO -> per-user ~/.ssh/known_hosts");
+            # AUTO resolves the per-user ~/.ssh/known_hosts only where <pwd.h> exists
+            if (PlatformOS == "Windows") {
+                assertNothing(sc.getKnownHostsFile(), "no <pwd.h> on Windows: AUTO not resolved");
+            } else {
+                assertRegex("\\.ssh/known_hosts$", sc.getKnownHostsFile(), "AUTO -> per-user ~/.ssh/known_hosts");
+            }
         }
 
         # process-global: a default set here is visible to objects created in another Program in
