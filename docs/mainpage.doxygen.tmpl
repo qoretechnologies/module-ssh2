@@ -268,7 +268,9 @@ stdout.printf("exit status: %d\n", chan.getExitStatus());@endcode
     - added symlink, readlink, chown, lstat, and statvfs data providers
 
     <b>Connection Module Updates:</b>
-    - added \c known_hosts, \c verify_host_key, \c use_agent, and \c keepalive_interval connection options
+    - added \c known_hosts, \c host_key_policy, \c verify_host_key, \c use_agent, and
+      \c keepalive_interval connection options
+    - added matching host-key verification options to the SFTP client data provider constructor
     - the \c verify_host_key connection option now defaults to @ref Qore::True "True" (secure by
       default), consistent with the underlying client classes
 

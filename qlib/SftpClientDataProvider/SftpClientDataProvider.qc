@@ -1,7 +1,7 @@
 # -*- mode: qore; indent-tabs-mode: nil -*-
 #! Qore SftpClientDataProvider class definition
 
-/** SftpClientDataProvider.qc Copyright 2023 - 2024 Qore Technologies, s.r.o.
+/** SftpClientDataProvider.qc Copyright 2023 - 2026 Qore Technologies, s.r.o.
 
     Permission is hereby granted, free of charge, to any person obtaining a
     copy of this software and associated documentation files (the "Software"),
@@ -26,6 +26,58 @@
 public namespace SftpClientDataProvider {
 #! Generic SFTP server app name
 public const AppName = "SFTP";
+
+#! Readable host-key policy constructor option values
+public enum SftpClientHostKeyPolicyOption : string {
+    #! Reject unknown host keys
+    Reject = "reject",
+    #! Trust unknown host keys on first use and persist them
+    TrustOnFirstUse = "tofu",
+    #! Trust unknown host keys for the current connection only when needed
+    TrustOnFirstUseSession = "tofu-session",
+}
+
+const HostKeyPolicyOptionValues = (
+    SftpClientHostKeyPolicyOption::Reject,
+    SftpClientHostKeyPolicyOption::TrustOnFirstUse,
+    SftpClientHostKeyPolicyOption::TrustOnFirstUseSession,
+);
+
+const HostKeyPolicyAllowedValues = (
+    <AllowedValueInfo>{
+        "display_name": "Reject",
+        "short_desc": "Reject unknown host keys",
+        "desc": "Reject unknown host keys",
+        "value": SftpClientHostKeyPolicyOption::Reject,
+    },
+    <AllowedValueInfo>{
+        "display_name": "Trust On First Use",
+        "short_desc": "Trust unknown host keys on first use and persist them",
+        "desc": "Trust unknown host keys on first use and persist them to the configured known_hosts file",
+        "value": SftpClientHostKeyPolicyOption::TrustOnFirstUse,
+    },
+    <AllowedValueInfo>{
+        "display_name": "Session Trust On First Use",
+        "short_desc": "Trust unknown host keys for the current connection only when needed",
+        "desc": "Trust unknown host keys for the current connection only if no known_hosts file is configured",
+        "value": SftpClientHostKeyPolicyOption::TrustOnFirstUseSession,
+    },
+);
+
+enum<Ssh2HostKeyPolicy> sub getHostKeyPolicyFromOption(string policy) {
+    if (policy == SftpClientHostKeyPolicyOption::Reject) {
+        return Ssh2HostKeyPolicy::Reject;
+    }
+    if (policy == SftpClientHostKeyPolicyOption::TrustOnFirstUse) {
+        return Ssh2HostKeyPolicy::TrustOnFirstUse;
+    }
+    if (policy == SftpClientHostKeyPolicyOption::TrustOnFirstUseSession) {
+        return Ssh2HostKeyPolicy::TrustOnFirstUseSession;
+    }
+
+    throw "OPTION-VALUE-ERROR", sprintf("invalid host_key_policy option value %y; expected one of %y",
+        policy, HostKeyPolicyOptionValues);
+}
 
 #! The SFTP client data provider class, provides API classes as children
 public class SftpClientDataProvider inherits AbstractDataProvider {
@@ -54,6 +106,47 @@ public class SftpClientDataProvider inherits AbstractDataProvider {
                 "short_desc": "A path to an SSH private key file in PEM format",
                 "type": AbstractDataProviderTypeMap."string",
                 "desc": "A path to an SSH private key file in PEM format to use for key-based authentication",
+            },
+            "known_hosts": <DataProviderOptionInfo>{
+                "display_name": "Known Hosts File",
+                "short_desc": "A path to an OpenSSH known_hosts file for host key verification",
+                "type": AbstractDataProviderTypeMap."string",
+                "desc": "A path to an OpenSSH known_hosts file for host key verification; environment variables "
+                    "can be prefixed with '$' in the path; if set to an empty string, no known_hosts file is "
+                    "configured; if not set, the ssh2 module default applies",
+            },
+            "host_key_policy": <DataProviderOptionInfo>{
+                "display_name": "Host Key Policy",
+                "short_desc": "Policy for unknown host keys",
+                "type": AbstractDataProviderTypeMap."string",
+                "desc": "Policy for unknown host keys when host-key verification is enabled: `reject` rejects "
+                    "unknown keys, `tofu` persists first-use keys to the configured known_hosts file, and "
+                    "`tofu-session` trusts unknown keys for the current connection only if no known_hosts file is "
+                    "configured",
+                "allowed_values": HostKeyPolicyAllowedValues,
+                "default_value": SftpClientHostKeyPolicyOption::TrustOnFirstUse,
+            },
+            "verify_host_key": <DataProviderOptionInfo>{
+                "display_name": "Verify Host Key",
+                "short_desc": "Enable host key verification against the known_hosts file",
+                "type": AbstractDataProviderTypeMap."bool",
+                "desc": "Enable host key verification against the known_hosts file",
+                "default_value": True,
+            },
+            "use_agent": <DataProviderOptionInfo>{
+                "display_name": "Use SSH Agent",
+                "short_desc": "Enable SSH agent authentication",
+                "type": AbstractDataProviderTypeMap."bool",
+                "desc": "Enable SSH agent authentication; when enabled, the client will attempt to authenticate "
+                    "using keys from the running SSH agent before other methods",
+                "default_value": True,
+            },
+            "keepalive_interval": <DataProviderOptionInfo>{
+                "display_name": "Keepalive Interval",
+                "short_desc": "Keepalive interval in seconds",
+                "type": AbstractDataProviderTypeMap."int",
+                "desc": "Keepalive interval in seconds; 0 disables keepalive; default: 60",
+                "default_value": 60,
             },
         };
 
@@ -113,6 +206,21 @@ public class SftpClientDataProvider inherits AbstractDataProvider {
         SFTPClient sftp(options.url);
         if (options.keyfile.val()) {
             sftp.setKeys(substitute_env_vars(options.keyfile));
+        }
+        if (exists options.known_hosts) {
+            sftp.setKnownHostsFile(substitute_env_vars(options.known_hosts));
+        }
+        if (exists options.host_key_policy) {
+            sftp.setHostKeyPolicy(getHostKeyPolicyFromOption(options.host_key_policy));
+        }
+        if (exists options.verify_host_key) {
+            sftp.setVerifyHostKey(options.verify_host_key);
+        }
+        if (exists options.use_agent) {
+            sftp.setUseAgent(options.use_agent);
+        }
+        if (exists options.keepalive_interval) {
+            sftp.setKeepalive(options.keepalive_interval);
         }
         return sftp;
     }

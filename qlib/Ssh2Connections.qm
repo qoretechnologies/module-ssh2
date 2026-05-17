@@ -27,7 +27,7 @@
 
 %modern
 
-%requires(reexport) ssh2
+%requires(reexport) ssh2 >= 2.0
 %requires(reexport) ConnectionProvider >= 1.4
 
 module Ssh2Connections {
@@ -66,6 +66,8 @@ module Ssh2Connections {
     @section ssh2connections_relnotes Ssh2Connections Module Release History
 
     @subsection ssh2connections_v2_0 Ssh2Connections v2.0
+    - added the \c host_key_policy connection option with readable values \c reject, \c tofu, and
+      \c tofu-session
     - the \c verify_host_key connection option now defaults to @ref Qore::True "True" (secure by
       default) and an explicit @ref Qore::False "False" is honored, consistent with the ssh2
       client classes
@@ -75,7 +77,8 @@ module Ssh2Connections {
       \c QORE_SSH2_DEFAULT_VERIFY_HOST_KEY environment variable)
     - if the \c known_hosts option is not set, the ssh2 module default applies (normally the local
       user's <tt>~/.ssh/known_hosts</tt> file, unless the embedding application has changed or
-      disabled the module default)
+      disabled the module default); if set to an empty string, no known_hosts file is configured
+      for the connection
 
     @subsection ssh2connections_v1_4 Ssh2Connections v1.4
     - implemented support for a data provider scheme cache and rich option information for connections
@@ -101,6 +104,86 @@ module Ssh2Connections {
 
 #! the Ssh2Connections namespace contains all the definitions in the Ssh2Connections module
 public namespace Ssh2Connections {
+#! Readable host-key policy option values
+public enum Ssh2HostKeyPolicyOption : string {
+    #! Reject unknown host keys
+    Reject = "reject",
+    #! Trust unknown host keys on first use and persist them
+    TrustOnFirstUse = "tofu",
+    #! Trust unknown host keys for the current connection only when needed
+    TrustOnFirstUseSession = "tofu-session",
+}
+
+const HostKeyPolicyOptionValues = (
+    Ssh2HostKeyPolicyOption::Reject,
+    Ssh2HostKeyPolicyOption::TrustOnFirstUse,
+    Ssh2HostKeyPolicyOption::TrustOnFirstUseSession,
+);
+
+const HostKeyPolicyAllowedValues = (
+    <AllowedValueInfo>{
+        "display_name": "Reject",
+        "short_desc": "Reject unknown host keys",
+        "desc": "Reject unknown host keys",
+        "value": Ssh2HostKeyPolicyOption::Reject,
+    },
+    <AllowedValueInfo>{
+        "display_name": "Trust On First Use",
+        "short_desc": "Trust unknown host keys on first use and persist them",
+        "desc": "Trust unknown host keys on first use and persist them to the configured known_hosts file",
+        "value": Ssh2HostKeyPolicyOption::TrustOnFirstUse,
+    },
+    <AllowedValueInfo>{
+        "display_name": "Session Trust On First Use",
+        "short_desc": "Trust unknown host keys for the current connection only when needed",
+        "desc": "Trust unknown host keys for the current connection only if no known_hosts file is configured",
+        "value": Ssh2HostKeyPolicyOption::TrustOnFirstUseSession,
+    },
+);
+
+enum<Ssh2HostKeyPolicyOption> sub getHostKeyPolicyOption(enum<Ssh2HostKeyPolicy> policy) {
+    if (policy == Ssh2HostKeyPolicy::Reject) {
+        return Ssh2HostKeyPolicyOption::Reject;
+    }
+    if (policy == Ssh2HostKeyPolicy::TrustOnFirstUse) {
+        return Ssh2HostKeyPolicyOption::TrustOnFirstUse;
+    }
+    if (policy == Ssh2HostKeyPolicy::TrustOnFirstUseSession) {
+        return Ssh2HostKeyPolicyOption::TrustOnFirstUseSession;
+    }
+
+    throw "SSH2-HOSTKEY-POLICY-ERROR", sprintf("invalid host key policy %y", policy);
+}
+
+enum<Ssh2HostKeyPolicyOption> sub getHostKeyPolicyOption(int policy) {
+    if (policy == SSH2_HOSTKEY_REJECT) {
+        return Ssh2HostKeyPolicyOption::Reject;
+    }
+    if (policy == SSH2_HOSTKEY_TOFU) {
+        return Ssh2HostKeyPolicyOption::TrustOnFirstUse;
+    }
+    if (policy == SSH2_HOSTKEY_TOFU_SESSION) {
+        return Ssh2HostKeyPolicyOption::TrustOnFirstUseSession;
+    }
+
+    throw "SSH2-HOSTKEY-POLICY-ERROR", sprintf("invalid host key policy %d", policy);
+}
+
+enum<Ssh2HostKeyPolicy> sub getHostKeyPolicyFromOption(string policy) {
+    if (policy == Ssh2HostKeyPolicyOption::Reject) {
+        return Ssh2HostKeyPolicy::Reject;
+    }
+    if (policy == Ssh2HostKeyPolicyOption::TrustOnFirstUse) {
+        return Ssh2HostKeyPolicy::TrustOnFirstUse;
+    }
+    if (policy == Ssh2HostKeyPolicyOption::TrustOnFirstUseSession) {
+        return Ssh2HostKeyPolicy::TrustOnFirstUseSession;
+    }
+
+    throw "CONNECTION-OPTION-ERROR", sprintf("invalid host_key_policy option value %y; expected one of %y",
+        policy, HostKeyPolicyOptionValues);
+}
+
 #! abstract base class for \c ssh module connections
 /** supports the following option:
     - \c "keyfile": a path to a private key file in PEM format to use for key-based authentication
@@ -165,10 +248,22 @@ public class Ssh2ClientConnection inherits AbstractSsh2Connection {
                     "short_desc": "A path to an OpenSSH known_hosts file for host key verification",
                     "type": "string",
                     "desc": "A path to an OpenSSH known_hosts file for host key verification; "
-                        "environment variables can be prefixed with '$' in the path; if not set, "
+                        "environment variables can be prefixed with '$' in the path; if set to an "
+                        "empty string, no known_hosts file is configured; if not set, "
                         "the ssh2 module default applies (normally the local user's "
                         "~/.ssh/known_hosts file, unless the embedding application has changed or "
                         "disabled the module default)",
+                },
+                "host_key_policy": <ConnectionOptionInfo>{
+                    "display_name": "Host Key Policy",
+                    "short_desc": "Policy for unknown host keys",
+                    "type": "string",
+                    "desc": "Policy for unknown host keys when host-key verification is enabled: "
+                        "`reject` rejects unknown keys, `tofu` persists first-use keys to the "
+                        "configured known_hosts file, and `tofu-session` trusts unknown keys for "
+                        "the current connection only if no known_hosts file is configured",
+                    "allowed_values": HostKeyPolicyAllowedValues,
+                    "default_value": Ssh2HostKeyPolicyOption::TrustOnFirstUse,
                 },
                 "verify_host_key": <ConnectionOptionInfo>{
                     "display_name": "Verify Host Key",
@@ -253,8 +348,11 @@ public class Ssh2ClientConnection inherits AbstractSsh2Connection {
         if (opts.keyfile) {
             sc.setKeys(substitute_env_vars(opts.keyfile));
         }
-        if (opts.known_hosts) {
+        if (exists opts.known_hosts) {
             sc.setKnownHostsFile(substitute_env_vars(opts.known_hosts));
+        }
+        if (exists opts.host_key_policy) {
+            sc.setHostKeyPolicy(getHostKeyPolicyFromOption(opts.host_key_policy));
         }
         if (exists opts.verify_host_key) {
             sc.setVerifyHostKey(opts.verify_host_key);
@@ -279,6 +377,7 @@ public class Ssh2ClientConnection inherits AbstractSsh2Connection {
         # QORE_SSH2_DEFAULT_VERIFY_HOST_KEY environment variable)
         hash<ConnectionSchemeInfo> scheme = ConnectionScheme;
         scheme.options.verify_host_key.default_value = SSH2Base::getDefaultVerifyHostKey();
+        scheme.options.host_key_policy.default_value = getHostKeyPolicyOption(SSH2Base::getDefaultHostKeyPolicy());
         return scheme;
     }
 }
@@ -311,10 +410,22 @@ public class SftpConnection inherits AbstractSsh2Connection {
                     "short_desc": "A path to an OpenSSH known_hosts file for host key verification",
                     "type": "string",
                     "desc": "A path to an OpenSSH known_hosts file for host key verification; "
-                        "environment variables can be prefixed with '$' in the path; if not set, "
+                        "environment variables can be prefixed with '$' in the path; if set to an "
+                        "empty string, no known_hosts file is configured; if not set, "
                         "the ssh2 module default applies (normally the local user's "
                         "~/.ssh/known_hosts file, unless the embedding application has changed or "
                         "disabled the module default)",
+                },
+                "host_key_policy": <ConnectionOptionInfo>{
+                    "display_name": "Host Key Policy",
+                    "short_desc": "Policy for unknown host keys",
+                    "type": "string",
+                    "desc": "Policy for unknown host keys when host-key verification is enabled: "
+                        "`reject` rejects unknown keys, `tofu` persists first-use keys to the "
+                        "configured known_hosts file, and `tofu-session` trusts unknown keys for "
+                        "the current connection only if no known_hosts file is configured",
+                    "allowed_values": HostKeyPolicyAllowedValues,
+                    "default_value": Ssh2HostKeyPolicyOption::TrustOnFirstUse,
                 },
                 "verify_host_key": <ConnectionOptionInfo>{
                     "display_name": "Verify Host Key",
@@ -467,6 +578,11 @@ public class SftpConnection inherits AbstractSsh2Connection {
         hash<auto> opts = {
             "url": url,
             "keyfile": opts.keyfile,
+            "known_hosts": opts.known_hosts,
+            "host_key_policy": opts.host_key_policy,
+            "verify_host_key": opts.verify_host_key,
+            "use_agent": opts.use_agent,
+            "keepalive_interval": opts.keepalive_interval,
         } + getSubtypeOptions(subtype_info{subtype}, constructor_options);
         return create_object(conf."class", opts);
     }
@@ -527,8 +643,11 @@ public class SftpConnection inherits AbstractSsh2Connection {
         if (opts.keyfile) {
             sc.setKeys(substitute_env_vars(opts.keyfile));
         }
-        if (opts.known_hosts) {
+        if (exists opts.known_hosts) {
             sc.setKnownHostsFile(substitute_env_vars(opts.known_hosts));
+        }
+        if (exists opts.host_key_policy) {
+            sc.setHostKeyPolicy(getHostKeyPolicyFromOption(opts.host_key_policy));
         }
         if (exists opts.verify_host_key) {
             sc.setVerifyHostKey(opts.verify_host_key);
@@ -566,6 +685,7 @@ public class SftpConnection inherits AbstractSsh2Connection {
         # QORE_SSH2_DEFAULT_VERIFY_HOST_KEY environment variable)
         hash<ConnectionSchemeInfo> scheme = ConnectionScheme;
         scheme.options.verify_host_key.default_value = SSH2Base::getDefaultVerifyHostKey();
+        scheme.options.host_key_policy.default_value = getHostKeyPolicyOption(SSH2Base::getDefaultHostKeyPolicy());
         return scheme;
     }
 }

@@ -35,6 +35,7 @@ class Ssh2ConnectionsTest inherits QUnit::Test {
 
         addTestCase("SftpConnection test", \sftpTest());
         addTestCase("Ssh2Connection test", \ssh2Test());
+        addTestCase("Host key policy option test", \hostKeyPolicyOptionTest());
         addTestCase("Scheme metadata reflects module default", \schemeMetadataTest());
 
         set_return_value(main());
@@ -94,9 +95,55 @@ class Ssh2ConnectionsTest inherits QUnit::Test {
         assertEq(conn.url, conn2.url);
     }
 
+    hostKeyPolicyOptionTest() {
+        on_exit {
+            SSH2Base::setDefaultVerifyHostKey(True);
+            SSH2Base::setDefaultHostKeyPolicy(Ssh2HostKeyPolicy::TrustOnFirstUse);
+            SSH2Base::setDefaultKnownHostsFile();
+        }
+
+        SSH2Base::setDefaultKnownHostsFile();
+
+        hash<auto> opts = getOptions() + {
+            "known_hosts": "",
+            "host_key_policy": Ssh2HostKeyPolicyOption::TrustOnFirstUseSession,
+            "verify_host_key": True,
+            "use_agent": False,
+            "keepalive_interval": 7,
+        };
+
+        Ssh2ClientConnection cconn("test", "test", uri, {}, opts);
+        SSH2Client sc = cconn.get(False);
+        assertNothing(sc.getKnownHostsFile(), "empty known_hosts option disables per-object known_hosts");
+        assertEq(Ssh2HostKeyPolicy::TrustOnFirstUseSession, sc.getHostKeyPolicy(),
+            "ssh connection applies readable host_key_policy option");
+        assertTrue(sc.getVerifyHostKey(), "ssh connection applies verify_host_key option");
+        assertFalse(sc.getUseAgent(), "ssh connection applies use_agent option");
+        assertEq(7, sc.getKeepalive(), "ssh connection applies keepalive_interval option");
+
+        SftpConnection sconn("test", "test", uri, {}, opts);
+        SFTPClient fc = sconn.get(False);
+        assertNothing(fc.getKnownHostsFile(), "empty known_hosts option disables per-object known_hosts for sftp");
+        assertEq(Ssh2HostKeyPolicy::TrustOnFirstUseSession, fc.getHostKeyPolicy(),
+            "sftp connection applies readable host_key_policy option");
+        assertTrue(fc.getVerifyHostKey(), "sftp connection applies verify_host_key option");
+        assertFalse(fc.getUseAgent(), "sftp connection applies use_agent option");
+        assertEq(7, fc.getKeepalive(), "sftp connection applies keepalive_interval option");
+
+        assertThrows("CONNECTION-OPTION-ERROR", "allowed values", sub () {
+            new Ssh2ClientConnection("test", "test", uri, {}, {"host_key_policy": "bogus"});
+        });
+        assertThrows("CONNECTION-OPTION-ERROR", "allowed values", sub () {
+            new SftpConnection("test", "test", uri, {}, {"host_key_policy": "bogus"});
+        });
+    }
+
     schemeMetadataTest() {
         # restore the process-global default regardless of assertion outcome
-        on_exit SSH2Base::setDefaultVerifyHostKey(True);
+        on_exit {
+            SSH2Base::setDefaultVerifyHostKey(True);
+            SSH2Base::setDefaultHostKeyPolicy(Ssh2HostKeyPolicy::TrustOnFirstUse);
+        }
 
         SftpConnection sconn("test", "test", uri, {}, getOptions());
         Ssh2ClientConnection cconn("test", "test", uri, {}, getOptions());
@@ -106,18 +153,38 @@ class Ssh2ConnectionsTest inherits QUnit::Test {
             "SftpConnection scheme reflects secure default");
         assertEq(True, cconn.getConnectionSchemeInfo().options.verify_host_key.default_value,
             "Ssh2ClientConnection scheme reflects secure default");
+        assertEq(Ssh2HostKeyPolicyOption::TrustOnFirstUse,
+            sconn.getConnectionSchemeInfo().options.host_key_policy.default_value,
+            "SftpConnection scheme reflects default host key policy");
+        assertEq(Ssh2HostKeyPolicyOption::TrustOnFirstUse,
+            cconn.getConnectionSchemeInfo().options.host_key_policy.default_value,
+            "Ssh2ClientConnection scheme reflects default host key policy");
+        assertEq("reject|tofu|tofu-session",
+            (map string($1.value), cconn.getConnectionSchemeInfo().options.host_key_policy.allowed_values).join("|"),
+            "scheme advertises readable host key policy values");
 
         # when an embedding application changes the module-global default, connection
         # introspection must reflect it (issue: OS user != logical user)
         SSH2Base::setDefaultVerifyHostKey(False);
+        SSH2Base::setDefaultHostKeyPolicy(Ssh2HostKeyPolicy::TrustOnFirstUseSession);
         assertEq(False, sconn.getConnectionSchemeInfo().options.verify_host_key.default_value,
             "SftpConnection scheme reflects overridden module default");
         assertEq(False, cconn.getConnectionSchemeInfo().options.verify_host_key.default_value,
             "Ssh2ClientConnection scheme reflects overridden module default");
+        assertEq(Ssh2HostKeyPolicyOption::TrustOnFirstUseSession,
+            sconn.getConnectionSchemeInfo().options.host_key_policy.default_value,
+            "SftpConnection scheme reflects overridden host key policy default");
+        assertEq(Ssh2HostKeyPolicyOption::TrustOnFirstUseSession,
+            cconn.getConnectionSchemeInfo().options.host_key_policy.default_value,
+            "Ssh2ClientConnection scheme reflects overridden host key policy default");
 
         SSH2Base::setDefaultVerifyHostKey(True);
+        SSH2Base::setDefaultHostKeyPolicy(Ssh2HostKeyPolicy::TrustOnFirstUse);
         assertEq(True, sconn.getConnectionSchemeInfo().options.verify_host_key.default_value,
             "scheme reflects restored module default");
+        assertEq(Ssh2HostKeyPolicyOption::TrustOnFirstUse,
+            sconn.getConnectionSchemeInfo().options.host_key_policy.default_value,
+            "scheme reflects restored host key policy default");
     }
 
     private usageIntern() {
