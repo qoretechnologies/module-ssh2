@@ -17,7 +17,7 @@ class NegativeTests inherits QUnit::Test {
         timeout timeout = 5s;
 
         const MyOpts = Opts + {
-            "timeout": "T,timeout=i",
+            "timeout": "t,timeout=i",
         };
 
         const ColumnOffset = 25;
@@ -589,6 +589,6 @@ class NegativeTests inherits QUnit::Test {
 
     private usageIntern() {
         TestReporter::usageIntern(ColumnOffset);
-        printOption("-T,--timeout=ARG", sprintf("set timeout in seconds (def: %ds)", timeout / 1000), ColumnOffset);
+        printOption("-t,--timeout=ARG", sprintf("set timeout in seconds (def: %ds)", timeout / 1000), ColumnOffset);
     }
 }

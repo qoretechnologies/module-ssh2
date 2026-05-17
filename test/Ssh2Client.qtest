@@ -22,7 +22,7 @@ class Ssh2ClientTest inherits QUnit::Test {
 
         const MyOpts = Opts + {
             "privkey": "k,private-key=s",
-            "timeout": "T,timeout=i",
+            "timeout": "t,timeout=i",
         };
 
         const ColumnOffset = 25;
@@ -375,6 +375,6 @@ class Ssh2ClientTest inherits QUnit::Test {
     private usageIntern() {
         TestReporter::usageIntern(ColumnOffset);
         printOption("-k,--private-key=ARG", "set private key to use for authentication", ColumnOffset);
-        printOption("-T,--timeout=ARG", sprintf("set timeout in seconds (def: %ds)", timeout / 1000), ColumnOffset);
+        printOption("-t,--timeout=ARG", sprintf("set timeout in seconds (def: %ds)", timeout / 1000), ColumnOffset);
     }
 }
