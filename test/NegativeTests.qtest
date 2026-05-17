@@ -39,6 +39,7 @@ class NegativeTests inherits QUnit::Test {
         addTestCase("Algorithm preference tests", \algorithmPreferenceTests());
         addTestCase("Banner tests", \bannerTests());
         addTestCase("Host key policy tests", \hostKeyPolicyTests());
+        addTestCase("Module default tests", \moduleDefaultsTests());
         addTestCase("Keys from data tests", \keysFromDataTests());
         addTestCase("SSH2Listener constructor tests", \listenerConstructorTests());
         addTestCase("Module constant tests", \moduleConstantTests());
@@ -381,10 +382,27 @@ class NegativeTests inherits QUnit::Test {
     }
 
     knownHostsOptionTests() {
-        # Test default: no known hosts file
+        # Test default known hosts file. AUTO resolution of the per-user ~/.ssh/known_hosts is
+        # compiled inside #ifdef HAVE_PWD_H, so it is only available on platforms with <pwd.h>;
+        # on Windows (no <pwd.h>) the compiled behavior is no implicit file (NOTHING).
         {
             SSH2Client sc("ssh://user@localhost");
-            assertNothing(sc.getKnownHostsFile());
+            *string khf = sc.getKnownHostsFile();
+            if (PlatformOS == "Windows") {
+                assertNothing(khf, "no <pwd.h> on Windows: AUTO known_hosts is not auto-resolved");
+            } else {
+                assertTrue(exists khf, "default known_hosts file must be set (secure by default)");
+                assertRegex("\\.ssh/known_hosts$", khf);
+            }
+        }
+
+        # Test default known hosts file is not set when filesystem access is not allowed
+        {
+            Program p(PO_NEW_STYLE | PO_NO_FILESYSTEM);
+            p.loadModule("ssh2");
+            p.parse("*string sub get_default_kh() { SSH2Client sc('ssh://user@localhost'); "
+                "return sc.getKnownHostsFile(); }", "no_fs_kh_test");
+            assertNothing(p.callFunction("get_default_kh"));
         }
 
         # Test set/get roundtrip
@@ -394,10 +412,10 @@ class NegativeTests inherits QUnit::Test {
             assertEq("/tmp/known_hosts", sc.getKnownHostsFile());
         }
 
-        # Test default verification disabled
+        # Test host key verification is enabled by default (secure by default)
         {
             SSH2Client sc("ssh://user@localhost");
-            assertFalse(sc.getVerifyHostKey());
+            assertTrue(sc.getVerifyHostKey());
         }
 
         # Test set/get verify roundtrip
@@ -412,12 +430,17 @@ class NegativeTests inherits QUnit::Test {
         # Test SFTPClient inherits known hosts options
         {
             SFTPClient sc("sftp://user@localhost");
-            assertNothing(sc.getKnownHostsFile());
-            assertFalse(sc.getVerifyHostKey());
-            sc.setKnownHostsFile("/tmp/kh");
-            sc.setVerifyHostKey(True);
-            assertEq("/tmp/kh", sc.getKnownHostsFile());
+            # AUTO ~/.ssh/known_hosts resolution requires <pwd.h> (absent on Windows)
+            if (PlatformOS == "Windows") {
+                assertNothing(sc.getKnownHostsFile(), "no <pwd.h> on Windows: not auto-resolved");
+            } else {
+                assertRegex("\\.ssh/known_hosts$", sc.getKnownHostsFile());
+            }
             assertTrue(sc.getVerifyHostKey());
+            sc.setKnownHostsFile("/tmp/kh");
+            sc.setVerifyHostKey(False);
+            assertEq("/tmp/kh", sc.getKnownHostsFile());
+            assertFalse(sc.getVerifyHostKey());
         }
 
         # Test getHostKey when not connected throws
@@ -498,10 +521,10 @@ class NegativeTests inherits QUnit::Test {
     }
 
     hostKeyPolicyTests() {
-        # Test default policy is REJECT
+        # Test default policy is TOFU (secure by default)
         {
             SSH2Client sc("ssh://user@localhost");
-            assertEq(SSH2_HOSTKEY_REJECT, sc.getHostKeyPolicy());
+            assertEq(SSH2_HOSTKEY_TOFU, sc.getHostKeyPolicy());
         }
 
         # Test set/get roundtrip
@@ -525,6 +548,115 @@ class NegativeTests inherits QUnit::Test {
         {
             assertEq(0, SSH2_HOSTKEY_REJECT);
             assertEq(1, SSH2_HOSTKEY_TOFU);
+        }
+    }
+
+    moduleDefaultsTests() {
+        # process-global defaults MUST be restored, otherwise later test cases (which assert the
+        # built-in defaults) would fail
+        on_exit {
+            SSH2Base::setDefaultVerifyHostKey(True);
+            SSH2Base::setDefaultHostKeyPolicy(SSH2_HOSTKEY_TOFU);
+            SSH2Base::setDefaultKnownHostsFile();
+        }
+
+        # built-in defaults
+        {
+            assertTrue(SSH2Base::getDefaultVerifyHostKey(), "built-in default: verify on");
+            assertEq(SSH2_HOSTKEY_TOFU, SSH2Base::getDefaultHostKeyPolicy(), "built-in default: TOFU");
+            assertNothing(SSH2Base::getDefaultKnownHostsFile(), "built-in default: AUTO (per-user)");
+        }
+
+        # setDefaultVerifyHostKey affects newly-constructed objects, not existing ones
+        {
+            SSH2Client pre("ssh://user@localhost");
+            SSH2Base::setDefaultVerifyHostKey(False);
+            assertFalse(SSH2Base::getDefaultVerifyHostKey());
+            SSH2Client post("ssh://user@localhost");
+            assertFalse(post.getVerifyHostKey(), "new object inherits global verify default");
+            assertTrue(pre.getVerifyHostKey(), "pre-existing object is unaffected");
+            SSH2Base::setDefaultVerifyHostKey(True);
+        }
+
+        # setDefaultHostKeyPolicy + invalid value
+        {
+            SSH2Base::setDefaultHostKeyPolicy(SSH2_HOSTKEY_REJECT);
+            assertEq(SSH2_HOSTKEY_REJECT, SSH2Base::getDefaultHostKeyPolicy());
+            SSH2Client sc("ssh://user@localhost");
+            assertEq(SSH2_HOSTKEY_REJECT, sc.getHostKeyPolicy(), "new object inherits global policy default");
+            assertThrows("SSH2-HOSTKEY-POLICY-ERROR", sub () {
+                SSH2Base::setDefaultHostKeyPolicy(99);
+            });
+            SSH2Base::setDefaultHostKeyPolicy(SSH2_HOSTKEY_TOFU);
+        }
+
+        # known_hosts tri-state: DISABLED -> no implicit file
+        {
+            SSH2Base::setDefaultKnownHostsFile("");
+            assertEq("", SSH2Base::getDefaultKnownHostsFile(), "DISABLED reports empty string");
+            SSH2Client sc("ssh://user@localhost");
+            assertNothing(sc.getKnownHostsFile(), "DISABLED -> object has no implicit known_hosts file");
+        }
+
+        # known_hosts tri-state: EXPLICIT -> configured path
+        {
+            SSH2Base::setDefaultKnownHostsFile("/tmp/qorus_managed_known_hosts");
+            assertEq("/tmp/qorus_managed_known_hosts", SSH2Base::getDefaultKnownHostsFile());
+            SSH2Client sc("ssh://user@localhost");
+            assertEq("/tmp/qorus_managed_known_hosts", sc.getKnownHostsFile(), "EXPLICIT -> object uses configured path");
+            SFTPClient fc("sftp://user@localhost");
+            assertEq("/tmp/qorus_managed_known_hosts", fc.getKnownHostsFile(), "EXPLICIT default also applies to SFTPClient");
+        }
+
+        # known_hosts tri-state: back to AUTO
+        {
+            SSH2Base::setDefaultKnownHostsFile();
+            assertNothing(SSH2Base::getDefaultKnownHostsFile());
+            SSH2Client sc("ssh://user@localhost");
+            # AUTO resolves the per-user ~/.ssh/known_hosts only where <pwd.h> exists
+            if (PlatformOS == "Windows") {
+                assertNothing(sc.getKnownHostsFile(), "no <pwd.h> on Windows: AUTO not resolved");
+            } else {
+                assertRegex("\\.ssh/known_hosts$", sc.getKnownHostsFile(), "AUTO -> per-user ~/.ssh/known_hosts");
+            }
+        }
+
+        # process-global: a default set here is visible to objects created in another Program in
+        # the same process (binary modules are loaded once per process)
+        {
+            SSH2Base::setDefaultVerifyHostKey(False);
+            Program p(PO_NEW_STYLE);
+            p.loadModule("ssh2");
+            p.parse("bool sub get_v() { SSH2Client sc('ssh://user@localhost'); return sc.getVerifyHostKey(); }",
+                "pg_test");
+            assertFalse(p.callFunction("get_v"), "process-global default visible in another Program");
+            SSH2Base::setDefaultVerifyHostKey(True);
+        }
+
+        # environment variables parsed as the baseline (validated in a child qore process so the
+        # variables are present at module init time)
+        {
+            string scr = sprintf("/tmp/ssh2_envtest_%d.q", getpid());
+            on_exit unlink(scr);
+            {
+                File f();
+                f.open2(scr, O_CREAT | O_WRONLY | O_TRUNC, 0700);
+                f.write("%new-style\n%requires ssh2\n"
+                    "SSH2Client sc(\"ssh://user@localhost\");\n"
+                    "printf(\"%y|%d|%y|%s\\n\", sc.getVerifyHostKey(), sc.getHostKeyPolicy(), "
+                    "exists sc.getKnownHostsFile(), sc.getKnownHostsFile() ?? \"\");\n");
+            }
+
+            # verify=off, policy=reject, known_hosts disabled (empty value)
+            string out = trim(backquote(sprintf("QORE_SSH2_DEFAULT_VERIFY_HOST_KEY=0 "
+                "QORE_SSH2_DEFAULT_HOST_KEY_POLICY=reject QORE_SSH2_DEFAULT_KNOWN_HOSTS= "
+                "qore %s 2>&1", scr)));
+            assertEq("False|0|False|", out, "env vars parsed: verify off, reject, kh disabled");
+
+            # known_hosts explicit path via env; verify/policy left at built-in defaults
+            string out2 = trim(backquote(sprintf("QORE_SSH2_DEFAULT_KNOWN_HOSTS=/tmp/env_kh "
+                "qore %s 2>&1", scr)));
+            assertEq("True|1|True|/tmp/env_kh", out2, "env var parsed: explicit known_hosts path");
         }
     }
 

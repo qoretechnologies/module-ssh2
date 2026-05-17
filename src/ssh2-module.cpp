@@ -33,9 +33,116 @@
 #include "SSH2Listener.h"
 
 #include <string.h>
+#include <strings.h>
+#include <stdlib.h>
 
 // thread-local storage for password for faked keyboard-interactive authentication
 TLKeyboardPassword keyboardPassword;
+
+// process-global ssh2 host key default configuration
+//
+// precedence (highest to lowest): explicit per-object setter (SSH2Base instance methods) >
+// process-global programmatic setter (SSH2Base::setDefault*()) > QORE_SSH2_DEFAULT_* environment
+// variable > built-in default (verification on, TOFU policy, per-OS-user ~/.ssh/known_hosts).
+//
+// the environment variables are parsed once as the baseline in ssh2_module_init(); programmatic
+// setters called later override that baseline; per-object instance setters always win as they set
+// instance state directly after construction.
+namespace {
+struct Ssh2HostKeyDefaults {
+    bool verify = true;
+    int policy = SSH2_HOSTKEY_TOFU;
+    int kh_mode = SSH2_KH_DEFAULT_AUTO;
+    std::string kh_path;
+};
+}
+static QoreThreadLock ssh2_defaults_lock;
+static Ssh2HostKeyDefaults ssh2_defaults;
+
+static bool ssh2_parse_env_bool(const char* val, bool def) {
+    if (!val || !val[0]) {
+        return def;
+    }
+    if (!strcasecmp(val, "1") || !strcasecmp(val, "true") || !strcasecmp(val, "yes")
+        || !strcasecmp(val, "on")) {
+        return true;
+    }
+    if (!strcasecmp(val, "0") || !strcasecmp(val, "false") || !strcasecmp(val, "no")
+        || !strcasecmp(val, "off")) {
+        return false;
+    }
+    return def;
+}
+
+void ssh2_init_host_key_defaults() {
+    AutoLocker al(ssh2_defaults_lock);
+
+    if (const char* v = getenv("QORE_SSH2_DEFAULT_VERIFY_HOST_KEY")) {
+        ssh2_defaults.verify = ssh2_parse_env_bool(v, ssh2_defaults.verify);
+    }
+
+    if (const char* v = getenv("QORE_SSH2_DEFAULT_HOST_KEY_POLICY")) {
+        if (!strcasecmp(v, "reject") || !strcasecmp(v, "0")) {
+            ssh2_defaults.policy = SSH2_HOSTKEY_REJECT;
+        } else if (!strcasecmp(v, "tofu") || !strcasecmp(v, "1")) {
+            ssh2_defaults.policy = SSH2_HOSTKEY_TOFU;
+        }
+    }
+
+    // QORE_SSH2_DEFAULT_KNOWN_HOSTS: unset -> AUTO (built-in per-user); set but empty -> DISABLED
+    // (no implicit known_hosts file); set to a path -> EXPLICIT (use that path)
+    if (const char* v = getenv("QORE_SSH2_DEFAULT_KNOWN_HOSTS")) {
+        if (v[0]) {
+            ssh2_defaults.kh_mode = SSH2_KH_DEFAULT_EXPLICIT;
+            ssh2_defaults.kh_path = v;
+        } else {
+            ssh2_defaults.kh_mode = SSH2_KH_DEFAULT_DISABLED;
+            ssh2_defaults.kh_path.clear();
+        }
+    }
+}
+
+bool ssh2_get_default_verify_host_key() {
+    AutoLocker al(ssh2_defaults_lock);
+    return ssh2_defaults.verify;
+}
+
+void ssh2_set_default_verify_host_key(bool verify) {
+    AutoLocker al(ssh2_defaults_lock);
+    ssh2_defaults.verify = verify;
+}
+
+int ssh2_get_default_host_key_policy() {
+    AutoLocker al(ssh2_defaults_lock);
+    return ssh2_defaults.policy;
+}
+
+int ssh2_set_default_host_key_policy(int policy) {
+    if (policy != SSH2_HOSTKEY_REJECT && policy != SSH2_HOSTKEY_TOFU) {
+        return -1;
+    }
+    AutoLocker al(ssh2_defaults_lock);
+    ssh2_defaults.policy = policy;
+    return 0;
+}
+
+int ssh2_get_default_known_hosts(std::string& path) {
+    AutoLocker al(ssh2_defaults_lock);
+    if (ssh2_defaults.kh_mode == SSH2_KH_DEFAULT_EXPLICIT) {
+        path = ssh2_defaults.kh_path;
+    }
+    return ssh2_defaults.kh_mode;
+}
+
+void ssh2_set_default_known_hosts(int mode, const char* path) {
+    AutoLocker al(ssh2_defaults_lock);
+    ssh2_defaults.kh_mode = mode;
+    if (mode == SSH2_KH_DEFAULT_EXPLICIT && path) {
+        ssh2_defaults.kh_path = path;
+    } else {
+        ssh2_defaults.kh_path.clear();
+    }
+}
 
 static QoreNamespace ssh2ns("Qore::SSH2"); // namespace
 
@@ -79,6 +186,10 @@ static void ssh2_module_init(QoreModuleInitContext& ctx, ExceptionSink& xsink) {
         xsink.raiseException("MODULE-INIT-ERROR", "the runtime version of the library is too old; got '%s', expecting minimum version '%s'", libssh2_version(0), LIBSSH2_VERSION);
         return;
     }
+
+    // parse the QORE_SSH2_DEFAULT_* environment variables into the process-global host key
+    // defaults; this is the baseline that programmatic SSH2Base::setDefault*() calls override
+    ssh2_init_host_key_defaults();
 
     // setup ssh2 error map
     ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_SOCKET_NONE, "LIBSSH2_ERROR_SOCKET_NONE"));
