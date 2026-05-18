@@ -31,6 +31,7 @@
 #include <map>
 #include <utility>
 #include <cstring>
+#include <chrono>
 #include <sys/types.h>
 #ifdef HAVE_PWD_H
 #include <pwd.h>
@@ -142,12 +143,170 @@ static int ensure_parent_dir(const char* path) {
     return 0;
 }
 
+static int64 ssh2_get_monotonic_nanos() {
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(
+        std::chrono::steady_clock::now().time_since_epoch()).count();
+}
+
+static std::string ssh2_normalize_host(const std::string& host) {
+    std::string rv(host);
+    if (!rv.empty() && rv[rv.size() - 1] == '.') {
+        rv.resize(rv.size() - 1);
+    }
+    for (char& c : rv) {
+        if (c >= 'A' && c <= 'Z') {
+            c = (char)(c - 'A' + 'a');
+        }
+    }
+    return rv;
+}
+
+static const char* ssh2_host_key_policy_name(int policy) {
+    switch (policy) {
+        case SSH2_HOSTKEY_REJECT:
+            return "reject";
+        case SSH2_HOSTKEY_TOFU:
+            return "tofu";
+        case SSH2_HOSTKEY_TOFU_SESSION:
+            return "tofu-session";
+    }
+    return "unknown";
+}
+
+static const char* ssh2_client_auth_order_name(int order) {
+    switch (order) {
+        case SSH2_CLIENT_AUTH_EXPLICIT_FIRST:
+            return "explicit-first";
+        case SSH2_CLIENT_AUTH_PROVIDER_FIRST:
+            return "provider-first";
+    }
+    return "unknown";
+}
+
+static const char* ssh2_client_identity_fallback_policy_name(int policy) {
+    switch (policy) {
+        case SSH2_CLIENT_ID_FALLBACK_DISABLED:
+            return "disabled";
+        case SSH2_CLIENT_ID_FALLBACK_AGENT:
+            return "agent";
+        case SSH2_CLIENT_ID_FALLBACK_DEFAULT_KEYS:
+            return "default-keys";
+        case SSH2_CLIENT_ID_FALLBACK_AGENT_AND_DEFAULT_KEYS:
+            return "agent-and-default-keys";
+    }
+    return "unknown";
+}
+
+static const char* ssh2_hostkey_type_name(int type) {
+    switch (type) {
+        case LIBSSH2_HOSTKEY_TYPE_RSA:
+            return "ssh-rsa";
+        case LIBSSH2_HOSTKEY_TYPE_DSS:
+            return "ssh-dss";
+#ifdef LIBSSH2_HOSTKEY_TYPE_ECDSA_256
+        case LIBSSH2_HOSTKEY_TYPE_ECDSA_256:
+            return "ecdsa-sha2-nistp256";
+        case LIBSSH2_HOSTKEY_TYPE_ECDSA_384:
+            return "ecdsa-sha2-nistp384";
+        case LIBSSH2_HOSTKEY_TYPE_ECDSA_521:
+            return "ecdsa-sha2-nistp521";
+#endif
+#ifdef LIBSSH2_HOSTKEY_TYPE_ED25519
+        case LIBSSH2_HOSTKEY_TYPE_ED25519:
+            return "ssh-ed25519";
+#endif
+    }
+    return "unknown";
+}
+
+static const char* ssh2_hostkey_decision_exception(const std::string& decision) {
+    if (decision == "unknown") {
+        return "SSH2-HOSTKEY-UNKNOWN";
+    }
+    if (decision == "mismatch") {
+        return "SSH2-HOSTKEY-MISMATCH";
+    }
+    if (decision == "revoked") {
+        return "SSH2-HOSTKEY-REVOKED";
+    }
+    if (decision == "store-error") {
+        return "SSH2-HOSTKEY-STORE-ERROR";
+    }
+    if (decision == "invalid-response") {
+        return "SSH2-HOSTKEY-INVALID-RESPONSE";
+    }
+    if (decision == "provider-error") {
+        return "SSH2-HOSTKEY-PROVIDER-ERROR";
+    }
+    if (decision == "timeout") {
+        return "SSH2-HOSTKEY-TIMEOUT";
+    }
+    return "SSH2-HOSTKEY-INVALID-RESPONSE";
+}
+
+static bool ssh2_hostkey_decision_success(const std::string& decision) {
+    return decision == "matched" || decision == "added" || decision == "accepted-session";
+}
+
+static bool ssh2_get_hash_string(const QoreHashNode* h, const char* key, std::string& str, ExceptionSink* xsink) {
+    QoreValue v = h->getKeyValue(key);
+    if (v.isNothing()) {
+        return false;
+    }
+    QoreStringValueHelper sv(v, QCS_UTF8, xsink);
+    if (*xsink) {
+        return false;
+    }
+    str = sv->c_str();
+    return true;
+}
+
+static QoreHashNode* ssh2_call_host_key_store(QoreObject* store, const QoreHashNode* call_context,
+        const QoreHashNode* observed, const char* method, const std::string& sshhost, uint32_t sshport,
+        QoreThreadLock& lock, ExceptionSink* xsink) {
+    ExceptionSink bxsink;
+    ReferenceHolder<QoreListNode> args(new QoreListNode(autoTypeInfo), &bxsink);
+    args->push(call_context->refSelf(), &bxsink);
+    args->push(observed->refSelf(), &bxsink);
+    if (bxsink) {
+        bxsink.clear();
+        xsink->raiseException("SSH2-HOSTKEY-PROVIDER-ERROR",
+            "could not build arguments for host-key store method %s()", method);
+        return nullptr;
+    }
+    ValueHolder rv(&bxsink);
+    {
+        AutoUnlocker au(lock);
+        rv = store->evalMethod(method, *args, &bxsink);
+    }
+    if (bxsink) {
+        bxsink.clear();
+        xsink->raiseException("SSH2-HOSTKEY-PROVIDER-ERROR",
+            "host-key store method %s() failed while verifying '%s:%d'", method, sshhost.c_str(), sshport);
+        return nullptr;
+    }
+    const QoreHashNode* h = rv->get<QoreHashNode>();
+    if (!h) {
+        xsink->raiseException("SSH2-HOSTKEY-INVALID-RESPONSE",
+            "host-key store method %s() returned %s instead of hash", method, rv->getTypeName());
+        return nullptr;
+    }
+    return h->copy();
+}
+
 /**
  * SSH2Client constructor
  *
  * this just prefills the values for connection with hostname and port
  */
-SSH2Client::SSH2Client(const char *hostname, const uint32_t port) : sshhost(hostname), verify_host_key(ssh2_get_default_verify_host_key()), host_key_policy(ssh2_get_default_host_key_policy()), sshport(port), keepalive_interval(QKEEPALIVE_DEFAULT), use_agent(true), sshauthenticatedwith(0), ssh_session(0) {
+SSH2Client::SSH2Client(const char *hostname, const uint32_t port) : sshhost(hostname),
+        verify_host_key(ssh2_get_default_verify_host_key()),
+        host_key_policy(ssh2_get_default_host_key_policy()), host_key_store(nullptr),
+        client_identity_provider(nullptr), client_auth_order(SSH2_CLIENT_AUTH_EXPLICIT_FIRST),
+        client_identity_fallback_policy(SSH2_CLIENT_ID_FALLBACK_DISABLED), sshport(port),
+        keepalive_interval(QKEEPALIVE_DEFAULT), use_agent(true), explicit_key_files(false),
+        explicit_key_data(false), auto_key_files(false), sshauthenticatedwith(0), connect_in_progress(false),
+        ssh_session(0) {
     setKeysIntern();
     setKnownHostsIntern();
 }
@@ -158,10 +317,18 @@ SSH2Client::SSH2Client(QoreURL &url, const uint32_t port) :
     sshpass(url.getPassword() ? url.getPassword()->getBuffer() : ""),
     verify_host_key(ssh2_get_default_verify_host_key()),
     host_key_policy(ssh2_get_default_host_key_policy()),
+    host_key_store(nullptr),
+    client_identity_provider(nullptr),
+    client_auth_order(SSH2_CLIENT_AUTH_EXPLICIT_FIRST),
+    client_identity_fallback_policy(SSH2_CLIENT_ID_FALLBACK_DISABLED),
     sshport(port ? port : (uint32_t)url.getPort()),
     keepalive_interval(QKEEPALIVE_DEFAULT),
     use_agent(true),
+    explicit_key_files(false),
+    explicit_key_data(false),
+    auto_key_files(false),
     sshauthenticatedwith(0),
+    connect_in_progress(false),
     ssh_session(0) {
     if (!sshport)
         sshport = DEFAULT_SSH_PORT;
@@ -180,6 +347,12 @@ SSH2Client::~SSH2Client() {
 
     // disconnect
     disconnectUnlocked(true);
+    if (client_identity_provider) {
+        client_identity_provider->deref(nullptr);
+    }
+    if (host_key_store) {
+        host_key_store->deref(nullptr);
+    }
 }
 
 void SSH2Client::setKeysIntern() {
@@ -210,6 +383,7 @@ void SSH2Client::setKeysIntern() {
                 return;
             }
             printd(5, "SSH2Client::setKeysIntern() set pub: '%s'\n", sshkeys_pub.c_str());
+            auto_key_files = true;
         }
         if (sshuser.empty()) {
             sshuser = usrpwd->pw_name;
@@ -256,6 +430,102 @@ void SSH2Client::setKnownHostsIntern() {
 #endif
 }
 
+QoreHashNode* SSH2Client::makeProviderContext(const char* purpose, int timeout_ms, ExceptionSink* xsink) const {
+    int64 now_ns = ssh2_get_monotonic_nanos();
+    int64 remaining_ns = timeout_ms < 0 ? 0 : (int64)timeout_ms * 1000000LL;
+    int64 deadline_ns = remaining_ns ? now_ns + remaining_ns : 0;
+
+    ReferenceHolder<QoreHashNode> ctxt(new QoreHashNode(autoTypeInfo), xsink);
+    ctxt->setKeyValue("purpose", new QoreStringNode(purpose), xsink);
+    ctxt->setKeyValue("original_host", new QoreStringNode(sshhost), xsink);
+    ctxt->setKeyValue("normalized_host", new QoreStringNode(ssh2_normalize_host(sshhost)), xsink);
+    ctxt->setKeyValue("port", (int64)sshport, xsink);
+    ctxt->setKeyValue("username", sshuser.empty() ? QoreValue() : QoreValue(new QoreStringNode(sshuser)), xsink);
+    ctxt->setKeyValue("host_key_policy", new QoreStringNode(ssh2_host_key_policy_name(host_key_policy)), xsink);
+    ctxt->setKeyValue("client_auth_order", new QoreStringNode(ssh2_client_auth_order_name(client_auth_order)),
+        xsink);
+    ctxt->setKeyValue("client_identity_fallback_policy",
+        new QoreStringNode(ssh2_client_identity_fallback_policy_name(client_identity_fallback_policy)), xsink);
+    ctxt->setKeyValue("deadline_ns", deadline_ns, xsink);
+    ctxt->setKeyValue("remaining_ns", remaining_ns, xsink);
+    if (*xsink) {
+        return nullptr;
+    }
+    return ctxt.release();
+}
+
+QoreHashNode* SSH2Client::makeObservedHostKeyInfo(const char* hostkey, size_t hostkey_len, int hostkey_type,
+        ExceptionSink* xsink) const {
+    ReferenceHolder<QoreHashNode> key(new QoreHashNode(autoTypeInfo), xsink);
+    key->setKeyValue("algorithm", new QoreStringNode(ssh2_hostkey_type_name(hostkey_type)), xsink);
+    SimpleRefHolder<BinaryNode> blob(new BinaryNode);
+    blob->append(hostkey, hostkey_len);
+    key->setKeyValue("public_key_blob", blob.release(), xsink);
+    key->setKeyValue("source_kind", new QoreStringNode("transport"), xsink);
+    if (*xsink) {
+        return nullptr;
+    }
+    return key.release();
+}
+
+int SSH2Client::verifyHostKeyWithStore(QoreObject* store, const char* hostkey, size_t hostkey_len, int hostkey_type,
+        int timeout_ms, ExceptionSink* xsink) {
+    ReferenceHolder<QoreHashNode> ctxt(makeProviderContext("host-key-verify", timeout_ms, xsink), xsink);
+    ReferenceHolder<QoreHashNode> observed(makeObservedHostKeyInfo(hostkey, hostkey_len, hostkey_type, xsink), xsink);
+    if (*xsink) {
+        return -1;
+    }
+
+    ReferenceHolder<QoreHashNode> decision(ssh2_call_host_key_store(store, *ctxt, *observed, "verifyHostKey",
+        sshhost, sshport, m, xsink), xsink);
+    if (*xsink) {
+        return -1;
+    }
+
+    std::string decision_name;
+    if (!decision || !ssh2_get_hash_string(*decision, "decision", decision_name, xsink)) {
+        if (!*xsink) {
+            xsink->raiseException("SSH2-HOSTKEY-INVALID-RESPONSE",
+                "host-key store verifyHostKey() response has no decision string");
+        }
+        return -1;
+    }
+
+    if (ssh2_hostkey_decision_success(decision_name)) {
+        return 0;
+    }
+
+    if (decision_name == "unknown"
+            && (host_key_policy == SSH2_HOSTKEY_TOFU || host_key_policy == SSH2_HOSTKEY_TOFU_SESSION)) {
+        ReferenceHolder<QoreHashNode> accept_ctxt(makeProviderContext("host-key-accept", timeout_ms, xsink), xsink);
+        if (*xsink) {
+            return -1;
+        }
+        decision = ssh2_call_host_key_store(store, *accept_ctxt, *observed, "acceptHostKeyIfAbsent", sshhost,
+            sshport, m, xsink);
+        if (*xsink) {
+            return -1;
+        }
+        decision_name.clear();
+        if (!decision || !ssh2_get_hash_string(*decision, "decision", decision_name, xsink)) {
+            if (!*xsink) {
+                xsink->raiseException("SSH2-HOSTKEY-INVALID-RESPONSE",
+                    "host-key store acceptHostKeyIfAbsent() response has no decision string");
+            }
+            return -1;
+        }
+        if (ssh2_hostkey_decision_success(decision_name)) {
+            return 0;
+        }
+    }
+
+    const char* ex = ssh2_hostkey_decision_exception(decision_name);
+    xsink->raiseException(new QoreStringNode(ex),
+        new QoreStringNodeMaker("host-key store rejected host key for '%s:%d' with decision %s",
+            sshhost.c_str(), sshport, decision_name.c_str()), decision ? decision.release() : QoreValue());
+    return -1;
+}
+
 /**
  * disconnect from the server if connected
  *
@@ -267,7 +537,7 @@ void SSH2Client::setKnownHostsIntern() {
 int SSH2Client::disconnectUnlocked(bool force, int timeout_ms, AbstractDisconnectionHelper* adh, ExceptionSink *xsink) {
 #ifdef HAVE_LIBSSH2_FORWARD_LISTEN
     // cancel all active listeners
-    for (auto it = listener_set.begin(); it != listener_set.end(); ) {
+    for (listener_set_t::iterator it = listener_set.begin(); it != listener_set.end(); ) {
         SSH2Listener* sl = *it;
         ++it;
         sl->cancelUnlocked();
@@ -318,7 +588,7 @@ int SSH2Client::disconnectUnlocked(bool force, int timeout_ms, AbstractDisconnec
  * return 1 if we think we are connected
  */
 int SSH2Client::sshConnectedUnlocked() {
-    return (ssh_session? 1: 0);
+    return (ssh_session && !connect_in_progress ? 1 : 0);
 }
 
 int SSH2Client::sshConnected() {
@@ -363,8 +633,9 @@ void SSH2Client::deref(ExceptionSink *xsink) {
 int SSH2Client::setUser(const char *user) {
     AutoLocker al(m);
 
-    if (sshConnectedUnlocked())
+    if (sshSessionActiveUnlocked()) {
         return -1;
+    }
 
     sshuser = user;
     return 0;
@@ -377,8 +648,9 @@ const char *SSH2Client::getUser() {
 int SSH2Client::setPassword(const char *pwd) {
     AutoLocker al(m);
 
-    if (sshConnectedUnlocked())
+    if (sshSessionActiveUnlocked()) {
         return -1;
+    }
 
     sshpass = pwd;
     return 0;
@@ -391,13 +663,16 @@ const char* SSH2Client::getPassword() {
 int SSH2Client::setKeys(const char *priv, const char *pub, ExceptionSink* xsink) {
     AutoLocker al(m);
 
-    if (sshConnectedUnlocked()) {
-        xsink->raiseException(SSH2_CONNECTED, "usage of SSH2Base::setKeys() is not allowed when connected");
+    if (sshSessionActiveUnlocked()) {
+        xsink->raiseException(SSH2_CONNECTED,
+            "usage of SSH2Base::setKeys() is not allowed when connected or connecting");
         return -1;
     }
 
     sshkeys_priv.clear();
     sshkeys_pub.clear();
+    explicit_key_files = false;
+    auto_key_files = false;
 
     // if the strings are null then ignore
     if (priv && strlen(priv)) {
@@ -440,6 +715,9 @@ int SSH2Client::setKeys(const char *priv, const char *pub, ExceptionSink* xsink)
             return -1;
         }
 
+    }
+    if (!sshkeys_priv.empty() && !sshkeys_pub.empty()) {
+        explicit_key_files = true;
     }
     return 0;
 }
@@ -496,6 +774,360 @@ int SSH2Client::startupUnlocked() {
 #else
     return libssh2_session_startup(ssh_session, socket.getSocket());
 #endif
+}
+
+int SSH2Client::tryAgentAuth(const char* userauthlist, int timeout_ms, bool& loggedin, ExceptionSink* xsink) {
+#ifdef HAVE_LIBSSH2_AGENT_API
+    if (loggedin || !userauthlist || !strstr(userauthlist, "publickey")) {
+        return 0;
+    }
+
+    printd(5, "SSH2Client::connect(): trying SSH agent authentication\n");
+    LIBSSH2_AGENT* agent = libssh2_agent_init(ssh_session);
+    if (!agent) {
+        return 0;
+    }
+
+    int rc = 0;
+    if (!libssh2_agent_connect(agent)) {
+        if (!libssh2_agent_list_identities(agent)) {
+            struct libssh2_agent_publickey* identity = nullptr;
+            struct libssh2_agent_publickey* prev_identity = nullptr;
+            size_t identity_count = 0;
+            while (!libssh2_agent_get_identity(agent, &identity, prev_identity)) {
+                if (!(identity_count++ % 10) && qore_check_cancel(xsink, "SSH2Client::connect")) {
+                    libssh2_agent_disconnect(agent);
+                    libssh2_agent_free(agent);
+                    disconnectUnlocked(true);
+                    return -1;
+                }
+                while ((rc = libssh2_agent_userauth(agent, sshuser.c_str(), identity)) == LIBSSH2_ERROR_EAGAIN) {
+                    if (waitSocketUnlocked(xsink, SSH2CLIENT_TIMEOUT, SSH2_ERROR, "SSH2Client::connect",
+                            timeout_ms)) {
+                        libssh2_agent_disconnect(agent);
+                        libssh2_agent_free(agent);
+                        disconnectUnlocked(true);
+                        return -1;
+                    }
+                }
+                if (!rc) {
+                    loggedin = true;
+                    sshauthenticatedwith = "agent";
+                    printd(5, "SSH agent authentication succeeded\n");
+                    break;
+                }
+                prev_identity = identity;
+            }
+        }
+        libssh2_agent_disconnect(agent);
+    }
+    libssh2_agent_free(agent);
+
+#ifdef DEBUG
+    if (!loggedin) {
+        printd(5, "SSH agent authentication failed or agent not available\n");
+    }
+#endif
+#endif
+    return 0;
+}
+
+int SSH2Client::tryPublicKeyMemoryAuth(const char* public_key, size_t public_key_len, const char* private_key,
+        size_t private_key_len, const char* passphrase, int timeout_ms, bool& loggedin, ExceptionSink* xsink) {
+#ifdef HAVE_LIBSSH2_PUBLICKEY_FROMMEMORY
+    if (loggedin || !private_key || !private_key_len) {
+        return 0;
+    }
+
+    printd(5, "SSH2Client::connect(): try publickey auth from memory\n");
+    int rc;
+    while ((rc = libssh2_userauth_publickey_frommemory(ssh_session, sshuser.c_str(), sshuser.size(),
+            public_key_len ? public_key : nullptr, public_key_len, private_key, private_key_len,
+            passphrase ? passphrase : "")) == LIBSSH2_ERROR_EAGAIN) {
+        if (waitSocketUnlocked(xsink, SSH2CLIENT_TIMEOUT, SSH2_ERROR, "SSH2Client::connect", timeout_ms)) {
+            disconnectUnlocked(true);
+            return -1;
+        }
+    }
+    if (!rc) {
+        loggedin = true;
+        sshauthenticatedwith = "publickey";
+        printd(5, "publickey (from memory) authentication succeeded\n");
+    }
+#ifdef DEBUG
+    else {
+        printd(5, "publickey (from memory) authentication failed\n");
+    }
+#endif
+#endif
+    return 0;
+}
+
+int SSH2Client::tryPublicKeyDataAuth(const char* userauthlist, int timeout_ms, bool& loggedin,
+        ExceptionSink* xsink) {
+    if (loggedin || sshkeys_priv_data.empty() || !userauthlist || !strstr(userauthlist, "publickey")) {
+        return 0;
+    }
+
+    const char* passphrase = sshkeys_passphrase.empty()
+        ? (sshpass.empty() ? "" : sshpass.c_str())
+        : sshkeys_passphrase.c_str();
+    return tryPublicKeyMemoryAuth(sshkeys_pub_data.empty() ? nullptr : sshkeys_pub_data.c_str(),
+        sshkeys_pub_data.size(), sshkeys_priv_data.c_str(), sshkeys_priv_data.size(), passphrase, timeout_ms,
+        loggedin, xsink);
+}
+
+int SSH2Client::tryPublicKeyFileAuth(const char* public_key_path, const char* private_key_path,
+        const char* passphrase, int timeout_ms, bool& loggedin, ExceptionSink* xsink) {
+    if (loggedin || !private_key_path || !private_key_path[0]) {
+        return 0;
+    }
+
+    QoreSandboxManagerHelper smh;
+    if (smh) {
+        if (!smh->checkFilesystemAccess(private_key_path, QSEC_READ, xsink)) {
+            disconnectUnlocked(true);
+            return -1;
+        }
+        if (public_key_path && public_key_path[0]
+                && !smh->checkFilesystemAccess(public_key_path, QSEC_READ, xsink)) {
+            disconnectUnlocked(true);
+            return -1;
+        }
+    }
+
+    printd(5, "SSH2Client::connect(): try pubkey auth: %s %s\n", private_key_path,
+        public_key_path && public_key_path[0] ? public_key_path : "n/a");
+    int rc;
+    while ((rc = libssh2_userauth_publickey_fromfile(ssh_session, sshuser.c_str(),
+            public_key_path && public_key_path[0] ? public_key_path : nullptr, private_key_path,
+            passphrase ? passphrase : "")) == LIBSSH2_ERROR_EAGAIN) {
+        if (waitSocketUnlocked(xsink, SSH2CLIENT_TIMEOUT, SSH2_ERROR, "SSH2Client::connect", timeout_ms)) {
+            disconnectUnlocked(true);
+            return -1;
+        }
+    }
+    if (!rc) {
+        loggedin = true;
+        sshauthenticatedwith = "publickey";
+        printd(5, "publickey authentication succeeded\n");
+    }
+#ifdef DEBUG
+    else {
+        printd(5, "publickey authentication failed\n");
+    }
+#endif
+    return 0;
+}
+
+int SSH2Client::tryProviderAuth(const char* userauthlist, int timeout_ms, bool& loggedin, ExceptionSink* xsink) {
+    if (loggedin || !client_identity_provider || !userauthlist || !strstr(userauthlist, "publickey")) {
+        return 0;
+    }
+
+    ReferenceHolder<QoreObject> provider(client_identity_provider->objectRefSelf(), xsink);
+    ReferenceHolder<QoreHashNode> ctxt(makeProviderContext("client-identity", timeout_ms, xsink), xsink);
+    if (*xsink) {
+        return -1;
+    }
+
+    ExceptionSink bxsink;
+    ReferenceHolder<QoreListNode> args(new QoreListNode(autoTypeInfo), &bxsink);
+    args->push(ctxt->refSelf(), &bxsink);
+    if (bxsink) {
+        bxsink.clear();
+        xsink->raiseException("SSH2-CLIENT-IDENTITY-PROVIDER-ERROR",
+            "could not build arguments for client identity provider");
+        return -1;
+    }
+
+    ValueHolder rv(&bxsink);
+    {
+        AutoUnlocker au(m);
+        rv = provider->evalMethod("getClientIdentityCandidates", *args, &bxsink);
+    }
+    if (bxsink) {
+        bxsink.clear();
+        xsink->raiseException("SSH2-CLIENT-IDENTITY-PROVIDER-ERROR",
+            "client identity provider failed while resolving candidates for '%s:%d'", sshhost.c_str(), sshport);
+        return -1;
+    }
+
+    const QoreListNode* candidates = rv->get<const QoreListNode>();
+    if (!candidates) {
+        xsink->raiseException("SSH2-CLIENT-IDENTITY-INVALID-RESPONSE",
+            "client identity provider returned %s instead of list", rv->getTypeName());
+        return -1;
+    }
+
+    for (size_t i = 0, e = candidates->size(); i < e && !loggedin; ++i) {
+        if (!(i % 100) && qore_check_cancel(xsink, "SSH2Client::connect")) {
+            disconnectUnlocked(true);
+            return -1;
+        }
+
+        QoreValue candidate_value = candidates->retrieveEntry(i);
+        const QoreHashNode* candidate = candidate_value.get<const QoreHashNode>();
+        if (!candidate) {
+            xsink->raiseException("SSH2-CLIENT-IDENTITY-INVALID-RESPONSE",
+                "client identity provider candidate %lu is %s instead of hash", (unsigned long)i,
+                candidate_value.getTypeName());
+            return -1;
+        }
+
+        std::string kind;
+        if (!ssh2_get_hash_string(candidate, "kind", kind, xsink)) {
+            if (!*xsink) {
+                xsink->raiseException("SSH2-CLIENT-IDENTITY-INVALID-RESPONSE",
+                    "client identity provider candidate %lu has no kind string", (unsigned long)i);
+            }
+            return -1;
+        }
+        QoreValue optional_value = candidate->getKeyValue("optional");
+        bool optional = optional_value.isNothing() ? false : optional_value.getAsBool();
+
+        if (kind == "agent") {
+            if (tryAgentAuth(userauthlist, timeout_ms, loggedin, xsink)) {
+                return -1;
+            }
+            continue;
+        }
+
+        if (kind == "file") {
+            std::string path;
+            if (!ssh2_get_hash_string(candidate, "path", path, xsink)) {
+                if (!*xsink) {
+                    xsink->raiseException("SSH2-CLIENT-IDENTITY-INVALID-RESPONSE",
+                        "client identity provider file candidate %lu has no path string", (unsigned long)i);
+                }
+                return -1;
+            }
+            if (tryPublicKeyFileAuth(nullptr, path.c_str(), sshpass.c_str(), timeout_ms, loggedin, xsink)) {
+                return -1;
+            }
+            continue;
+        }
+
+        if (kind != "in-memory" && kind != "reference") {
+            xsink->raiseException("SSH2-CLIENT-IDENTITY-INVALID-RESPONSE",
+                "client identity provider candidate %lu has unsupported kind '%s'", (unsigned long)i,
+                kind.c_str());
+            return -1;
+        }
+
+        ExceptionSink mxsink;
+        ReferenceHolder<QoreListNode> material_args(new QoreListNode(autoTypeInfo), &mxsink);
+        material_args->push(ctxt->refSelf(), &mxsink);
+        material_args->push(candidate->refSelf(), &mxsink);
+        if (mxsink) {
+            mxsink.clear();
+            xsink->raiseException("SSH2-CLIENT-IDENTITY-PROVIDER-ERROR",
+                "could not build arguments for client identity provider material lookup");
+            return -1;
+        }
+
+        ValueHolder material_value(&mxsink);
+        {
+            AutoUnlocker au(m);
+            material_value = provider->evalMethod("getPrivateKeyMaterial", *material_args, &mxsink);
+        }
+        if (mxsink) {
+            mxsink.clear();
+            if (optional) {
+                printd(5, "optional client identity candidate %lu failed during material lookup\n",
+                    (unsigned long)i);
+                continue;
+            }
+            xsink->raiseException("SSH2-CLIENT-IDENTITY-PROVIDER-ERROR",
+                "client identity provider failed while resolving private key material for candidate %lu",
+                (unsigned long)i);
+            return -1;
+        }
+
+        const QoreHashNode* material = material_value->get<const QoreHashNode>();
+        if (!material) {
+            xsink->raiseException("SSH2-CLIENT-IDENTITY-INVALID-RESPONSE",
+                "client identity provider material for candidate %lu is %s instead of hash",
+                (unsigned long)i, material_value->getTypeName());
+            return -1;
+        }
+
+        std::string material_kind;
+        if (!ssh2_get_hash_string(material, "kind", material_kind, xsink)) {
+            if (!*xsink) {
+                xsink->raiseException("SSH2-CLIENT-IDENTITY-INVALID-RESPONSE",
+                    "client identity provider material for candidate %lu has no kind string",
+                    (unsigned long)i);
+            }
+            return -1;
+        }
+
+        if (material_kind == "file") {
+            std::string path;
+            if (!ssh2_get_hash_string(material, "path", path, xsink)) {
+                if (!*xsink) {
+                    xsink->raiseException("SSH2-CLIENT-IDENTITY-INVALID-RESPONSE",
+                        "client identity provider file material for candidate %lu has no path string",
+                        (unsigned long)i);
+                }
+                return -1;
+            }
+            if (tryPublicKeyFileAuth(nullptr, path.c_str(), sshpass.c_str(), timeout_ms, loggedin, xsink)) {
+                return -1;
+            }
+        } else if (material_kind == "text") {
+            std::string private_key;
+            if (!ssh2_get_hash_string(material, "private_key_text", private_key, xsink)) {
+                if (!*xsink) {
+                    xsink->raiseException("SSH2-CLIENT-IDENTITY-INVALID-RESPONSE",
+                        "client identity provider text material for candidate %lu has no private_key_text string",
+                        (unsigned long)i);
+                }
+                return -1;
+            }
+            std::string public_key;
+            bool has_public_key = ssh2_get_hash_string(material, "public_key_text", public_key, xsink);
+            if (*xsink) {
+                return -1;
+            }
+            if (tryPublicKeyMemoryAuth(has_public_key ? public_key.c_str() : nullptr,
+                    has_public_key ? public_key.size() : 0, private_key.c_str(), private_key.size(), "",
+                    timeout_ms, loggedin, xsink)) {
+                return -1;
+            }
+        } else if (material_kind == "data") {
+            QoreValue private_key_value = material->getKeyValue("private_key_data");
+            const BinaryNode* private_key = private_key_value.get<const BinaryNode>();
+            if (!private_key) {
+                xsink->raiseException("SSH2-CLIENT-IDENTITY-INVALID-RESPONSE",
+                    "client identity provider data material for candidate %lu has no private_key_data binary",
+                    (unsigned long)i);
+                return -1;
+            }
+            std::string public_key;
+            bool has_public_key = ssh2_get_hash_string(material, "public_key_text", public_key, xsink);
+            if (*xsink) {
+                return -1;
+            }
+            if (tryPublicKeyMemoryAuth(has_public_key ? public_key.c_str() : nullptr,
+                    has_public_key ? public_key.size() : 0, (const char*)private_key->getPtr(),
+                    private_key->size(), "", timeout_ms, loggedin, xsink)) {
+                return -1;
+            }
+        } else {
+            if (optional) {
+                printd(5, "optional client identity candidate %lu returned unsupported material kind '%s'\n",
+                    (unsigned long)i, material_kind.c_str());
+                continue;
+            }
+            xsink->raiseException("SSH2-CLIENT-IDENTITY-INVALID-RESPONSE",
+                "client identity provider material for candidate %lu has unsupported kind '%s'",
+                (unsigned long)i, material_kind.c_str());
+            return -1;
+        }
+    }
+
+    return 0;
 }
 
 /**
@@ -555,10 +1187,11 @@ int SSH2Client::sshConnectUnlocked(int timeout_ms, ExceptionSink *xsink = 0) {
     }
 
     // apply algorithm preferences before handshake
-    for (auto& p : method_prefs) {
-        int prc = libssh2_session_method_pref(ssh_session, p.first, p.second.c_str());
+    for (std::map<int, std::string>::iterator i = method_prefs.begin(), e = method_prefs.end(); i != e; ++i) {
+        int prc = libssh2_session_method_pref(ssh_session, i->first, i->second.c_str());
         if (prc) {
-            printd(5, "SSH2Client::connect(): libssh2_session_method_pref(%d, '%s') returned %d\n", p.first, p.second.c_str(), prc);
+            printd(5, "SSH2Client::connect(): libssh2_session_method_pref(%d, '%s') returned %d\n", i->first,
+                i->second.c_str(), prc);
         }
     }
 
@@ -597,6 +1230,13 @@ int SSH2Client::sshConnectUnlocked(int timeout_ms, ExceptionSink *xsink = 0) {
             return -1;
         }
 
+        if (host_key_store) {
+            ReferenceHolder<QoreObject> store(host_key_store->objectRefSelf(), xsink);
+            if (verifyHostKeyWithStore(*store, hostkey, hostkey_len, hostkey_type, timeout_ms, xsink)) {
+                disconnectUnlocked(true);
+                return -1;
+            }
+        } else {
         LIBSSH2_KNOWNHOSTS* nh = libssh2_knownhost_init(ssh_session);
         if (!nh) {
             disconnectUnlocked(true);
@@ -756,6 +1396,7 @@ int SSH2Client::sshConnectUnlocked(int timeout_ms, ExceptionSink *xsink = 0) {
         // LIBSSH2_KNOWNHOST_CHECK_MATCH: host key matches, continue
 
         libssh2_knownhost_free(nh);
+        }
     }
 #else
     // this build of the ssh2 module was compiled against a libssh2 library without the
@@ -792,12 +1433,21 @@ int SSH2Client::sshConnectUnlocked(int timeout_ms, ExceptionSink *xsink = 0) {
 
     printd(5, "userauthlist: %s\n", userauthlist ? userauthlist : "n/a");
 
+    bool provider_configured = client_identity_provider;
+    bool fallback_agent_allowed = !provider_configured
+        || client_identity_fallback_policy == SSH2_CLIENT_ID_FALLBACK_AGENT
+        || client_identity_fallback_policy == SSH2_CLIENT_ID_FALLBACK_AGENT_AND_DEFAULT_KEYS;
+    bool fallback_default_keys_allowed = !provider_configured
+        || client_identity_fallback_policy == SSH2_CLIENT_ID_FALLBACK_DEFAULT_KEYS
+        || client_identity_fallback_policy == SSH2_CLIENT_ID_FALLBACK_AGENT_AND_DEFAULT_KEYS;
+    bool publickey_auth_available = userauthlist && strstr(userauthlist, "publickey");
+    bool explicit_file_keys_available = publickey_auth_available && explicit_key_files && !sshkeys_priv.empty()
+        && !sshkeys_pub.empty();
+    bool default_file_keys_available = publickey_auth_available && auto_key_files && !sshkeys_priv.empty()
+        && !sshkeys_pub.empty();
+
     // set flags for use with authentification if we have the required information
     if (userauthlist) {
-        // only try pubkey authentication if we have the required keys
-        if (strstr(userauthlist, "publickey") && !sshkeys_priv.empty() && !sshkeys_pub.empty()) {
-            auth_pw |= QAUTH_PUBLICKEY;
-        }
         // only try password authentication if we have a password
         if (!sshpass.empty()) {
             if (strstr(userauthlist, "password")) {
@@ -810,106 +1460,58 @@ int SSH2Client::sshConnectUnlocked(int timeout_ms, ExceptionSink *xsink = 0) {
     }
 
     // try auth
-#ifdef HAVE_LIBSSH2_AGENT_API
-    // try SSH agent authentication first (most secure and convenient when available)
-    if (!loggedin && use_agent && userauthlist && strstr(userauthlist, "publickey")) {
-        printd(5, "SSH2Client::connect(): trying SSH agent authentication\n");
-        LIBSSH2_AGENT* agent = libssh2_agent_init(ssh_session);
-        if (agent) {
-            if (!libssh2_agent_connect(agent)) {
-                if (!libssh2_agent_list_identities(agent)) {
-                    struct libssh2_agent_publickey* identity = nullptr;
-                    struct libssh2_agent_publickey* prev_identity = nullptr;
-                    while (!libssh2_agent_get_identity(agent, &identity, prev_identity)) {
-                        while ((rc = libssh2_agent_userauth(agent, sshuser.c_str(), identity)) == LIBSSH2_ERROR_EAGAIN) {
-                            if (waitSocketUnlocked(xsink, SSH2CLIENT_TIMEOUT, SSH2_ERROR, "SSH2Client::connect", timeout_ms)) {
-                                libssh2_agent_disconnect(agent);
-                                libssh2_agent_free(agent);
-                                disconnectUnlocked(true);
-                                return -1;
-                            }
-                        }
-                        if (!rc) {
-                            loggedin = true;
-                            sshauthenticatedwith = "agent";
-                            printd(5, "SSH agent authentication succeeded\n");
-                            break;
-                        }
-                        prev_identity = identity;
-                    }
-                }
-                libssh2_agent_disconnect(agent);
+    if (provider_configured) {
+        if (client_auth_order == SSH2_CLIENT_AUTH_PROVIDER_FIRST) {
+            if (tryProviderAuth(userauthlist, timeout_ms, loggedin, xsink)) {
+                return -1;
             }
-            libssh2_agent_free(agent);
-        }
-#ifdef DEBUG
-        if (!loggedin) {
-            printd(5, "SSH agent authentication failed or agent not available\n");
-        }
-#endif
-    }
-#endif
-
-#ifdef HAVE_LIBSSH2_PUBLICKEY_FROMMEMORY
-    // try publickey from memory if key data was provided
-    if (!loggedin && !sshkeys_priv_data.empty() && userauthlist && strstr(userauthlist, "publickey")) {
-        printd(5, "SSH2Client::connect(): try publickey auth from memory\n");
-        const char* passphrase = sshkeys_passphrase.empty() ? (sshpass.empty() ? "" : sshpass.c_str()) : sshkeys_passphrase.c_str();
-        while ((rc = libssh2_userauth_publickey_frommemory(ssh_session, sshuser.c_str(), sshuser.size(),
-                sshkeys_pub_data.empty() ? nullptr : sshkeys_pub_data.c_str(),
-                sshkeys_pub_data.size(),
-                sshkeys_priv_data.c_str(), sshkeys_priv_data.size(),
-                passphrase)) == LIBSSH2_ERROR_EAGAIN) {
-            if (waitSocketUnlocked(xsink, SSH2CLIENT_TIMEOUT, SSH2_ERROR, "SSH2Client::connect", timeout_ms)) {
-                disconnectUnlocked(true);
+            if (!loggedin && explicit_key_data
+                    && tryPublicKeyDataAuth(userauthlist, timeout_ms, loggedin, xsink)) {
+                return -1;
+            }
+            if (!loggedin && explicit_file_keys_available
+                    && tryPublicKeyFileAuth(sshkeys_pub.c_str(), sshkeys_priv.c_str(), sshpass.c_str(),
+                        timeout_ms, loggedin, xsink)) {
+                return -1;
+            }
+        } else {
+            if (!loggedin && explicit_key_data
+                    && tryPublicKeyDataAuth(userauthlist, timeout_ms, loggedin, xsink)) {
+                return -1;
+            }
+            if (!loggedin && explicit_file_keys_available
+                    && tryPublicKeyFileAuth(sshkeys_pub.c_str(), sshkeys_priv.c_str(), sshpass.c_str(),
+                        timeout_ms, loggedin, xsink)) {
+                return -1;
+            }
+            if (tryProviderAuth(userauthlist, timeout_ms, loggedin, xsink)) {
                 return -1;
             }
         }
-        if (!rc) {
-            loggedin = true;
-            sshauthenticatedwith = "publickey";
-            printd(5, "publickey (from memory) authentication succeeded\n");
+        if (!loggedin && use_agent && fallback_agent_allowed
+                && tryAgentAuth(userauthlist, timeout_ms, loggedin, xsink)) {
+            return -1;
         }
-#ifdef DEBUG
-        else {
-            printd(5, "publickey (from memory) authentication failed\n");
+        if (!loggedin && fallback_default_keys_allowed && default_file_keys_available
+                && tryPublicKeyFileAuth(sshkeys_pub.c_str(), sshkeys_priv.c_str(), sshpass.c_str(), timeout_ms,
+                    loggedin, xsink)) {
+            return -1;
         }
-#endif
-    }
-#endif
-
-    // try publickey from file if available
-    if (!loggedin && (auth_pw & QAUTH_PUBLICKEY)) {
-        // Verify filesystem sandbox access for key files before reading
-        QoreSandboxManagerHelper smh;
-        if (smh) {
-            if (!smh->checkFilesystemAccess(sshkeys_priv.c_str(), QSEC_READ, xsink)) {
-                disconnectUnlocked(true);
-                return -1;
-            }
-            if (!smh->checkFilesystemAccess(sshkeys_pub.c_str(), QSEC_READ, xsink)) {
-                disconnectUnlocked(true);
-                return -1;
-            }
-        }
-
-        printd(5, "SSH2Client::connect(): try pubkey auth: %s %s\n", sshkeys_priv.c_str(), sshkeys_pub.c_str());
-        while ((rc = libssh2_userauth_publickey_fromfile(ssh_session, sshuser.c_str(), sshkeys_pub.c_str(), sshkeys_priv.c_str(), sshpass.c_str())) == LIBSSH2_ERROR_EAGAIN) {
-            if (waitSocketUnlocked(xsink, SSH2CLIENT_TIMEOUT, SSH2_ERROR, "SSH2Client::connect", timeout_ms)) {
-                disconnectUnlocked(true); // clean up connection
-                return -1;
-            }
-        }
-        if (!rc) {
-            loggedin = true;
-            sshauthenticatedwith = "publickey";
-            printd(5, "publickey authentication succeeded\n");
-        }
-#ifdef DEBUG
-        else
-            printd(5, "publickey authentication failed\n");
-#endif
     } else {
+        if (!loggedin && use_agent && tryAgentAuth(userauthlist, timeout_ms, loggedin, xsink)) {
+            return -1;
+        }
+        if (!loggedin && tryPublicKeyDataAuth(userauthlist, timeout_ms, loggedin, xsink)) {
+            return -1;
+        }
+        if (!loggedin && publickey_auth_available && !sshkeys_priv.empty() && !sshkeys_pub.empty()
+                && tryPublicKeyFileAuth(sshkeys_pub.c_str(), sshkeys_priv.c_str(), sshpass.c_str(), timeout_ms,
+                    loggedin, xsink)) {
+            return -1;
+        }
+    }
+
+    if (!loggedin && publickey_auth_available && sshkeys_priv.empty()) {
             printd(5, "no publickey authentication attempted: priv: '%s' pub: '%s'\n", sshkeys_priv.empty() ? "n/a" : sshkeys_priv.c_str(), sshkeys_pub.empty() ? "n/a" : sshkeys_pub.c_str());
     }
 
@@ -997,8 +1599,9 @@ int method_type_from_string(const char* method_type, ExceptionSink* xsink) {
 
 int SSH2Client::setMethodPreference(int method_type, const char* prefs, ExceptionSink* xsink) {
     AutoLocker al(m);
-    if (sshConnectedUnlocked()) {
-        xsink->raiseException(SSH2_CONNECTED, "usage of SSH2Base::setMethodPreference() is not allowed when connected");
+    if (sshSessionActiveUnlocked()) {
+        xsink->raiseException(SSH2_CONNECTED,
+            "usage of SSH2Base::setMethodPreference() is not allowed when connected or connecting");
         return -1;
     }
     method_prefs[method_type] = prefs;
@@ -1010,7 +1613,7 @@ QoreListNode* SSH2Client::getSupportedAlgorithms(int method_type, ExceptionSink*
     AutoLocker al(m);
 
     // we need a session to query supported algs; create a temporary one if not connected
-    LIBSSH2_SESSION* session = ssh_session;
+    LIBSSH2_SESSION* session = sshConnectedUnlocked() ? ssh_session : nullptr;
     bool temp_session = false;
     if (!session) {
         session = libssh2_session_init();
@@ -1054,8 +1657,9 @@ QoreListNode* SSH2Client::getSupportedAlgorithms(int method_type, ExceptionSink*
 
 int SSH2Client::setBanner(const char* banner, ExceptionSink* xsink) {
     AutoLocker al(m);
-    if (sshConnectedUnlocked()) {
-        xsink->raiseException(SSH2_CONNECTED, "usage of SSH2Base::setBanner() is not allowed when connected");
+    if (sshSessionActiveUnlocked()) {
+        xsink->raiseException(SSH2_CONNECTED,
+            "usage of SSH2Base::setBanner() is not allowed when connected or connecting");
         return -1;
     }
     ssh_banner = banner ? banner : "";
@@ -1276,6 +1880,12 @@ int SSH2Client::addKnownHostLocked(const char* host, int port, ExceptionSink* xs
 
 int SSH2Client::sshConnect(int timeout_ms, ExceptionSink *xsink = 0) {
     AutoLocker al(m);
+    if (connect_in_progress) {
+        xsink && xsink->raiseException("SSH2-CONNECT-IN-PROGRESS",
+            "SSH2Base::connect() is already in progress");
+        return -1;
+    }
+    ConnectInProgressHelper ciph(*this);
 
     return sshConnectUnlocked(timeout_ms, xsink);
 }

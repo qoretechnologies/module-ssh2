@@ -11,6 +11,176 @@
 
 %exec-class Ssh2ClientTest
 
+class TestMemoryIdentityProvider {
+    private {
+        string private_key;
+        *string public_key;
+        int candidate_calls;
+        int material_calls;
+    }
+
+    constructor(string private_key, *string public_key) {
+        self.private_key = private_key;
+        self.public_key = public_key;
+        self.candidate_calls = 0;
+        self.material_calls = 0;
+    }
+
+    list<hash<auto>> getClientIdentityCandidates(hash<auto> ctxt) {
+        ++candidate_calls;
+        return ({"kind": "in-memory"},);
+    }
+
+    hash<auto> getPrivateKeyMaterial(hash<auto> ctxt, hash<auto> candidate) {
+        ++material_calls;
+        return {
+            "kind": "text",
+            "private_key_text": private_key,
+            "public_key_text": public_key,
+        };
+    }
+
+    int getCandidateCalls() {
+        return candidate_calls;
+    }
+
+    int getMaterialCalls() {
+        return material_calls;
+    }
+}
+
+class RejectingHostKeyStore {
+    hash<auto> verifyHostKey(hash<auto> ctxt, hash<auto> observed_key) {
+        return {
+            "decision": "unknown",
+            "observed_key": observed_key,
+        };
+    }
+
+    hash<auto> acceptHostKeyIfAbsent(hash<auto> ctxt, hash<auto> observed_key) {
+        return {
+            "decision": "unknown",
+            "observed_key": observed_key,
+        };
+    }
+}
+
+class LockProbeHostKeyStore {
+    private {
+        *SSH2Client client;
+        int verify_calls;
+        bool connected_during_verify;
+        *string callback_error;
+    }
+
+    constructor(SSH2Client client) {
+        self.client = client;
+    }
+
+    hash<auto> verifyHostKey(hash<auto> ctxt, hash<auto> observed_key) {
+        ++verify_calls;
+        try {
+            connected_during_verify = boolean(client.connected());
+        } catch (hash<ExceptionInfo> ex) {
+            callback_error = sprintf("%s: %s", ex.err, ex.desc);
+        }
+        return {
+            "decision": "unknown",
+            "observed_key": observed_key,
+        };
+    }
+
+    hash<auto> acceptHostKeyIfAbsent(hash<auto> ctxt, hash<auto> observed_key) {
+        return {
+            "decision": "unknown",
+            "observed_key": observed_key,
+        };
+    }
+
+    int getVerifyCalls() {
+        return verify_calls;
+    }
+
+    bool getConnectedDuringVerify() {
+        return connected_during_verify;
+    }
+
+    *string getCallbackError() {
+        return callback_error;
+    }
+
+    clearClient() {
+        client = NOTHING;
+    }
+}
+
+class LockProbeIdentityProvider {
+    private {
+        *SSH2Client client;
+        string private_key;
+        *string public_key;
+        int candidate_calls;
+        int material_calls;
+        bool connected_during_candidates;
+        bool connected_during_material;
+        *string callback_error;
+    }
+
+    constructor(SSH2Client client, string private_key, *string public_key) {
+        self.client = client;
+        self.private_key = private_key;
+        self.public_key = public_key;
+    }
+
+    list<hash<auto>> getClientIdentityCandidates(hash<auto> ctxt) {
+        ++candidate_calls;
+        try {
+            connected_during_candidates = boolean(client.connected());
+        } catch (hash<ExceptionInfo> ex) {
+            callback_error = sprintf("%s: %s", ex.err, ex.desc);
+        }
+        return ({"kind": "in-memory"},);
+    }
+
+    hash<auto> getPrivateKeyMaterial(hash<auto> ctxt, hash<auto> candidate) {
+        ++material_calls;
+        try {
+            connected_during_material = boolean(client.connected());
+        } catch (hash<ExceptionInfo> ex) {
+            callback_error = sprintf("%s: %s", ex.err, ex.desc);
+        }
+        return {
+            "kind": "text",
+            "private_key_text": private_key,
+            "public_key_text": public_key,
+        };
+    }
+
+    int getCandidateCalls() {
+        return candidate_calls;
+    }
+
+    int getMaterialCalls() {
+        return material_calls;
+    }
+
+    bool getConnectedDuringCandidates() {
+        return connected_during_candidates;
+    }
+
+    bool getConnectedDuringMaterial() {
+        return connected_during_material;
+    }
+
+    *string getCallbackError() {
+        return callback_error;
+    }
+
+    clearClient() {
+        client = NOTHING;
+    }
+}
+
 class Ssh2ClientTest inherits QUnit::Test {
     public {
     }
@@ -47,6 +217,9 @@ class Ssh2ClientTest inherits QUnit::Test {
         addTestCase("Secure defaults and fail-closed test", \secureDefaultsAndFailClosedTest());
         addTestCase("Known hosts TOFU creates parent dir test", \knownHostsTofuCreatesParentDirTest());
         addTestCase("Known hosts stat error fail-closed test", \knownHostsStatErrorFailClosedTest());
+        addTestCase("Client identity provider test", \clientIdentityProviderTest());
+        addTestCase("Host key store callback lock test", \hostKeyStoreCallbackLockTest());
+        addTestCase("Client identity provider callback lock test", \clientIdentityProviderCallbackLockTest());
         addTestCase("Channel PTY resize test", \channelPtyResizeTest());
         addTestCase("Channel exit signal test", \channelExitSignalTest());
         addTestCase("Algorithm query test", \algorithmQueryTest());
@@ -425,6 +598,114 @@ class Ssh2ClientTest inherits QUnit::Test {
         assertEq(False, boolean(sc.connected()), "must not be connected after stat() fail-closed");
     }
 
+    clientIdentityProviderTest() {
+        *string priv_key_path = getPrivateKeyPath();
+        if (!priv_key_path) {
+            testSkip("no private key file available for client identity provider test");
+        }
+
+        string private_key = ReadOnlyFile::readTextFile(priv_key_path);
+        *string public_key = is_file(priv_key_path + ".pub")
+            ? ReadOnlyFile::readTextFile(priv_key_path + ".pub")
+            : NOTHING;
+        string kh_file = sprintf("%s/ssh2_test_provider_known_hosts_%s", tmp_location(), get_random_string(10));
+        on_exit {
+            if (is_file(kh_file)) {
+                unlink(kh_file);
+            }
+        }
+
+        # Host-key verification must fail before the identity provider is consulted for secrets.
+        {
+            TestMemoryIdentityProvider provider(private_key, public_key);
+            RejectingHostKeyStore store();
+            SSH2Client sc(uri);
+            sc.setClientIdentityProvider(provider);
+            sc.setHostKeyStore(store);
+            sc.setHostKeyPolicy(Ssh2HostKeyPolicy::Reject);
+            assertThrows("SSH2-HOSTKEY-UNKNOWN", sub () {
+                sc.connect();
+            });
+            assertEq(0, provider.getCandidateCalls(),
+                "client identity provider must not be called before host-key verification succeeds");
+            assertEq(0, provider.getMaterialCalls(),
+                "private key material must not be requested before host-key verification succeeds");
+        }
+
+        # With a provider configured and fallback disabled, authentication must use the provider
+        # candidate and not the constructor's auto-discovered default key path.
+        {
+            TestMemoryIdentityProvider provider(private_key, public_key);
+            SSH2Client sc(uri);
+            sc.setClientIdentityProvider(provider);
+            sc.setClientIdentityFallbackPolicy(Ssh2ClientIdentityFallbackPolicy::Disabled);
+            sc.setKnownHostsFile(kh_file);
+            sc.setHostKeyPolicy(Ssh2HostKeyPolicy::TrustOnFirstUse);
+            sc.connect();
+            assertEq(True, boolean(sc.connected()), "provider-backed client identity should authenticate");
+            assertEq("publickey", sc.getAuthenticatedWith());
+            assertEq(1, provider.getCandidateCalls(), "provider should be consulted once for the connection");
+            assertEq(1, provider.getMaterialCalls(), "private key material should be requested at point of use");
+            sc.disconnect();
+        }
+    }
+
+    hostKeyStoreCallbackLockTest() {
+        SSH2Client sc(uri);
+        LockProbeHostKeyStore store(sc);
+        sc.setHostKeyStore(store);
+        sc.setHostKeyPolicy(Ssh2HostKeyPolicy::Reject);
+        on_exit {
+            sc.setHostKeyStore(NOTHING);
+            store.clearClient();
+        }
+
+        assertThrows("SSH2-HOSTKEY-UNKNOWN", sub () {
+            sc.connect();
+        });
+        assertEq(1, store.getVerifyCalls(), "host-key store must be called exactly once");
+        assertNothing(store.getCallbackError(), "host-key store callback same-client call must not throw");
+        assertFalse(store.getConnectedDuringVerify(),
+            "same-client connected() call from a host-key store callback must not see a completed connection");
+    }
+
+    clientIdentityProviderCallbackLockTest() {
+        *string priv_key_path = getPrivateKeyPath();
+        if (!priv_key_path) {
+            testSkip("no private key file available for client identity provider callback lock test");
+        }
+
+        string private_key = ReadOnlyFile::readTextFile(priv_key_path);
+        *string public_key = is_file(priv_key_path + ".pub")
+            ? ReadOnlyFile::readTextFile(priv_key_path + ".pub")
+            : NOTHING;
+        string kh_file = sprintf("%s/ssh2_test_provider_lock_known_hosts_%s", tmp_location(), get_random_string(10));
+        on_exit {
+            if (is_file(kh_file)) {
+                unlink(kh_file);
+            }
+        }
+
+        SSH2Client sc(uri);
+        LockProbeIdentityProvider provider(sc, private_key, public_key);
+        sc.setClientIdentityProvider(provider);
+        sc.setClientIdentityFallbackPolicy(Ssh2ClientIdentityFallbackPolicy::Disabled);
+        sc.setKnownHostsFile(kh_file);
+        sc.setHostKeyPolicy(Ssh2HostKeyPolicy::TrustOnFirstUse);
+        sc.connect();
+        sc.disconnect();
+        sc.setClientIdentityProvider(NOTHING);
+        provider.clearClient();
+
+        assertEq(1, provider.getCandidateCalls(), "identity provider must be called exactly once");
+        assertEq(1, provider.getMaterialCalls(), "identity provider material lookup must be called exactly once");
+        assertNothing(provider.getCallbackError(), "identity provider callback same-client calls must not throw");
+        assertFalse(provider.getConnectedDuringCandidates(),
+            "same-client connected() call from candidate callback must not see a completed connection");
+        assertFalse(provider.getConnectedDuringMaterial(),
+            "same-client connected() call from material callback must not see a completed connection");
+    }
+
     channelPtyResizeTest() {
         SSH2Client sc(uri);
         setPrivateKey(sc);
@@ -523,19 +804,29 @@ class Ssh2ClientTest inherits QUnit::Test {
         sc.disconnect();
     }
 
-    private setPrivateKey(SSH2Client client) {
+    private *string getPrivateKeyPath() {
         if (m_options.privkey) {
-            client.setKeys(m_options.privkey);
-            return;
+            return m_options.privkey;
         }
-        if (PlatformOS == "Windows")
-            exit(0);
+        if (PlatformOS == "Windows") {
+            return NOTHING;
+        }
 
         string sshdir = ENV.HOME + "/.ssh";
-        if (is_file(sshdir + "/id_rsa"))
-            client.setKeys(sshdir + "/id_rsa");
-        else if (is_file(sshdir + "/id_dsa"))
-            client.setKeys(sshdir + "/id_dsa");
+        if (is_file(sshdir + "/id_rsa")) {
+            return sshdir + "/id_rsa";
+        }
+        if (is_file(sshdir + "/id_dsa")) {
+            return sshdir + "/id_dsa";
+        }
+        return NOTHING;
+    }
+
+    private setPrivateKey(SSH2Client client) {
+        *string priv_key_path = getPrivateKeyPath();
+        if (priv_key_path) {
+            client.setKeys(priv_key_path);
+        }
     }
 
     # read channel until a prompt is recognized

@@ -33,5 +33,7 @@
 DLLLOCAL QoreClass* initSSH2BaseClass(QoreNamespace& ns);
 DLLLOCAL extern QoreClass* QC_SSH2BASE;
 DLLLOCAL extern QoreEnumDecl* enumSsh2HostKeyPolicy;
+DLLLOCAL extern QoreEnumDecl* enumSsh2ClientAuthOrder;
+DLLLOCAL extern QoreEnumDecl* enumSsh2ClientIdentityFallbackPolicy;
 
 #endif

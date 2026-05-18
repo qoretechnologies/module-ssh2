@@ -10,6 +10,12 @@
 
 %exec-class NegativeTests
 
+class DummyIdentityProvider {
+}
+
+class DummyHostKeyStore {
+}
+
 class NegativeTests inherits QUnit::Test {
     public {}
 
@@ -39,6 +45,7 @@ class NegativeTests inherits QUnit::Test {
         addTestCase("Algorithm preference tests", \algorithmPreferenceTests());
         addTestCase("Banner tests", \bannerTests());
         addTestCase("Host key policy tests", \hostKeyPolicyTests());
+        addTestCase("Credential provider option tests", \credentialProviderOptionTests());
         addTestCase("Module default tests", \moduleDefaultsTests());
         addTestCase("Keys from data tests", \keysFromDataTests());
         addTestCase("SSH2Listener constructor tests", \listenerConstructorTests());
@@ -565,6 +572,57 @@ class NegativeTests inherits QUnit::Test {
         }
     }
 
+    credentialProviderOptionTests() {
+        # Client auth ordering defaults to explicit caller keys before provider candidates
+        {
+            SSH2Client sc("ssh://user@localhost");
+            assertEq(Ssh2ClientAuthOrder::ExplicitFirst, sc.getClientAuthOrder());
+            sc.setClientAuthOrder(Ssh2ClientAuthOrder::ProviderFirst);
+            assertEq(Ssh2ClientAuthOrder::ProviderFirst, sc.getClientAuthOrder());
+            sc.setClientAuthOrder(SSH2_CLIENT_AUTH_EXPLICIT_FIRST);
+            assertEq(Ssh2ClientAuthOrder::ExplicitFirst, sc.getClientAuthOrder());
+            assertThrows("SSH2-CLIENT-AUTH-ORDER-ERROR", sub () {
+                sc.setClientAuthOrder(99);
+            });
+        }
+
+        # Process-user fallback is disabled by default when a provider is configured; callers
+        # opt in with a type-safe enum or the legacy integer constants.
+        {
+            SSH2Client sc("ssh://user@localhost");
+            assertEq(Ssh2ClientIdentityFallbackPolicy::Disabled, sc.getClientIdentityFallbackPolicy());
+            sc.setClientIdentityFallbackPolicy(Ssh2ClientIdentityFallbackPolicy::Agent);
+            assertEq(Ssh2ClientIdentityFallbackPolicy::Agent, sc.getClientIdentityFallbackPolicy());
+            sc.setClientIdentityFallbackPolicy(SSH2_CLIENT_ID_FALLBACK_DEFAULT_KEYS);
+            assertEq(Ssh2ClientIdentityFallbackPolicy::DefaultKeys, sc.getClientIdentityFallbackPolicy());
+            sc.setClientIdentityFallbackPolicy(Ssh2ClientIdentityFallbackPolicy::AgentAndDefaultKeys);
+            assertEq(Ssh2ClientIdentityFallbackPolicy::AgentAndDefaultKeys,
+                sc.getClientIdentityFallbackPolicy());
+            assertThrows("SSH2-CLIENT-IDENTITY-FALLBACK-POLICY-ERROR", sub () {
+                sc.setClientIdentityFallbackPolicy(99);
+            });
+        }
+
+        # Provider/store setters keep object identity and can be cleared explicitly.
+        {
+            SSH2Client sc("ssh://user@localhost");
+            assertNothing(sc.getClientIdentityProvider());
+            assertNothing(sc.getHostKeyStore());
+
+            DummyIdentityProvider provider();
+            DummyHostKeyStore store();
+            sc.setClientIdentityProvider(provider);
+            sc.setHostKeyStore(store);
+            assertEq(provider, sc.getClientIdentityProvider());
+            assertEq(store, sc.getHostKeyStore());
+
+            sc.setClientIdentityProvider(NOTHING);
+            sc.setHostKeyStore(NOTHING);
+            assertNothing(sc.getClientIdentityProvider());
+            assertNothing(sc.getHostKeyStore());
+        }
+    }
+
     moduleDefaultsTests() {
         # process-global defaults MUST be restored, otherwise later test cases (which assert the
         # built-in defaults) would fail
@@ -726,6 +784,22 @@ class NegativeTests inherits QUnit::Test {
         assertEq(Ssh2HostKeyPolicy::Reject, SSH2_HOSTKEY_REJECT);
         assertEq(Ssh2HostKeyPolicy::TrustOnFirstUse, SSH2_HOSTKEY_TOFU);
         assertEq(Ssh2HostKeyPolicy::TrustOnFirstUseSession, SSH2_HOSTKEY_TOFU_SESSION);
+
+        # Verify client provider policy constants exist and map to the public enums
+        assertEq(Type::Int, SSH2_CLIENT_AUTH_EXPLICIT_FIRST.type());
+        assertEq(Type::Int, SSH2_CLIENT_AUTH_PROVIDER_FIRST.type());
+        assertEq(Ssh2ClientAuthOrder::ExplicitFirst, SSH2_CLIENT_AUTH_EXPLICIT_FIRST);
+        assertEq(Ssh2ClientAuthOrder::ProviderFirst, SSH2_CLIENT_AUTH_PROVIDER_FIRST);
+
+        assertEq(Type::Int, SSH2_CLIENT_ID_FALLBACK_DISABLED.type());
+        assertEq(Type::Int, SSH2_CLIENT_ID_FALLBACK_AGENT.type());
+        assertEq(Type::Int, SSH2_CLIENT_ID_FALLBACK_DEFAULT_KEYS.type());
+        assertEq(Type::Int, SSH2_CLIENT_ID_FALLBACK_AGENT_AND_DEFAULT_KEYS.type());
+        assertEq(Ssh2ClientIdentityFallbackPolicy::Disabled, SSH2_CLIENT_ID_FALLBACK_DISABLED);
+        assertEq(Ssh2ClientIdentityFallbackPolicy::Agent, SSH2_CLIENT_ID_FALLBACK_AGENT);
+        assertEq(Ssh2ClientIdentityFallbackPolicy::DefaultKeys, SSH2_CLIENT_ID_FALLBACK_DEFAULT_KEYS);
+        assertEq(Ssh2ClientIdentityFallbackPolicy::AgentAndDefaultKeys,
+            SSH2_CLIENT_ID_FALLBACK_AGENT_AND_DEFAULT_KEYS);
 
         # Verify trace constants exist
         assertEq(Type::Int, SSH2_TRACE_TRANS.type());

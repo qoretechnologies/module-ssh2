@@ -60,6 +60,8 @@ struct Ssh2HostKeyDefaults {
 static QoreThreadLock ssh2_defaults_lock;
 static Ssh2HostKeyDefaults ssh2_defaults;
 QoreEnumDecl* enumSsh2HostKeyPolicy = nullptr;
+QoreEnumDecl* enumSsh2ClientAuthOrder = nullptr;
+QoreEnumDecl* enumSsh2ClientIdentityFallbackPolicy = nullptr;
 
 static bool ssh2_parse_env_bool(const char* val, bool def) {
     if (!val || !val[0]) {
@@ -305,6 +307,8 @@ static void ssh2_module_init(QoreModuleInitContext& ctx, ExceptionSink& xsink) {
 
     // all classes belonging to here
     enumSsh2HostKeyPolicy = init_enum_Ssh2HostKeyPolicy(ssh2ns);
+    enumSsh2ClientAuthOrder = init_enum_Ssh2ClientAuthOrder(ssh2ns);
+    enumSsh2ClientIdentityFallbackPolicy = init_enum_Ssh2ClientIdentityFallbackPolicy(ssh2ns);
 
     // NOTE: SSH2Listener must be initialized before SSH2Client because SSH2Client
     // references SSH2Listener as a return type for forwardListen()
@@ -323,6 +327,13 @@ static void ssh2_module_init(QoreModuleInitContext& ctx, ExceptionSink& xsink) {
     ssh2ns.addConstant("SSH2_HOSTKEY_REJECT", SSH2_HOSTKEY_REJECT);
     ssh2ns.addConstant("SSH2_HOSTKEY_TOFU", SSH2_HOSTKEY_TOFU);
     ssh2ns.addConstant("SSH2_HOSTKEY_TOFU_SESSION", SSH2_HOSTKEY_TOFU_SESSION);
+    ssh2ns.addConstant("SSH2_CLIENT_AUTH_EXPLICIT_FIRST", SSH2_CLIENT_AUTH_EXPLICIT_FIRST);
+    ssh2ns.addConstant("SSH2_CLIENT_AUTH_PROVIDER_FIRST", SSH2_CLIENT_AUTH_PROVIDER_FIRST);
+    ssh2ns.addConstant("SSH2_CLIENT_ID_FALLBACK_DISABLED", SSH2_CLIENT_ID_FALLBACK_DISABLED);
+    ssh2ns.addConstant("SSH2_CLIENT_ID_FALLBACK_AGENT", SSH2_CLIENT_ID_FALLBACK_AGENT);
+    ssh2ns.addConstant("SSH2_CLIENT_ID_FALLBACK_DEFAULT_KEYS", SSH2_CLIENT_ID_FALLBACK_DEFAULT_KEYS);
+    ssh2ns.addConstant("SSH2_CLIENT_ID_FALLBACK_AGENT_AND_DEFAULT_KEYS",
+        SSH2_CLIENT_ID_FALLBACK_AGENT_AND_DEFAULT_KEYS);
 
 #ifdef HAVE_LIBSSH2_TRACE
     // trace bitmask constants

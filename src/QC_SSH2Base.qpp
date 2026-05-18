@@ -50,6 +50,36 @@ enum Qore::SSH2::Ssh2HostKeyPolicy : int {
     TrustOnFirstUseSession = SSH2_HOSTKEY_TOFU_SESSION,
 };
 
+//! SSH client public-key authentication ordering enum
+/** Controls whether explicit caller-supplied keys or provider-supplied identity candidates are
+    tried first when a client identity provider is configured.
+
+    @since ssh2 2.1
+*/
+enum Qore::SSH2::Ssh2ClientAuthOrder : int {
+    //! Try explicit caller keys before provider candidates
+    ExplicitFirst = SSH2_CLIENT_AUTH_EXPLICIT_FIRST,
+    //! Try provider candidates before explicit caller keys
+    ProviderFirst = SSH2_CLIENT_AUTH_PROVIDER_FIRST,
+};
+
+//! SSH client process-user identity fallback policy enum
+/** Controls which process-user identity sources may be used after explicit keys and provider
+    candidates when a client identity provider is configured.
+
+    @since ssh2 2.1
+*/
+enum Qore::SSH2::Ssh2ClientIdentityFallbackPolicy : int {
+    //! Do not use process-user SSH agent or default key discovery
+    Disabled = SSH2_CLIENT_ID_FALLBACK_DISABLED,
+    //! Allow SSH agent fallback
+    Agent = SSH2_CLIENT_ID_FALLBACK_AGENT,
+    //! Allow default key-file fallback
+    DefaultKeys = SSH2_CLIENT_ID_FALLBACK_DEFAULT_KEYS,
+    //! Allow SSH agent and default key-file fallback
+    AgentAndDefaultKeys = SSH2_CLIENT_ID_FALLBACK_AGENT_AND_DEFAULT_KEYS,
+};
+
 //! base class for SFTPClient and SSH2Client
 /** The SSH2Base class provides common methods to the SSH2Client and SFTPClient classes
  */
@@ -466,6 +496,119 @@ nothing SSH2Base::setHostKeyPolicy(int policy) {
 */
 enum<Ssh2HostKeyPolicy> SSH2Base::getHostKeyPolicy() [flags=CONSTANT] {
     return (int64)myself->getHostKeyPolicy();
+}
+
+//! Sets the client identity provider object
+/** The provider is called during connection setup to return ordered client identity candidates.
+    When a provider is configured, process-user fallback sources such as the SSH agent and default
+    key discovery are disabled unless explicitly enabled with
+    @ref setClientIdentityFallbackPolicy().
+
+    @param provider a provider object implementing the \c SshCredentialProvider
+    \c AbstractSshClientIdentityProvider contract, or @ref nothing "NOTHING" to clear it
+
+    @throw SSH2-CONNECTED this method cannot be called when a connection is established
+
+    @since ssh2 2.1
+*/
+nothing SSH2Base::setClientIdentityProvider(*object provider) {
+    myself->setClientIdentityProvider(provider, xsink);
+}
+
+//! Returns the configured client identity provider object
+/** @return the configured provider object or @ref nothing "NOTHING" if none is configured
+
+    @since ssh2 2.1
+*/
+*object SSH2Base::getClientIdentityProvider() [flags=CONSTANT] {
+    return myself->getClientIdentityProvider();
+}
+
+//! Sets the remote host-key trust store object
+/** The store is called during connection setup when host-key verification is enabled.  If a store
+    is configured, it is used instead of the configured \c known_hosts file for host-key
+    verification and TOFU decisions.
+
+    @param store a store object implementing the \c SshCredentialProvider
+    \c AbstractSshHostKeyStore contract, or @ref nothing "NOTHING" to clear it
+
+    @throw SSH2-CONNECTED this method cannot be called when a connection is established
+
+    @since ssh2 2.1
+*/
+nothing SSH2Base::setHostKeyStore(*object store) {
+    myself->setHostKeyStore(store, xsink);
+}
+
+//! Returns the configured remote host-key trust store object
+/** @return the configured store object or @ref nothing "NOTHING" if none is configured
+
+    @since ssh2 2.1
+*/
+*object SSH2Base::getHostKeyStore() [flags=CONSTANT] {
+    return myself->getHostKeyStore();
+}
+
+//! Sets client public-key authentication ordering
+/** @param order the client authentication order
+
+    @throw SSH2-CLIENT-AUTH-ORDER-ERROR invalid order value
+
+    @since ssh2 2.1
+*/
+nothing SSH2Base::setClientAuthOrder(enum<Ssh2ClientAuthOrder> order) {
+    myself->setClientAuthOrder((int)order, xsink);
+}
+
+//! Sets client public-key authentication ordering using integer constants
+/** @see setClientAuthOrder()
+
+    @since ssh2 2.1
+*/
+nothing SSH2Base::setClientAuthOrder(int order) {
+    myself->setClientAuthOrder((int)order, xsink);
+}
+
+//! Returns client public-key authentication ordering
+/** @return the client authentication order
+
+    @since ssh2 2.1
+*/
+enum<Ssh2ClientAuthOrder> SSH2Base::getClientAuthOrder() [flags=CONSTANT] {
+    return (int64)myself->getClientAuthOrder();
+}
+
+//! Sets process-user client identity fallback policy
+/** This policy applies when a client identity provider is configured.  It is explicit opt-in for
+    using process-user credential sources such as the SSH agent or default key-file discovery after
+    explicit caller keys and provider candidates have been tried.
+
+    @param policy the client identity fallback policy
+
+    @throw SSH2-CLIENT-IDENTITY-FALLBACK-POLICY-ERROR invalid policy value
+
+    @since ssh2 2.1
+*/
+nothing SSH2Base::setClientIdentityFallbackPolicy(enum<Ssh2ClientIdentityFallbackPolicy> policy) {
+    myself->setClientIdentityFallbackPolicy((int)policy, xsink);
+}
+
+//! Sets process-user client identity fallback policy using integer constants
+/** @see setClientIdentityFallbackPolicy()
+
+    @since ssh2 2.1
+*/
+nothing SSH2Base::setClientIdentityFallbackPolicy(int policy) {
+    myself->setClientIdentityFallbackPolicy((int)policy, xsink);
+}
+
+//! Returns process-user client identity fallback policy
+/** @return the client identity fallback policy
+
+    @since ssh2 2.1
+*/
+enum<Ssh2ClientIdentityFallbackPolicy> SSH2Base::getClientIdentityFallbackPolicy() [flags=CONSTANT] {
+    return (int64)myself->getClientIdentityFallbackPolicy();
 }
 
 //! Sets the process-global default for host key verification for subsequently-created objects

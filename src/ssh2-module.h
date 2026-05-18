@@ -60,6 +60,8 @@ DLLLOCAL TypedHashDecl* init_hashdecl_SftpStatVfsInfo(QoreNamespace& ns);
 DLLLOCAL TypedHashDecl* init_hashdecl_Ssh2ExitSignalInfo(QoreNamespace& ns);
 DLLLOCAL TypedHashDecl* init_hashdecl_Ssh2HostKeyInfo(QoreNamespace& ns);
 DLLLOCAL QoreEnumDecl* init_enum_Ssh2HostKeyPolicy(QoreNamespace& ns);
+DLLLOCAL QoreEnumDecl* init_enum_Ssh2ClientAuthOrder(QoreNamespace& ns);
+DLLLOCAL QoreEnumDecl* init_enum_Ssh2ClientIdentityFallbackPolicy(QoreNamespace& ns);
 
 DLLLOCAL extern const TypedHashDecl* hashdeclSftpFileInfo;
 DLLLOCAL extern const TypedHashDecl* hashdeclSftpDirInfo;
@@ -69,11 +71,23 @@ DLLLOCAL extern const TypedHashDecl* hashdeclSsh2StatInfo;
 DLLLOCAL extern const TypedHashDecl* hashdeclSftpStatVfsInfo;
 DLLLOCAL extern const TypedHashDecl* hashdeclSsh2ExitSignalInfo;
 DLLLOCAL extern const TypedHashDecl* hashdeclSsh2HostKeyInfo;
+DLLLOCAL extern QoreEnumDecl* enumSsh2ClientAuthOrder;
+DLLLOCAL extern QoreEnumDecl* enumSsh2ClientIdentityFallbackPolicy;
 
 // host key policy constants
 #define SSH2_HOSTKEY_REJECT       0
 #define SSH2_HOSTKEY_TOFU         1
 #define SSH2_HOSTKEY_TOFU_SESSION 2
+
+// client identity provider ordering constants
+#define SSH2_CLIENT_AUTH_EXPLICIT_FIRST 0
+#define SSH2_CLIENT_AUTH_PROVIDER_FIRST 1
+
+// client identity process-user fallback policy constants
+#define SSH2_CLIENT_ID_FALLBACK_DISABLED               0
+#define SSH2_CLIENT_ID_FALLBACK_AGENT                  1
+#define SSH2_CLIENT_ID_FALLBACK_DEFAULT_KEYS           2
+#define SSH2_CLIENT_ID_FALLBACK_AGENT_AND_DEFAULT_KEYS 3
 
 // process-global default known_hosts handling modes (see ssh2-module.cpp)
 #define SSH2_KH_DEFAULT_AUTO     0   //!< built-in: the local OS user's ~/.ssh/known_hosts (filesystem-gated)

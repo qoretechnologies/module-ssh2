@@ -103,6 +103,10 @@ private:
     std::string known_hosts_file;
     bool verify_host_key;
     int host_key_policy;
+    QoreObject* host_key_store;
+    QoreObject* client_identity_provider;
+    int client_auth_order;
+    int client_identity_fallback_policy;
 
     // algorithm preferences (method_type -> prefs string)
     std::map<int, std::string> method_prefs;
@@ -116,9 +120,13 @@ private:
 
     // whether to try SSH agent authentication
     bool use_agent;
+    bool explicit_key_files;
+    bool explicit_key_data;
+    bool auto_key_files;
 
     // server info
     const char *sshauthenticatedwith;
+    bool connect_in_progress;
 
     // set of connected channels
     channel_set_t channel_set;
@@ -149,7 +157,38 @@ protected:
 
     DLLLOCAL int startupUnlocked();
     DLLLOCAL int sshConnectedUnlocked();
+    DLLLOCAL bool sshSessionActiveUnlocked() const {
+        return connect_in_progress || ssh_session;
+    }
+
+    class ConnectInProgressHelper {
+    private:
+        SSH2Client& client;
+
+    public:
+        DLLLOCAL ConnectInProgressHelper(SSH2Client& n_client) : client(n_client) {
+            assert(!client.connect_in_progress);
+            client.connect_in_progress = true;
+        }
+
+        DLLLOCAL ~ConnectInProgressHelper() {
+            client.connect_in_progress = false;
+        }
+    };
+
     DLLLOCAL int sshConnectUnlocked(int timeout_ms, ExceptionSink *xsink);
+    DLLLOCAL QoreHashNode* makeProviderContext(const char* purpose, int timeout_ms, ExceptionSink* xsink) const;
+    DLLLOCAL QoreHashNode* makeObservedHostKeyInfo(const char* hostkey, size_t hostkey_len, int hostkey_type,
+        ExceptionSink* xsink) const;
+    DLLLOCAL int verifyHostKeyWithStore(QoreObject* store, const char* hostkey, size_t hostkey_len, int hostkey_type,
+        int timeout_ms, ExceptionSink* xsink);
+    DLLLOCAL int tryAgentAuth(const char* userauthlist, int timeout_ms, bool& loggedin, ExceptionSink* xsink);
+    DLLLOCAL int tryPublicKeyDataAuth(const char* userauthlist, int timeout_ms, bool& loggedin, ExceptionSink* xsink);
+    DLLLOCAL int tryPublicKeyMemoryAuth(const char* public_key, size_t public_key_len, const char* private_key,
+        size_t private_key_len, const char* passphrase, int timeout_ms, bool& loggedin, ExceptionSink* xsink);
+    DLLLOCAL int tryPublicKeyFileAuth(const char* public_key_path, const char* private_key_path,
+        const char* passphrase, int timeout_ms, bool& loggedin, ExceptionSink* xsink);
+    DLLLOCAL int tryProviderAuth(const char* userauthlist, int timeout_ms, bool& loggedin, ExceptionSink* xsink);
     DLLLOCAL void channelDeletedUnlocked(SSH2Channel *channel) {
 #ifdef DEBUG
         int rc =
@@ -298,6 +337,11 @@ public:
 
     DLLLOCAL int disconnect(bool force = false, int timeout_ms = DEFAULT_TIMEOUT_MS, ExceptionSink *xsink = 0) {
         AutoLocker al(m);
+        if (connect_in_progress) {
+            xsink && xsink->raiseException("SSH2-CONNECT-IN-PROGRESS",
+                "cannot disconnect while SSH2Base::connect() is in progress");
+            return -1;
+        }
 
         return disconnectUnlocked(force, timeout_ms, 0, xsink);
     }
@@ -321,8 +365,9 @@ public:
 
     DLLLOCAL int setKnownHostsFile(const char* path, ExceptionSink* xsink) {
         AutoLocker al(m);
-        if (sshConnectedUnlocked()) {
-            xsink->raiseException(SSH2_CONNECTED, "usage of SSH2Base::setKnownHostsFile() is not allowed when connected");
+        if (sshSessionActiveUnlocked()) {
+            xsink->raiseException(SSH2_CONNECTED,
+                "usage of SSH2Base::setKnownHostsFile() is not allowed when connected or connecting");
             return -1;
         }
         known_hosts_file = path ? path : "";
@@ -336,8 +381,9 @@ public:
 
     DLLLOCAL int setVerifyHostKey(bool verify, ExceptionSink* xsink) {
         AutoLocker al(m);
-        if (sshConnectedUnlocked()) {
-            xsink->raiseException(SSH2_CONNECTED, "usage of SSH2Base::setVerifyHostKey() is not allowed when connected");
+        if (sshSessionActiveUnlocked()) {
+            xsink->raiseException(SSH2_CONNECTED,
+                "usage of SSH2Base::setVerifyHostKey() is not allowed when connected or connecting");
             return -1;
         }
         verify_host_key = verify;
@@ -351,6 +397,11 @@ public:
 
     DLLLOCAL int setHostKeyPolicy(int policy, ExceptionSink* xsink) {
         AutoLocker al(m);
+        if (connect_in_progress) {
+            xsink->raiseException(SSH2_CONNECTED,
+                "usage of SSH2Base::setHostKeyPolicy() is not allowed while connecting");
+            return -1;
+        }
         if (policy != SSH2_HOSTKEY_REJECT && policy != SSH2_HOSTKEY_TOFU
             && policy != SSH2_HOSTKEY_TOFU_SESSION) {
             xsink->raiseException("SSH2-HOSTKEY-POLICY-ERROR",
@@ -371,6 +422,97 @@ public:
     DLLLOCAL QoreHashNode* getHostKeyLocked(ExceptionSink* xsink);
     DLLLOCAL int addKnownHostLocked(const char* host, int port, ExceptionSink* xsink);
 
+    DLLLOCAL int setClientIdentityProvider(QoreObject* provider, ExceptionSink* xsink) {
+        AutoLocker al(m);
+        if (sshSessionActiveUnlocked()) {
+            xsink->raiseException(SSH2_CONNECTED,
+                "usage of SSH2Base::setClientIdentityProvider() is not allowed when connected or connecting");
+            return -1;
+        }
+        QoreObject* old = client_identity_provider;
+        client_identity_provider = provider ? provider->objectRefSelf() : nullptr;
+        if (old) {
+            old->deref(xsink);
+        }
+        return 0;
+    }
+
+    DLLLOCAL QoreObject* getClientIdentityProvider() const {
+        AutoLocker al(m);
+        return client_identity_provider ? client_identity_provider->objectRefSelf() : nullptr;
+    }
+
+    DLLLOCAL int setHostKeyStore(QoreObject* store, ExceptionSink* xsink) {
+        AutoLocker al(m);
+        if (sshSessionActiveUnlocked()) {
+            xsink->raiseException(SSH2_CONNECTED,
+                "usage of SSH2Base::setHostKeyStore() is not allowed when connected or connecting");
+            return -1;
+        }
+        QoreObject* old = host_key_store;
+        host_key_store = store ? store->objectRefSelf() : nullptr;
+        if (old) {
+            old->deref(xsink);
+        }
+        return 0;
+    }
+
+    DLLLOCAL QoreObject* getHostKeyStore() const {
+        AutoLocker al(m);
+        return host_key_store ? host_key_store->objectRefSelf() : nullptr;
+    }
+
+    DLLLOCAL int setClientAuthOrder(int order, ExceptionSink* xsink) {
+        AutoLocker al(m);
+        if (connect_in_progress) {
+            xsink->raiseException(SSH2_CONNECTED,
+                "usage of SSH2Base::setClientAuthOrder() is not allowed while connecting");
+            return -1;
+        }
+        if (order != SSH2_CLIENT_AUTH_EXPLICIT_FIRST && order != SSH2_CLIENT_AUTH_PROVIDER_FIRST) {
+            xsink->raiseException("SSH2-CLIENT-AUTH-ORDER-ERROR",
+                "invalid client auth order %d; expected SSH2_CLIENT_AUTH_EXPLICIT_FIRST (%d) "
+                "or SSH2_CLIENT_AUTH_PROVIDER_FIRST (%d)", order, SSH2_CLIENT_AUTH_EXPLICIT_FIRST,
+                SSH2_CLIENT_AUTH_PROVIDER_FIRST);
+            return -1;
+        }
+        client_auth_order = order;
+        return 0;
+    }
+
+    DLLLOCAL int getClientAuthOrder() const {
+        AutoLocker al(m);
+        return client_auth_order;
+    }
+
+    DLLLOCAL int setClientIdentityFallbackPolicy(int policy, ExceptionSink* xsink) {
+        AutoLocker al(m);
+        if (connect_in_progress) {
+            xsink->raiseException(SSH2_CONNECTED,
+                "usage of SSH2Base::setClientIdentityFallbackPolicy() is not allowed while connecting");
+            return -1;
+        }
+        if (policy != SSH2_CLIENT_ID_FALLBACK_DISABLED && policy != SSH2_CLIENT_ID_FALLBACK_AGENT
+            && policy != SSH2_CLIENT_ID_FALLBACK_DEFAULT_KEYS
+            && policy != SSH2_CLIENT_ID_FALLBACK_AGENT_AND_DEFAULT_KEYS) {
+            xsink->raiseException("SSH2-CLIENT-IDENTITY-FALLBACK-POLICY-ERROR",
+                "invalid client identity fallback policy %d; expected "
+                "SSH2_CLIENT_ID_FALLBACK_DISABLED (%d), SSH2_CLIENT_ID_FALLBACK_AGENT (%d), "
+                "SSH2_CLIENT_ID_FALLBACK_DEFAULT_KEYS (%d), or "
+                "SSH2_CLIENT_ID_FALLBACK_AGENT_AND_DEFAULT_KEYS (%d)", policy,
+                SSH2_CLIENT_ID_FALLBACK_DISABLED, SSH2_CLIENT_ID_FALLBACK_AGENT,
+                SSH2_CLIENT_ID_FALLBACK_DEFAULT_KEYS, SSH2_CLIENT_ID_FALLBACK_AGENT_AND_DEFAULT_KEYS);
+            return -1;
+        }
+        client_identity_fallback_policy = policy;
+        return 0;
+    }
+
+    DLLLOCAL int getClientIdentityFallbackPolicy() const {
+        AutoLocker al(m);
+        return client_identity_fallback_policy;
+    }
+
     DLLLOCAL int setMethodPreference(int method_type, const char* prefs, ExceptionSink* xsink);
     DLLLOCAL QoreListNode* getSupportedAlgorithms(int method_type, ExceptionSink* xsink);
     DLLLOCAL int setBanner(const char* banner, ExceptionSink* xsink);
@@ -386,8 +528,9 @@ public:
 
     DLLLOCAL int setKeysFromData(const BinaryNode* priv_key, const BinaryNode* pub_key, const char* passphrase, ExceptionSink* xsink) {
         AutoLocker al(m);
-        if (sshConnectedUnlocked()) {
-            xsink->raiseException(SSH2_CONNECTED, "usage of SSH2Base::setKeysFromData() is not allowed when connected");
+        if (sshSessionActiveUnlocked()) {
+            xsink->raiseException(SSH2_CONNECTED,
+                "usage of SSH2Base::setKeysFromData() is not allowed when connected or connecting");
             return -1;
         }
         sshkeys_priv_data.assign((const char*)priv_key->getPtr(), priv_key->size());
@@ -401,13 +544,15 @@ public:
         } else {
             sshkeys_passphrase.clear();
         }
+        explicit_key_data = true;
         return 0;
     }
 
     DLLLOCAL int setUseAgent(bool enable, ExceptionSink* xsink) {
         AutoLocker al(m);
-        if (sshConnectedUnlocked()) {
-            xsink->raiseException(SSH2_CONNECTED, "usage of SSH2Base::setUseAgent() is not allowed when connected");
+        if (sshSessionActiveUnlocked()) {
+            xsink->raiseException(SSH2_CONNECTED,
+                "usage of SSH2Base::setUseAgent() is not allowed when connected or connecting");
             return -1;
         }
         use_agent = enable;
@@ -421,8 +566,9 @@ public:
 
     DLLLOCAL int setKeepalive(int interval, ExceptionSink* xsink) {
         AutoLocker al(m);
-        if (sshConnectedUnlocked()) {
-            xsink->raiseException(SSH2_CONNECTED, "usage of SSH2Base::setKeepalive() is not allowed when connected");
+        if (sshSessionActiveUnlocked()) {
+            xsink->raiseException(SSH2_CONNECTED,
+                "usage of SSH2Base::setKeepalive() is not allowed when connected or connecting");
             return -1;
         }
         keepalive_interval = interval;
