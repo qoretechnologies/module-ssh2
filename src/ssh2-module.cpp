@@ -35,6 +35,7 @@
 #include <string.h>
 #include <strings.h>
 #include <stdlib.h>
+#include <dlfcn.h>
 
 // thread-local storage for password for faked keyboard-interactive authentication
 TLKeyboardPassword keyboardPassword;
@@ -174,6 +175,7 @@ extern "C" DLLEXPORT void ssh2_qore_module_desc(QoreModuleInfo& mod_info) {
     mod_info.del = ssh2_module_delete;
     mod_info.license = QL_MIT;
     mod_info.license_str = "MIT";
+    mod_info.dependencies.push_back("sshutil");
 }
 
 emap_t ssh2_emap;
@@ -187,8 +189,33 @@ DLLLOCAL const TypedHashDecl* hashdeclSsh2StatInfo;
 DLLLOCAL const TypedHashDecl* hashdeclSftpStatVfsInfo;
 DLLLOCAL const TypedHashDecl* hashdeclSsh2ExitSignalInfo;
 DLLLOCAL const TypedHashDecl* hashdeclSsh2HostKeyInfo;
+DLLLOCAL QoreClass* QC_ABSTRACTSSHCLIENTIDENTITYPROVIDER = nullptr;
+DLLLOCAL QoreClass* QC_ABSTRACTSSHHOSTKEYSTORE = nullptr;
+
+static int ssh2_resolve_sshutil_class(QoreClass*& target, const char* symbol, ExceptionSink& xsink) {
+    void* ptr = dlsym(RTLD_DEFAULT, symbol);
+    if (!ptr) {
+        xsink.raiseException("MODULE-INIT-ERROR",
+            "could not resolve required sshutil class symbol '%s': %s", symbol, dlerror());
+        return -1;
+    }
+
+    target = *reinterpret_cast<QoreClass**>(ptr);
+    if (!target) {
+        xsink.raiseException("MODULE-INIT-ERROR",
+            "required sshutil class symbol '%s' resolved to a null class pointer", symbol);
+        return -1;
+    }
+    return 0;
+}
 
 static void ssh2_module_init(QoreModuleInitContext& ctx, ExceptionSink& xsink) {
+    if (ssh2_resolve_sshutil_class(QC_ABSTRACTSSHCLIENTIDENTITYPROVIDER,
+            "QC_ABSTRACTSSHCLIENTIDENTITYPROVIDER", xsink)
+            || ssh2_resolve_sshutil_class(QC_ABSTRACTSSHHOSTKEYSTORE, "QC_ABSTRACTSSHHOSTKEYSTORE", xsink)) {
+        return;
+    }
+
     qore_libssh2_version = libssh2_version(LIBSSH2_VERSION_NUM);
     if (!qore_libssh2_version) {
         xsink.raiseException("MODULE-INIT-ERROR", "the runtime version of the library is too old; got '%s', expecting minimum version '%s'", libssh2_version(0), LIBSSH2_VERSION);

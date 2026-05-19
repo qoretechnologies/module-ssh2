@@ -110,13 +110,47 @@ static void map_ssh2_sbuf_to_hash(QoreHashNode *h, struct stat *sbuf, ExceptionS
     h->setKeyValue("mtime",       DateTimeNode::makeAbsolute(currentTZ(), (int64)sbuf->st_mtime), xsink);
 }
 
+static int ssh2_check_fs_access(const char* path, int mode, const char* operation, ExceptionSink* xsink) {
+    if (!path || !*path) {
+        return 0;
+    }
+    if (getProgram() && (getProgram()->getParseOptions() & PO_NO_FILESYSTEM)) {
+        if (xsink) {
+            xsink->raiseException("ILLEGAL-FILESYSTEM-ACCESS",
+                "%s for '%s' is not allowed when PO_NO_FILESYSTEM is set", operation, path);
+        }
+        return -1;
+    }
+    QoreSandboxManagerHelper smh;
+    if (smh) {
+        ExceptionSink local_xsink;
+        ExceptionSink* check_xsink = xsink ? xsink : &local_xsink;
+        if (!smh->checkFilesystemAccess(path, mode, check_xsink)) {
+            if (!xsink && local_xsink) {
+                local_xsink.clear();
+            }
+            return -1;
+        }
+    }
+    return 0;
+}
+
+static bool ssh2_fs_access_allowed_quiet(const char* path, int mode, const char* operation) {
+    ExceptionSink xsink;
+    int rc = ssh2_check_fs_access(path, mode, operation, &xsink);
+    if (xsink) {
+        xsink.clear();
+    }
+    return !rc;
+}
+
 // ensure the parent directory of the given file path exists, creating it with mode 0700 if it
 // does not. This is needed for the auto-resolved ~/.ssh/known_hosts file under the TOFU policy:
 // on a fresh account ~/.ssh may not exist yet, and without it libssh2_knownhost_writefile()
 // fails and the accepted host key is never persisted, leaving every subsequent connection a
 // first-use (and therefore man-in-the-middle) opportunity. Returns 0 if the parent directory
 // exists or was created, -1 with errno set otherwise.
-static int ensure_parent_dir(const char* path) {
+static int ensure_parent_dir(const char* path, ExceptionSink* xsink) {
     const char* slash = strrchr(path, '/');
     if (!slash || slash == path) {
         // no parent component (a bare relative name, or the filesystem root itself): nothing to
@@ -124,6 +158,9 @@ static int ensure_parent_dir(const char* path) {
         return 0;
     }
     std::string dir(path, slash - path);
+    if (ssh2_check_fs_access(dir.c_str(), QSEC_CREATE, "creating known_hosts parent directory", xsink)) {
+        return -1;
+    }
     struct stat sb;
     if (!stat(dir.c_str(), &sb)) {
         if (S_ISDIR(sb.st_mode)) {
@@ -368,6 +405,12 @@ void SSH2Client::setKeysIntern() {
         if (!(getProgram()->getParseOptions() & PO_NO_FILESYSTEM)) {
             sshkeys_priv = usrpwd->pw_dir;
             sshkeys_priv += "/.ssh/id_rsa";
+            if (!ssh2_fs_access_allowed_quiet(sshkeys_priv.c_str(), QSEC_READ,
+                    "auto-discovering SSH private key file")) {
+                printd(5, "SSH2Client::setKeysIntern() skipping automatic setting of keys because sandbox access to '%s' is denied\n", sshkeys_priv.c_str());
+                sshkeys_priv.clear();
+                return;
+            }
             if (!q_path_is_readable(sshkeys_priv.c_str())) {
                 printd(5, "SSH2Client::setKeysIntern() skipping automatic setting of keys because '%s' is not readable\n", sshkeys_priv.c_str());
                 sshkeys_priv.clear();
@@ -376,6 +419,13 @@ void SSH2Client::setKeysIntern() {
             printd(5, "SSH2Client::setKeysIntern() set priv: '%s'\n", sshkeys_priv.c_str());
             sshkeys_pub = usrpwd->pw_dir;
             sshkeys_pub += "/.ssh/id_rsa.pub";
+            if (!ssh2_fs_access_allowed_quiet(sshkeys_pub.c_str(), QSEC_READ,
+                    "auto-discovering SSH public key file")) {
+                printd(5, "SSH2Client::setKeysIntern() skipping automatic setting of keys because sandbox access to '%s' is denied\n", sshkeys_pub.c_str());
+                sshkeys_priv.clear();
+                sshkeys_pub.clear();
+                return;
+            }
             if (!q_path_is_readable(sshkeys_pub.c_str())) {
                 printd(5, "SSH2Client::setKeysIntern() skipping automatic setting of keys because '%s' is not readable\n", sshkeys_pub.c_str());
                 sshkeys_priv.clear();
@@ -677,6 +727,11 @@ int SSH2Client::setKeys(const char *priv, const char *pub, ExceptionSink* xsink)
     // if the strings are null then ignore
     if (priv && strlen(priv)) {
         sshkeys_priv = priv;
+        if (ssh2_check_fs_access(sshkeys_priv.c_str(), QSEC_READ, "reading SSH private key file", xsink)) {
+            sshkeys_priv.clear();
+            return -1;
+        }
+
 #ifdef _QORE_HAS_PATH_IS_READABLE
         if (!q_path_is_readable(sshkeys_priv.c_str())) {
             xsink->raiseException("SSH2-SETKEYS-ERROR", "private key '%s' is not readable", sshkeys_priv.c_str());
@@ -685,18 +740,17 @@ int SSH2Client::setKeys(const char *priv, const char *pub, ExceptionSink* xsink)
         }
 #endif
 
-        // Check filesystem sandbox access for private key
-        QoreSandboxManagerHelper smh;
-        if (smh && !smh->checkFilesystemAccess(sshkeys_priv.c_str(), QSEC_READ, xsink)) {
-            sshkeys_priv.clear();
-            return -1;
-        }
-
-        if (pub)
+        if (pub) {
             sshkeys_pub = pub;
-        else {
+        } else {
             sshkeys_pub = priv;
             sshkeys_pub += ".pub";
+        }
+
+        if (ssh2_check_fs_access(sshkeys_pub.c_str(), QSEC_READ, "reading SSH public key file", xsink)) {
+            sshkeys_priv.clear();
+            sshkeys_pub.clear();
+            return -1;
         }
 
 #ifdef _QORE_HAS_PATH_IS_READABLE
@@ -707,13 +761,6 @@ int SSH2Client::setKeys(const char *priv, const char *pub, ExceptionSink* xsink)
             return -1;
         }
 #endif
-
-        // Check filesystem sandbox access for public key
-        if (smh && !smh->checkFilesystemAccess(sshkeys_pub.c_str(), QSEC_READ, xsink)) {
-            sshkeys_priv.clear();
-            sshkeys_pub.clear();
-            return -1;
-        }
 
     }
     if (!sshkeys_priv.empty() && !sshkeys_pub.empty()) {
@@ -883,17 +930,14 @@ int SSH2Client::tryPublicKeyFileAuth(const char* public_key_path, const char* pr
         return 0;
     }
 
-    QoreSandboxManagerHelper smh;
-    if (smh) {
-        if (!smh->checkFilesystemAccess(private_key_path, QSEC_READ, xsink)) {
-            disconnectUnlocked(true);
-            return -1;
-        }
-        if (public_key_path && public_key_path[0]
-                && !smh->checkFilesystemAccess(public_key_path, QSEC_READ, xsink)) {
-            disconnectUnlocked(true);
-            return -1;
-        }
+    if (ssh2_check_fs_access(private_key_path, QSEC_READ, "reading SSH private key file", xsink)) {
+        disconnectUnlocked(true);
+        return -1;
+    }
+    if (public_key_path && public_key_path[0]
+            && ssh2_check_fs_access(public_key_path, QSEC_READ, "reading SSH public key file", xsink)) {
+        disconnectUnlocked(true);
+        return -1;
     }
 
     printd(5, "SSH2Client::connect(): try pubkey auth: %s %s\n", private_key_path,
@@ -1259,6 +1303,11 @@ int SSH2Client::sshConnectUnlocked(int timeout_ms, ExceptionSink *xsink = 0) {
         // first connection under the SSH2_HOSTKEY_TOFU policy because it is created on first use,
         // but a file that exists and cannot be read or parsed must not be silently ignored.
         if (!known_hosts_file.empty()) {
+            if (ssh2_check_fs_access(known_hosts_file.c_str(), QSEC_READ, "reading known_hosts file", xsink)) {
+                libssh2_knownhost_free(nh);
+                disconnectUnlocked(true);
+                return -1;
+            }
             struct stat sb;
             if (!stat(known_hosts_file.c_str(), &sb)) {
                 int read_rc = libssh2_knownhost_readfile(nh, known_hosts_file.c_str(),
@@ -1346,7 +1395,18 @@ int SSH2Client::sshConnectUnlocked(int timeout_ms, ExceptionSink *xsink = 0) {
                 if (!known_hosts_file.empty()) {
                     // On a fresh account the parent directory (typically ~/.ssh) may not exist yet;
                     // create it (mode 0700) so the key can actually be written.
-                    if (ensure_parent_dir(known_hosts_file.c_str())) {
+                    if (ssh2_check_fs_access(known_hosts_file.c_str(), QSEC_WRITE | QSEC_CREATE,
+                                "writing known_hosts file", xsink)) {
+                        libssh2_knownhost_free(nh);
+                        disconnectUnlocked(true);
+                        return -1;
+                    }
+                    if (ensure_parent_dir(known_hosts_file.c_str(), xsink)) {
+                        if (*xsink) {
+                            libssh2_knownhost_free(nh);
+                            disconnectUnlocked(true);
+                            return -1;
+                        }
                         int dir_errno = errno;
                         libssh2_knownhost_free(nh);
                         disconnectUnlocked(true);
@@ -1801,6 +1861,10 @@ int SSH2Client::addKnownHostLocked(const char* host, int port, ExceptionSink* xs
     // load the existing known hosts file if present; if it exists but cannot be read or parsed,
     // fail rather than silently overwriting it (which would discard or mask existing entries)
     {
+        if (ssh2_check_fs_access(known_hosts_file.c_str(), QSEC_READ, "reading known_hosts file", xsink)) {
+            libssh2_knownhost_free(nh);
+            return -1;
+        }
         struct stat sb;
         if (!stat(known_hosts_file.c_str(), &sb)) {
             int read_rc = libssh2_knownhost_readfile(nh, known_hosts_file.c_str(),
@@ -1863,6 +1927,21 @@ int SSH2Client::addKnownHostLocked(const char* host, int port, ExceptionSink* xs
     if (rc) {
         libssh2_knownhost_free(nh);
         xsink->raiseException("SSH2-HOSTKEY-ERROR", "could not add host key for '%s:%d'", use_host, use_port);
+        return -1;
+    }
+
+    if (ssh2_check_fs_access(known_hosts_file.c_str(), QSEC_WRITE | QSEC_CREATE, "writing known_hosts file",
+            xsink)) {
+        libssh2_knownhost_free(nh);
+        return -1;
+    }
+    if (ensure_parent_dir(known_hosts_file.c_str(), xsink)) {
+        libssh2_knownhost_free(nh);
+        if (*xsink) {
+            return -1;
+        }
+        xsink->raiseErrnoException("SSH2-HOSTKEY-ERROR", errno,
+            "could not create parent directory for known hosts file '%s'", known_hosts_file.c_str());
         return -1;
     }
 

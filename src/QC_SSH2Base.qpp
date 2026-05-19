@@ -504,23 +504,24 @@ enum<Ssh2HostKeyPolicy> SSH2Base::getHostKeyPolicy() [flags=CONSTANT] {
     key discovery are disabled unless explicitly enabled with
     @ref setClientIdentityFallbackPolicy().
 
-    @param provider a provider object implementing the \c SshCredentialProvider
-    \c AbstractSshClientIdentityProvider contract, or @ref nothing "NOTHING" to clear it
+    @param provider a provider object implementing the
+    @c Qore::SshUtil::AbstractSshClientIdentityProvider contract, or
+    @c NOTHING to clear it
 
     @throw SSH2-CONNECTED this method cannot be called when a connection is established
 
     @since ssh2 2.1
 */
-nothing SSH2Base::setClientIdentityProvider(*object provider) {
-    myself->setClientIdentityProvider(provider, xsink);
+nothing SSH2Base::setClientIdentityProvider(*AbstractSshClientIdentityProvider provider) {
+    myself->setClientIdentityProvider(const_cast<QoreObject*>(provider), xsink);
 }
 
 //! Returns the configured client identity provider object
-/** @return the configured provider object or @ref nothing "NOTHING" if none is configured
+/** @return the configured provider object or @c NOTHING if none is configured
 
     @since ssh2 2.1
 */
-*object SSH2Base::getClientIdentityProvider() [flags=CONSTANT] {
+*AbstractSshClientIdentityProvider SSH2Base::getClientIdentityProvider() [flags=CONSTANT] {
     return myself->getClientIdentityProvider();
 }
 
@@ -529,23 +530,24 @@ nothing SSH2Base::setClientIdentityProvider(*object provider) {
     is configured, it is used instead of the configured \c known_hosts file for host-key
     verification and TOFU decisions.
 
-    @param store a store object implementing the \c SshCredentialProvider
-    \c AbstractSshHostKeyStore contract, or @ref nothing "NOTHING" to clear it
+    @param store a store object implementing the
+    @c Qore::SshUtil::AbstractSshHostKeyStore contract, or
+    @c NOTHING to clear it
 
     @throw SSH2-CONNECTED this method cannot be called when a connection is established
 
     @since ssh2 2.1
 */
-nothing SSH2Base::setHostKeyStore(*object store) {
-    myself->setHostKeyStore(store, xsink);
+nothing SSH2Base::setHostKeyStore(*AbstractSshHostKeyStore store) {
+    myself->setHostKeyStore(const_cast<QoreObject*>(store), xsink);
 }
 
 //! Returns the configured remote host-key trust store object
-/** @return the configured store object or @ref nothing "NOTHING" if none is configured
+/** @return the configured store object or @c NOTHING if none is configured
 
     @since ssh2 2.1
 */
-*object SSH2Base::getHostKeyStore() [flags=CONSTANT] {
+*AbstractSshHostKeyStore SSH2Base::getHostKeyStore() [flags=CONSTANT] {
     return myself->getHostKeyStore();
 }
 

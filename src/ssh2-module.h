@@ -74,6 +74,9 @@ DLLLOCAL extern const TypedHashDecl* hashdeclSsh2HostKeyInfo;
 DLLLOCAL extern QoreEnumDecl* enumSsh2ClientAuthOrder;
 DLLLOCAL extern QoreEnumDecl* enumSsh2ClientIdentityFallbackPolicy;
 
+DLLLOCAL extern QoreClass* QC_ABSTRACTSSHCLIENTIDENTITYPROVIDER;
+DLLLOCAL extern QoreClass* QC_ABSTRACTSSHHOSTKEYSTORE;
+
 // host key policy constants
 #define SSH2_HOSTKEY_REJECT       0
 #define SSH2_HOSTKEY_TOFU         1

@@ -3,15 +3,16 @@
 
 %modern
 
-%requires qore >= 0.8.12
+%requires qore >= 2.3
 %requires ssh2 >= 2.0
+%requires sshutil
 
 %requires Util
 %requires QUnit
 
 %exec-class Ssh2ClientTest
 
-class TestMemoryIdentityProvider {
+class TestMemoryIdentityProvider inherits SshUtil::AbstractSshClientIdentityProvider {
     private {
         string private_key;
         *string public_key;
@@ -26,15 +27,16 @@ class TestMemoryIdentityProvider {
         self.material_calls = 0;
     }
 
-    list<hash<auto>> getClientIdentityCandidates(hash<auto> ctxt) {
+    list<hash<SshUtil::SshClientIdentityCandidate>> getClientIdentityCandidates(hash<auto> ctxt) {
         ++candidate_calls;
-        return ({"kind": "in-memory"},);
+        return (<SshUtil::SshClientIdentityCandidate>{"kind": SshUtil::SshClientIdentityCandidateKind::InMemory},);
     }
 
-    hash<auto> getPrivateKeyMaterial(hash<auto> ctxt, hash<auto> candidate) {
+    hash<SshUtil::SshPrivateKeyMaterial> getPrivateKeyMaterial(hash<auto> ctxt,
+            hash<SshUtil::SshClientIdentityCandidate> candidate) {
         ++material_calls;
-        return {
-            "kind": "text",
+        return <SshUtil::SshPrivateKeyMaterial>{
+            "kind": SshUtil::SshPrivateKeyMaterialKind::Text,
             "private_key_text": private_key,
             "public_key_text": public_key,
         };
@@ -49,23 +51,31 @@ class TestMemoryIdentityProvider {
     }
 }
 
-class RejectingHostKeyStore {
-    hash<auto> verifyHostKey(hash<auto> ctxt, hash<auto> observed_key) {
-        return {
-            "decision": "unknown",
-            "observed_key": observed_key,
+class RejectingHostKeyStore inherits SshUtil::AbstractSshHostKeyStore {
+    hash<SshUtil::SshHostKeyDecisionInfo> verifyHostKey(hash<auto> ctxt, hash<auto> observed_key) {
+        return <SshUtil::SshHostKeyDecisionInfo>{
+            "decision": SshUtil::SshHostKeyDecision::Unknown,
+            "observed_key": cast<hash<SshUtil::SshPublicKeyInfo>>(observed_key),
         };
     }
 
-    hash<auto> acceptHostKeyIfAbsent(hash<auto> ctxt, hash<auto> observed_key) {
-        return {
-            "decision": "unknown",
-            "observed_key": observed_key,
+    hash<SshUtil::SshHostKeyDecisionInfo> acceptHostKeyIfAbsent(hash<auto> ctxt, hash<auto> observed_key) {
+        return <SshUtil::SshHostKeyDecisionInfo>{
+            "decision": SshUtil::SshHostKeyDecision::Unknown,
+            "observed_key": cast<hash<SshUtil::SshPublicKeyInfo>>(observed_key),
+        };
+    }
+
+    hash<SshUtil::SshHostKeyDecisionInfo> approveHostKey(hash<auto> ctxt, hash<auto> expected_observed_key,
+            hash<auto> record) {
+        return <SshUtil::SshHostKeyDecisionInfo>{
+            "decision": SshUtil::SshHostKeyDecision::Unknown,
+            "observed_key": cast<hash<SshUtil::SshPublicKeyInfo>>(expected_observed_key),
         };
     }
 }
 
-class LockProbeHostKeyStore {
+class LockProbeHostKeyStore inherits SshUtil::AbstractSshHostKeyStore {
     private {
         *SSH2Client client;
         int verify_calls;
@@ -77,23 +87,31 @@ class LockProbeHostKeyStore {
         self.client = client;
     }
 
-    hash<auto> verifyHostKey(hash<auto> ctxt, hash<auto> observed_key) {
+    hash<SshUtil::SshHostKeyDecisionInfo> verifyHostKey(hash<auto> ctxt, hash<auto> observed_key) {
         ++verify_calls;
         try {
             connected_during_verify = boolean(client.connected());
         } catch (hash<ExceptionInfo> ex) {
             callback_error = sprintf("%s: %s", ex.err, ex.desc);
         }
-        return {
-            "decision": "unknown",
-            "observed_key": observed_key,
+        return <SshUtil::SshHostKeyDecisionInfo>{
+            "decision": SshUtil::SshHostKeyDecision::Unknown,
+            "observed_key": cast<hash<SshUtil::SshPublicKeyInfo>>(observed_key),
         };
     }
 
-    hash<auto> acceptHostKeyIfAbsent(hash<auto> ctxt, hash<auto> observed_key) {
-        return {
-            "decision": "unknown",
-            "observed_key": observed_key,
+    hash<SshUtil::SshHostKeyDecisionInfo> acceptHostKeyIfAbsent(hash<auto> ctxt, hash<auto> observed_key) {
+        return <SshUtil::SshHostKeyDecisionInfo>{
+            "decision": SshUtil::SshHostKeyDecision::Unknown,
+            "observed_key": cast<hash<SshUtil::SshPublicKeyInfo>>(observed_key),
+        };
+    }
+
+    hash<SshUtil::SshHostKeyDecisionInfo> approveHostKey(hash<auto> ctxt, hash<auto> expected_observed_key,
+            hash<auto> record) {
+        return <SshUtil::SshHostKeyDecisionInfo>{
+            "decision": SshUtil::SshHostKeyDecision::Unknown,
+            "observed_key": cast<hash<SshUtil::SshPublicKeyInfo>>(expected_observed_key),
         };
     }
 
@@ -114,7 +132,7 @@ class LockProbeHostKeyStore {
     }
 }
 
-class LockProbeIdentityProvider {
+class LockProbeIdentityProvider inherits SshUtil::AbstractSshClientIdentityProvider {
     private {
         *SSH2Client client;
         string private_key;
@@ -132,25 +150,26 @@ class LockProbeIdentityProvider {
         self.public_key = public_key;
     }
 
-    list<hash<auto>> getClientIdentityCandidates(hash<auto> ctxt) {
+    list<hash<SshUtil::SshClientIdentityCandidate>> getClientIdentityCandidates(hash<auto> ctxt) {
         ++candidate_calls;
         try {
             connected_during_candidates = boolean(client.connected());
         } catch (hash<ExceptionInfo> ex) {
             callback_error = sprintf("%s: %s", ex.err, ex.desc);
         }
-        return ({"kind": "in-memory"},);
+        return (<SshUtil::SshClientIdentityCandidate>{"kind": SshUtil::SshClientIdentityCandidateKind::InMemory},);
     }
 
-    hash<auto> getPrivateKeyMaterial(hash<auto> ctxt, hash<auto> candidate) {
+    hash<SshUtil::SshPrivateKeyMaterial> getPrivateKeyMaterial(hash<auto> ctxt,
+            hash<SshUtil::SshClientIdentityCandidate> candidate) {
         ++material_calls;
         try {
             connected_during_material = boolean(client.connected());
         } catch (hash<ExceptionInfo> ex) {
             callback_error = sprintf("%s: %s", ex.err, ex.desc);
         }
-        return {
-            "kind": "text",
+        return <SshUtil::SshPrivateKeyMaterial>{
+            "kind": SshUtil::SshPrivateKeyMaterialKind::Text,
             "private_key_text": private_key,
             "public_key_text": public_key,
         };
@@ -217,7 +236,9 @@ class Ssh2ClientTest inherits QUnit::Test {
         addTestCase("Secure defaults and fail-closed test", \secureDefaultsAndFailClosedTest());
         addTestCase("Known hosts TOFU creates parent dir test", \knownHostsTofuCreatesParentDirTest());
         addTestCase("Known hosts stat error fail-closed test", \knownHostsStatErrorFailClosedTest());
+        addTestCase("Known hosts filesystem sandbox test", \knownHostsFilesystemSandboxTest());
         addTestCase("Client identity provider test", \clientIdentityProviderTest());
+        addTestCase("Virtual host-key store no-filesystem test", \virtualHostKeyStoreNoFilesystemTest());
         addTestCase("Host key store callback lock test", \hostKeyStoreCallbackLockTest());
         addTestCase("Client identity provider callback lock test", \clientIdentityProviderCallbackLockTest());
         addTestCase("Channel PTY resize test", \channelPtyResizeTest());
@@ -290,6 +311,7 @@ class Ssh2ClientTest inherits QUnit::Test {
             }
             assertEq(Type::String, ls_out.type());
             ls_chan.sendEof();
+            ls_chan.waitEof();
             ls_chan.close();
             ls_chan.waitClosed();
         }
@@ -598,6 +620,106 @@ class Ssh2ClientTest inherits QUnit::Test {
         assertEq(False, boolean(sc.connected()), "must not be connected after stat() fail-closed");
     }
 
+    knownHostsFilesystemSandboxTest() {
+        *string priv_key_path = getPrivateKeyPath();
+        if (!priv_key_path) {
+            testSkip("no private key file available for known_hosts sandbox test");
+        }
+
+        binary private_key = binary(ReadOnlyFile::readTextFile(priv_key_path));
+        *binary public_key = is_file(priv_key_path + ".pub")
+            ? binary(ReadOnlyFile::readTextFile(priv_key_path + ".pub"))
+            : NOTHING;
+        string denied_kh = sprintf("%s/ssh2_test_sandbox_denied_known_hosts_%s", tmp_location(),
+            get_random_string(10));
+        string allowed_kh = sprintf("%s/ssh2_test_sandbox_allowed_known_hosts_%s", tmp_location(),
+            get_random_string(10));
+        string nofs_kh = sprintf("%s/ssh2_test_nofs_known_hosts_%s", tmp_location(), get_random_string(10));
+        on_exit {
+            if (is_file(denied_kh)) {
+                unlink(denied_kh);
+            }
+            if (is_file(allowed_kh)) {
+                unlink(allowed_kh);
+            }
+            if (is_file(nofs_kh)) {
+                unlink(nofs_kh);
+            }
+            SSH2Base::setDefaultKnownHostsFile();
+        }
+
+        Program p(PO_NEW_STYLE | PO_STRICT_ARGS | PO_REQUIRE_TYPES);
+        p.loadModule("ssh2");
+        p.parse("
+            sub connect_with_known_hosts(string uri, string kh, binary priv, *binary pub) {
+                SSH2Client sc(uri);
+                sc.setKeysFromData(priv, pub);
+                sc.setKnownHostsFile(kh);
+                sc.setHostKeyPolicy(Ssh2HostKeyPolicy::TrustOnFirstUse);
+                sc.connect();
+                sc.disconnect();
+            }
+
+            sub add_known_host(string uri, string kh, binary priv, *binary pub) {
+                SSH2Client sc(uri);
+                sc.setKeysFromData(priv, pub);
+                sc.setKnownHostsFile(kh);
+                sc.setVerifyHostKey(False);
+                sc.connect();
+                sc.addKnownHost();
+                sc.disconnect();
+            }
+        ", "known_hosts_sandbox_test");
+
+        SandboxManager denied_sm();
+        denied_sm.setFilesystemSandboxRoot("/var");
+        p.setSandboxManager(denied_sm);
+        assertThrows("FILESYSTEM-ACCESS-DENIED", sub () {
+            p.callFunction("connect_with_known_hosts", uri, denied_kh, private_key, public_key);
+        });
+        assertFalse(is_file(denied_kh), "denied known_hosts write must not create the file");
+
+        assertThrows("FILESYSTEM-ACCESS-DENIED", sub () {
+            p.callFunction("add_known_host", uri, denied_kh, private_key, public_key);
+        });
+        assertFalse(is_file(denied_kh), "denied addKnownHost() must not create the file");
+
+        Program allowed_p(PO_NEW_STYLE | PO_STRICT_ARGS | PO_REQUIRE_TYPES);
+        allowed_p.loadModule("ssh2");
+        allowed_p.parse("
+            sub connect_with_known_hosts(string uri, string kh, binary priv, *binary pub) {
+                SSH2Client sc(uri);
+                sc.setKeysFromData(priv, pub);
+                sc.setKnownHostsFile(kh);
+                sc.setHostKeyPolicy(Ssh2HostKeyPolicy::TrustOnFirstUse);
+                sc.connect();
+                sc.disconnect();
+            }
+        ", "known_hosts_sandbox_allowed_test");
+        SandboxManager allowed_sm();
+        allowed_sm.setFilesystemSandboxRoot(tmp_location());
+        allowed_p.setSandboxManager(allowed_sm);
+        allowed_p.callFunction("connect_with_known_hosts", uri, allowed_kh, private_key, public_key);
+        assertTrue(is_file(allowed_kh), "allowed known_hosts path must be created");
+
+        SSH2Base::setDefaultKnownHostsFile(nofs_kh);
+        Program nofs_p(PO_NEW_STYLE | PO_NO_FILESYSTEM | PO_STRICT_ARGS | PO_REQUIRE_TYPES);
+        nofs_p.loadModule("ssh2");
+        nofs_p.parse("
+            sub connect_with_default_known_hosts(string uri, binary priv, *binary pub) {
+                SSH2Client sc(uri);
+                sc.setKeysFromData(priv, pub);
+                sc.setHostKeyPolicy(Ssh2HostKeyPolicy::TrustOnFirstUse);
+                sc.connect();
+                sc.disconnect();
+            }
+        ", "known_hosts_nofs_test");
+        assertThrows("ILLEGAL-FILESYSTEM-ACCESS", "PO_NO_FILESYSTEM", sub () {
+            nofs_p.callFunction("connect_with_default_known_hosts", uri, private_key, public_key);
+        });
+        assertFalse(is_file(nofs_kh), "PO_NO_FILESYSTEM known_hosts write must not create the file");
+    }
+
     clientIdentityProviderTest() {
         *string priv_key_path = getPrivateKeyPath();
         if (!priv_key_path) {
@@ -648,6 +770,228 @@ class Ssh2ClientTest inherits QUnit::Test {
             assertEq(1, provider.getMaterialCalls(), "private key material should be requested at point of use");
             sc.disconnect();
         }
+    }
+
+    virtualHostKeyStoreNoFilesystemTest() {
+        *string priv_key_path = getPrivateKeyPath();
+        if (!priv_key_path) {
+            testSkip("no private key file available for virtual host-key store no-filesystem test");
+        }
+
+        string private_key = ReadOnlyFile::readTextFile(priv_key_path);
+        *string public_key = is_file(priv_key_path + ".pub")
+            ? ReadOnlyFile::readTextFile(priv_key_path + ".pub")
+            : NOTHING;
+
+        Program p(PO_NEW_STYLE | PO_NO_FILESYSTEM | PO_STRICT_ARGS | PO_REQUIRE_TYPES);
+        p.loadModule("ssh2");
+        p.loadModule("sshutil");
+        p.parse("
+            class MemoryIdentityProvider inherits SshUtil::AbstractSshClientIdentityProvider {
+                private {
+                    string private_key;
+                    *string public_key;
+                    int candidate_calls;
+                    int material_calls;
+                }
+
+                constructor(string private_key, *string public_key) {
+                    self.private_key = private_key;
+                    self.public_key = public_key;
+                    candidate_calls = 0;
+                    material_calls = 0;
+                }
+
+                list<hash<SshUtil::SshClientIdentityCandidate>> getClientIdentityCandidates(hash<auto> ctxt) {
+                    ++candidate_calls;
+                    return (<SshUtil::SshClientIdentityCandidate>{
+                        \"kind\": SshUtil::SshClientIdentityCandidateKind::InMemory,
+                    },);
+                }
+
+                hash<SshUtil::SshPrivateKeyMaterial> getPrivateKeyMaterial(hash<auto> ctxt,
+                        hash<SshUtil::SshClientIdentityCandidate> candidate) {
+                    ++material_calls;
+                    return <SshUtil::SshPrivateKeyMaterial>{
+                        \"kind\": SshUtil::SshPrivateKeyMaterialKind::Text,
+                        \"private_key_text\": private_key,
+                        \"public_key_text\": public_key,
+                    };
+                }
+
+                int getCandidateCalls() {
+                    return candidate_calls;
+                }
+
+                int getMaterialCalls() {
+                    return material_calls;
+                }
+            }
+
+            class MemoryHostKeyStore inherits SshUtil::AbstractSshHostKeyStore {
+                private {
+                    string mode;
+                    *hash<SshUtil::SshPublicKeyInfo> stored_key;
+                    int verify_calls;
+                    int accept_calls;
+                }
+
+                constructor(string mode = \"stateful\") {
+                    self.mode = mode;
+                    verify_calls = 0;
+                    accept_calls = 0;
+                }
+
+                private bool keysMatch(hash<auto> left, hash<auto> right) {
+                    return left.algorithm == right.algorithm && left.public_key_blob == right.public_key_blob;
+                }
+
+                private hash<SshUtil::SshHostKeyDecisionInfo> makeDecision(
+                        enum<SshUtil::SshHostKeyDecision> decision, hash<auto> observed_key) {
+                    return <SshUtil::SshHostKeyDecisionInfo>{
+                        \"decision\": decision,
+                        \"observed_key\": cast<hash<SshUtil::SshPublicKeyInfo>>(observed_key),
+                    };
+                }
+
+                hash<SshUtil::SshHostKeyDecisionInfo> verifyHostKey(hash<auto> ctxt, hash<auto> observed_key) {
+                    ++verify_calls;
+                    if (mode == \"throw\") {
+                        throw \"TEST-HOSTKEY-STORE-ERROR\", \"host-key store failure\";
+                    }
+                    if (mode == \"revoked\") {
+                        return makeDecision(SshUtil::SshHostKeyDecision::Revoked, observed_key);
+                    }
+                    if (mode == \"accepted-session\") {
+                        return makeDecision(SshUtil::SshHostKeyDecision::AcceptedSession, observed_key);
+                    }
+                    if (stored_key && keysMatch(stored_key, observed_key)) {
+                        return makeDecision(SshUtil::SshHostKeyDecision::Matched, observed_key);
+                    }
+                    return makeDecision(SshUtil::SshHostKeyDecision::Unknown, observed_key);
+                }
+
+                hash<SshUtil::SshHostKeyDecisionInfo> acceptHostKeyIfAbsent(hash<auto> ctxt,
+                        hash<auto> observed_key) {
+                    ++accept_calls;
+                    if (mode == \"stateful\") {
+                        stored_key = cast<hash<SshUtil::SshPublicKeyInfo>>(observed_key);
+                        return makeDecision(SshUtil::SshHostKeyDecision::Added, observed_key);
+                    }
+                    return makeDecision(SshUtil::SshHostKeyDecision::Unknown, observed_key);
+                }
+
+                hash<SshUtil::SshHostKeyDecisionInfo> approveHostKey(hash<auto> ctxt,
+                        hash<auto> expected_observed_key, hash<auto> record) {
+                    return makeDecision(SshUtil::SshHostKeyDecision::AcceptedSession, expected_observed_key);
+                }
+
+                int getVerifyCalls() {
+                    return verify_calls;
+                }
+
+                int getAcceptCalls() {
+                    return accept_calls;
+                }
+
+                bool hasStoredKey() {
+                    return boolean(stored_key);
+                }
+            }
+
+            hash<auto> sub connect_with_virtual_store(string uri, string priv, *string pub) {
+                MemoryIdentityProvider provider(priv, pub);
+                MemoryHostKeyStore store();
+
+                SSH2Client first(uri);
+                first.setHostKeyStore(store);
+                first.setClientIdentityProvider(provider);
+                first.setClientIdentityFallbackPolicy(Ssh2ClientIdentityFallbackPolicy::Disabled);
+                first.setHostKeyPolicy(Ssh2HostKeyPolicy::TrustOnFirstUse);
+                *string first_kh = first.getKnownHostsFile();
+                first.connect();
+                bool first_connected = boolean(first.connected());
+                first.disconnect();
+
+                SSH2Client second(uri);
+                second.setHostKeyStore(store);
+                second.setClientIdentityProvider(provider);
+                second.setClientIdentityFallbackPolicy(Ssh2ClientIdentityFallbackPolicy::Disabled);
+                second.setHostKeyPolicy(Ssh2HostKeyPolicy::Reject);
+                *string second_kh = second.getKnownHostsFile();
+                second.connect();
+                bool second_connected = boolean(second.connected());
+                second.disconnect();
+
+                return {
+                    \"first_connected\": first_connected,
+                    \"second_connected\": second_connected,
+                    \"first_known_hosts\": first_kh,
+                    \"second_known_hosts\": second_kh,
+                    \"stored\": store.hasStoredKey(),
+                    \"verify_calls\": store.getVerifyCalls(),
+                    \"accept_calls\": store.getAcceptCalls(),
+                    \"candidate_calls\": provider.getCandidateCalls(),
+                    \"material_calls\": provider.getMaterialCalls(),
+                };
+            }
+
+            hash<auto> sub fail_before_identity(string uri, string priv, *string pub, string mode) {
+                MemoryIdentityProvider provider(priv, pub);
+                MemoryHostKeyStore store(mode);
+                SSH2Client sc(uri);
+                sc.setHostKeyStore(store);
+                sc.setClientIdentityProvider(provider);
+                sc.setClientIdentityFallbackPolicy(Ssh2ClientIdentityFallbackPolicy::Disabled);
+                sc.setHostKeyPolicy(Ssh2HostKeyPolicy::Reject);
+                try {
+                    sc.connect();
+                } catch (hash<ExceptionInfo> ex) {
+                    return {
+                        \"err\": ex.err,
+                        \"known_hosts\": sc.getKnownHostsFile(),
+                        \"verify_calls\": store.getVerifyCalls(),
+                        \"accept_calls\": store.getAcceptCalls(),
+                        \"candidate_calls\": provider.getCandidateCalls(),
+                        \"material_calls\": provider.getMaterialCalls(),
+                    };
+                }
+                throw \"TEST-ERROR\", \"expected host-key store failure\";
+            }
+        ", "virtual_hostkey_store_nofs_test");
+
+        hash<auto> result = p.callFunction("connect_with_virtual_store", uri, private_key, public_key);
+        assertTrue(result.first_connected, "first virtual-store TOFU connection must succeed");
+        assertTrue(result.second_connected, "second virtual-store match connection must succeed");
+        assertNothing(result.first_known_hosts, "PO_NO_FILESYSTEM virtual store must not use known_hosts");
+        assertNothing(result.second_known_hosts, "PO_NO_FILESYSTEM virtual store must not use known_hosts");
+        assertTrue(result.stored, "virtual store must retain the accepted host key");
+        assertEq(2, result.verify_calls, "virtual store must verify both connections");
+        assertEq(1, result.accept_calls, "virtual store must accept only the first unknown host key");
+        assertEq(2, result.candidate_calls, "identity provider must be consulted once per connection");
+        assertEq(2, result.material_calls, "identity provider must supply key material once per connection");
+
+        hash<auto> unknown = p.callFunction("fail_before_identity", uri, private_key, public_key, "stateful");
+        assertEq("SSH2-HOSTKEY-UNKNOWN", unknown.err);
+        assertNothing(unknown.known_hosts);
+        assertEq(1, unknown.verify_calls);
+        assertEq(0, unknown.accept_calls);
+        assertEq(0, unknown.candidate_calls);
+        assertEq(0, unknown.material_calls);
+
+        hash<auto> revoked = p.callFunction("fail_before_identity", uri, private_key, public_key, "revoked");
+        assertEq("SSH2-HOSTKEY-REVOKED", revoked.err);
+        assertEq(1, revoked.verify_calls);
+        assertEq(0, revoked.accept_calls);
+        assertEq(0, revoked.candidate_calls);
+        assertEq(0, revoked.material_calls);
+
+        hash<auto> thrown = p.callFunction("fail_before_identity", uri, private_key, public_key, "throw");
+        assertEq("SSH2-HOSTKEY-PROVIDER-ERROR", thrown.err);
+        assertEq(1, thrown.verify_calls);
+        assertEq(0, thrown.accept_calls);
+        assertEq(0, thrown.candidate_calls);
+        assertEq(0, thrown.material_calls);
     }
 
     hostKeyStoreCallbackLockTest() {

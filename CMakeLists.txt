@@ -6,7 +6,7 @@ include(CheckCXXCompilerFlag)
 include(CheckCXXSymbolExists)
 include(CheckIncludeFileCXX)
 
-find_package(Qore 2.0 REQUIRED)
+find_package(Qore 2.3 REQUIRED)
 find_package(OpenSSL REQUIRED)
 
 if(WIN32 OR MSYS OR MINGW)

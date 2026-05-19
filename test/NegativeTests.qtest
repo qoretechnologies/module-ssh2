@@ -5,15 +5,44 @@
 
 %modern
 
+%requires qore >= 2.3
 %requires ssh2 >= 2.0
+%requires sshutil
 %requires QUnit
 
 %exec-class NegativeTests
 
-class DummyIdentityProvider {
+class DummyIdentityProvider inherits SshUtil::AbstractSshClientIdentityProvider {
+    list<hash<SshUtil::SshClientIdentityCandidate>> getClientIdentityCandidates(hash<auto> ctxt) {
+        return ();
+    }
 }
 
-class DummyHostKeyStore {
+class DummyHostKeyStore inherits SshUtil::AbstractSshHostKeyStore {
+    hash<SshUtil::SshHostKeyDecisionInfo> verifyHostKey(hash<auto> ctxt, hash<auto> observed_key) {
+        return <SshUtil::SshHostKeyDecisionInfo>{
+            "decision": SshUtil::SshHostKeyDecision::Unknown,
+            "observed_key": cast<hash<SshUtil::SshPublicKeyInfo>>(observed_key),
+        };
+    }
+
+    hash<SshUtil::SshHostKeyDecisionInfo> acceptHostKeyIfAbsent(hash<auto> ctxt, hash<auto> observed_key) {
+        return <SshUtil::SshHostKeyDecisionInfo>{
+            "decision": SshUtil::SshHostKeyDecision::Unknown,
+            "observed_key": cast<hash<SshUtil::SshPublicKeyInfo>>(observed_key),
+        };
+    }
+
+    hash<SshUtil::SshHostKeyDecisionInfo> approveHostKey(hash<auto> ctxt, hash<auto> expected_observed_key,
+            hash<auto> record) {
+        return <SshUtil::SshHostKeyDecisionInfo>{
+            "decision": SshUtil::SshHostKeyDecision::Unknown,
+            "observed_key": cast<hash<SshUtil::SshPublicKeyInfo>>(expected_observed_key),
+        };
+    }
+}
+
+class NonProvider {
 }
 
 class NegativeTests inherits QUnit::Test {
@@ -615,6 +644,10 @@ class NegativeTests inherits QUnit::Test {
             sc.setHostKeyStore(store);
             assertEq(provider, sc.getClientIdentityProvider());
             assertEq(store, sc.getHostKeyStore());
+
+            object non_provider = new NonProvider();
+            assertThrows("RUNTIME-OVERLOAD-ERROR", sub () { sc.setClientIdentityProvider(non_provider); });
+            assertThrows("RUNTIME-OVERLOAD-ERROR", sub () { sc.setHostKeyStore(non_provider); });
 
             sc.setClientIdentityProvider(NOTHING);
             sc.setHostKeyStore(NOTHING);

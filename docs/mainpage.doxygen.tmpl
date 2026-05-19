@@ -10,10 +10,12 @@
     - <a href="http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html">LGPL 2.1</a>
     - MIT (see COPYING.MIT in the source distribution for more information)
     .
-    The module is tagged as such in the module's header (meaning it can be loaded unconditionally regardless of how the %Qore library was initialized).  This version of the module requires Qore 0.8.1+ to compile and run.
+    The module is tagged as such in the module's header (meaning it can be loaded unconditionally regardless of how the %Qore library was initialized).  This version of the module requires Qore 2.3+ and the @c sshutil module to compile and run.
 
     To use the module in a %Qore script, use the \c %%requires directive as follows:
-    @code %requires ssh2 @endcode
+    @code{.py}
+%requires ssh2
+    @endcode
 
     This module provides the following classes:
     |!Class|!Description
@@ -268,6 +270,8 @@ stdout.printf("exit status: %d\n", chan.getExitStatus());@endcode
     - added symlink, readlink, chown, lstat, and statvfs data providers
 
     <b>Connection Module Updates:</b>
+    - added typed client identity provider and host-key store APIs backed by the
+      @c sshutil module
     - added \c known_hosts, \c host_key_policy, \c verify_host_key, \c use_agent, and
       \c keepalive_interval connection options
     - added matching host-key verification options to the SFTP client data provider constructor
