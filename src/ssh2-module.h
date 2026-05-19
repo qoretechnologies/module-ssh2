@@ -75,13 +75,10 @@ DLLLOCAL extern QoreEnumDecl* enumSsh2ClientAuthOrder;
 DLLLOCAL extern QoreEnumDecl* enumSsh2ClientIdentityFallbackPolicy;
 
 // module-internal cache of the sshutil abstract provider classes; populated
-// in ssh2_module_init() by calling the public sshutil accessor functions
-// declared in <qore/sshutil.h> (the sshutil class-pointer data symbols must
-// NOT be referenced directly: Qore dlopen()s this module before loading its
-// sshutil dependency, so an undefined data symbol would fail to bind)
+// in ssh2_module_init() by dlsym() on sshutil's public accessor functions
+// after the declared sshutil dependency has been loaded
 DLLLOCAL extern QoreClass* QC_ABSTRACTSSHCLIENTIDENTITYPROVIDER;
 DLLLOCAL extern QoreClass* QC_ABSTRACTSSHHOSTKEYSTORE;
-#include <qore/sshutil.h>
 
 // host key policy constants
 #define SSH2_HOSTKEY_REJECT       0

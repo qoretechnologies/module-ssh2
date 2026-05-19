@@ -35,6 +35,7 @@
 #include <string.h>
 #include <strings.h>
 #include <stdlib.h>
+#include <dlfcn.h>
 
 // thread-local storage for password for faked keyboard-interactive authentication
 TLKeyboardPassword keyboardPassword;
@@ -189,19 +190,40 @@ DLLLOCAL const TypedHashDecl* hashdeclSftpStatVfsInfo;
 DLLLOCAL const TypedHashDecl* hashdeclSsh2ExitSignalInfo;
 DLLLOCAL const TypedHashDecl* hashdeclSsh2HostKeyInfo;
 // module-internal cache of the sshutil abstract provider classes; populated
-// from the public sshutil accessor functions in ssh2_module_init()
-QoreClass* QC_ABSTRACTSSHCLIENTIDENTITYPROVIDER = nullptr;
-QoreClass* QC_ABSTRACTSSHHOSTKEYSTORE = nullptr;
+// in ssh2_module_init() by dlsym() on sshutil's public accessor functions
+// after the declared sshutil dependency has been loaded
+DLLLOCAL QoreClass* QC_ABSTRACTSSHCLIENTIDENTITYPROVIDER = nullptr;
+DLLLOCAL QoreClass* QC_ABSTRACTSSHHOSTKEYSTORE = nullptr;
+
+using sshutil_get_class_t = QoreClass* (*)();
+
+static int ssh2_resolve_sshutil_class(QoreClass*& target, const char* accessor, const char* class_name,
+        ExceptionSink& xsink) {
+    dlerror();
+    void* ptr = dlsym(RTLD_DEFAULT, accessor);
+    const char* err = dlerror();
+    if (err) {
+        xsink.raiseException("MODULE-INIT-ERROR", "could not resolve required sshutil accessor '%s': %s",
+            accessor, err);
+        return -1;
+    }
+
+    sshutil_get_class_t get_class = reinterpret_cast<sshutil_get_class_t>(ptr);
+    target = get_class();
+    if (!target) {
+        xsink.raiseException("MODULE-INIT-ERROR",
+            "required sshutil accessor '%s' returned no %s class pointer", accessor, class_name);
+        return -1;
+    }
+    return 0;
+}
 
 static void ssh2_module_init(QoreModuleInitContext& ctx, ExceptionSink& xsink) {
-    // resolve the sshutil abstract provider classes via the public accessor
-    // functions; sshutil is a declared dependency, so it has already been
-    // loaded and initialized by the time this module's init runs
-    QC_ABSTRACTSSHCLIENTIDENTITYPROVIDER = sshutil_get_abstract_ssh_client_identity_provider_class();
-    QC_ABSTRACTSSHHOSTKEYSTORE = sshutil_get_abstract_ssh_host_key_store_class();
-    if (!QC_ABSTRACTSSHCLIENTIDENTITYPROVIDER || !QC_ABSTRACTSSHHOSTKEYSTORE) {
-        xsink.raiseException("MODULE-INIT-ERROR", "the required sshutil module did not provide the abstract "
-            "SSH provider classes (sshutil not initialized?)");
+    if (ssh2_resolve_sshutil_class(QC_ABSTRACTSSHCLIENTIDENTITYPROVIDER,
+            "sshutil_get_abstract_ssh_client_identity_provider_class", "AbstractSshClientIdentityProvider",
+            xsink)
+            || ssh2_resolve_sshutil_class(QC_ABSTRACTSSHHOSTKEYSTORE,
+                "sshutil_get_abstract_ssh_host_key_store_class", "AbstractSshHostKeyStore", xsink)) {
         return;
     }
 
