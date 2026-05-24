@@ -74,7 +74,7 @@ SSH2Listener::destructor() {
     @throw SSH2LISTENER-TIMEOUT timeout waiting for a connection
     @throw SSH2-ERROR socket error; invalid SSH2 protocol response; server returned an error message
 */
-SSH2Channel SSH2Listener::accept(timeout timeout = -1) {
+SSH2Channel SSH2Listener::accept(timeout timeout = -1) [flags=NAMED_ARGS] {
     return c->accept(xsink, timeout);
 }
 

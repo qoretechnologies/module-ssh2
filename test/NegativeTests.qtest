@@ -78,6 +78,7 @@ class NegativeTests inherits QUnit::Test {
         addTestCase("Module default tests", \moduleDefaultsTests());
         addTestCase("Keys from data tests", \keysFromDataTests());
         addTestCase("SSH2Listener constructor tests", \listenerConstructorTests());
+        addTestCase("Named argument tests", \namedArgumentTests());
         addTestCase("Module constant tests", \moduleConstantTests());
 
         set_return_value(main());
@@ -806,6 +807,104 @@ class NegativeTests inherits QUnit::Test {
             assertThrows("SSH2CLIENT-NOT-CONNECTED", sub () {
                 sc.forwardListen("0.0.0.0", 8080);
             });
+        }
+    }
+
+    namedArgumentTests() {
+        on_exit {
+            SSH2Base::setDefaultVerifyHostKey(verify: True);
+            SSH2Base::setDefaultHostKeyPolicy(policy: Ssh2HostKeyPolicy::TrustOnFirstUse);
+            SSH2Base::setDefaultKnownHostsFile();
+        }
+
+        {
+            SSH2Client sc(url: "ssh://named@localhost:2222");
+            assertEq("localhost", sc.getHost());
+            assertEq(2222, sc.getPort());
+            assertEq("named", sc.getUser());
+
+            sc.setUser(user: "renamed");
+            sc.setPassword(password: "secret");
+            assertEq("renamed", sc.getUser());
+            assertEq("secret", sc.getPassword());
+
+            sc.setVerifyHostKey(verify: False);
+            assertFalse(sc.getVerifyHostKey());
+            sc.setUseAgent(enable: False);
+            assertFalse(sc.getUseAgent());
+            sc.setKeepalive(interval: 15);
+            assertEq(15, sc.getKeepalive());
+            sc.setBanner(banner: "SSH-2.0-NamedArgs");
+            assertEq("SSH-2.0-NamedArgs", sc.getBanner());
+
+            sc.setHostKeyPolicy(policy: Ssh2HostKeyPolicy::Reject);
+            assertEq(Ssh2HostKeyPolicy::Reject, sc.getHostKeyPolicy());
+            sc.setClientAuthOrder(order: Ssh2ClientAuthOrder::ProviderFirst);
+            assertEq(Ssh2ClientAuthOrder::ProviderFirst, sc.getClientAuthOrder());
+            sc.setClientIdentityFallbackPolicy(policy: Ssh2ClientIdentityFallbackPolicy::Agent);
+            assertEq(Ssh2ClientIdentityFallbackPolicy::Agent, sc.getClientIdentityFallbackPolicy());
+
+            sc.setMethodPreference(method_type: "KEX", preferences: "curve25519-sha256");
+            assertGt(0, sc.getSupportedAlgorithms(method_type: "KEX").size());
+
+            assertThrows("SSH2CLIENT-NOT-CONNECTED", sub () {
+                sc.setTraceLevel(trace_level: SSH2_TRACE_AUTH);
+            });
+            assertThrows("SSH2CLIENT-OPENDIRECTTCPIPCHANNEL-ERROR", sub () {
+                sc.openDirectTcpipChannel(host: "remote", port: 0);
+            });
+            assertThrows("SSH2CLIENT-SCPPUT-ERROR", sub () {
+                sc.scpPut(remote_path: "/tmp/named", size: 0, mode: 0644);
+            });
+            assertThrows("SSH2CLIENT-NOT-CONNECTED", sub () {
+                sc.forwardListen(host: "127.0.0.1", port: 0, queue_maxsize: 1, timeout: timeout);
+            });
+        }
+
+        {
+            SSH2Base::setDefaultVerifyHostKey(verify: False);
+            assertFalse(SSH2Base::getDefaultVerifyHostKey());
+            SSH2Base::setDefaultHostKeyPolicy(policy: Ssh2HostKeyPolicy::Reject);
+            assertEq(Ssh2HostKeyPolicy::Reject, SSH2Base::getDefaultHostKeyPolicy());
+            SSH2Base::setDefaultKnownHostsFile(path: "/tmp/named_known_hosts");
+            assertEq("/tmp/named_known_hosts", SSH2Base::getDefaultKnownHostsFile());
+        }
+
+        {
+            SFTPClient sc(url: "sftp://named@localhost", port: 2200);
+            assertEq("localhost", sc.getHost());
+            assertEq(2200, sc.getPort());
+            assertEq("named", sc.getUser());
+            assertFalse(sc.isAlive(timeout_ms: 1));
+            assertThrows("SFTPCLIENT-PARAMETER-ERROR", sub () {
+                sc.chmod(path: "/tmp/named", mode: 01755, timeout: timeout);
+            });
+        }
+
+        {
+            SSH2Client sc(url: "ssh://user@localhost");
+            string testKeyPath = "/tmp/ssh2_named_args_key_" + getpid();
+            string testKeyPubPath = testKeyPath + ".pub";
+            {
+                File f();
+                f.open2(testKeyPath, O_CREAT | O_WRONLY | O_TRUNC, 0600);
+                f.write("-----BEGIN OPENSSH PRIVATE KEY-----\ntest\n-----END OPENSSH PRIVATE KEY-----\n");
+            }
+            {
+                File f();
+                f.open2(testKeyPubPath, O_CREAT | O_WRONLY | O_TRUNC, 0644);
+                f.write("ssh-rsa AAAAB test\n");
+            }
+            on_exit unlink(testKeyPath);
+            on_exit unlink(testKeyPubPath);
+
+            sc.setKeys(private_key: testKeyPath, public_key: testKeyPubPath);
+            assertEq(testKeyPath, sc.getKeyPriv());
+            assertEq(testKeyPubPath, sc.getKeyPub());
+
+            binary priv = binary("-----BEGIN OPENSSH PRIVATE KEY-----\ntest\n-----END OPENSSH PRIVATE KEY-----\n");
+            binary pub = binary("ssh-rsa AAAAB test\n");
+            sc.setKeysFromData(private_key_data: priv, public_key_data: pub, passphrase: "passphrase");
         }
     }
 
