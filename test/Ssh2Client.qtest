@@ -271,7 +271,7 @@ class Ssh2ClientTest inherits QUnit::Test {
         delete info;
         chan = sc.scpGet(fn, -1, \info);
         assertEq(FileLen, info.size);
-        any str = chan.readBlock(info.size);
+        auto str = chan.readBlock(info.size);
         assertEq(FileContents, str);
 
         # test readBinaryBlock() from SSH2Client::scpGet()
@@ -288,7 +288,7 @@ class Ssh2ClientTest inherits QUnit::Test {
 
         chan.sendEof();
         chan.close();
-        any rc = chan.getExitStatus();
+        auto rc = chan.getExitStatus();
         assertEq(Type::Int, rc.type());
 
         # clean up the test file via exec (deterministic, no prompt detection needed)

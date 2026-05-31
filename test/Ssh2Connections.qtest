@@ -87,7 +87,7 @@ class Ssh2ConnectionsTest inherits QUnit::Test {
         SSH2Client sc = conn.get();
         SSH2Channel chan = sc.openSessionChannel();
         chan.exec("ls -l | head -5");
-        any str = chan.read();
+        auto str = chan.read();
         assertEq(Type::String, str.type());
 
         # issue #3696: test connection serialization
