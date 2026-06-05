@@ -271,7 +271,7 @@ class Ssh2ClientTest inherits QUnit::Test {
         delete info;
         chan = sc.scpGet(fn, -1, \info);
         assertEq(FileLen, info.size);
-        any str = chan.readBlock(info.size);
+        auto str = chan.readBlock(info.size);
         assertEq(FileContents, str);
 
         # test readBinaryBlock() from SSH2Client::scpGet()
@@ -288,7 +288,7 @@ class Ssh2ClientTest inherits QUnit::Test {
 
         chan.sendEof();
         chan.close();
-        any rc = chan.getExitStatus();
+        auto rc = chan.getExitStatus();
         assertEq(Type::Int, rc.type());
 
         # clean up the test file via exec (deterministic, no prompt detection needed)
@@ -673,6 +673,7 @@ class Ssh2ClientTest inherits QUnit::Test {
 
         SandboxManager denied_sm();
         denied_sm.setFilesystemSandboxRoot("/var");
+        denied_sm.setNetworkDefaultPolicy(allow: True);
         p.setSandboxManager(denied_sm);
         assertThrows("FILESYSTEM-ACCESS-DENIED", sub () {
             p.callFunction("connect_with_known_hosts", uri, denied_kh, private_key, public_key);
@@ -698,6 +699,7 @@ class Ssh2ClientTest inherits QUnit::Test {
         ", "known_hosts_sandbox_allowed_test");
         SandboxManager allowed_sm();
         allowed_sm.setFilesystemSandboxRoot(tmp_location());
+        allowed_sm.setNetworkDefaultPolicy(allow: True);
         allowed_p.setSandboxManager(allowed_sm);
         allowed_p.callFunction("connect_with_known_hosts", uri, allowed_kh, private_key, public_key);
         assertTrue(is_file(allowed_kh), "allowed known_hosts path must be created");

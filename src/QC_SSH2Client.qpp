@@ -125,7 +125,7 @@ qclass SSH2Client [arg=SSH2Client* c; ns=Qore::SSH2; dom=NETWORK; vparent=SSH2Ba
     @throw SSH2CLIENT-PARAMETER-ERROR empty url passed
     @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SSH2 protocol response; server returned an error message
  */
-SSH2Client::constructor(string url, softint port = 0) {
+SSH2Client::constructor(string url, softint port = 0) [flags=NAMED_ARGS] {
     QoreURL qurl(url);
 
     if (!qurl.getHost()) {
@@ -181,7 +181,7 @@ hash<Ssh2ConnectionInfo> SSH2Client::info() [flags=CONSTANT] {
     @throw SSH2CLIENT-TIMEOUT timeout opening channel
     @throw SSH2-ERROR error opening channel
  */
-SSH2Channel SSH2Client::openSessionChannel(timeout timeout = 60s) {
+SSH2Channel SSH2Client::openSessionChannel(timeout timeout = 60s) [flags=NAMED_ARGS] {
     return c->openSessionChannel(xsink, timeout);
 }
 
@@ -200,7 +200,7 @@ SSH2Channel SSH2Client::openSessionChannel(timeout timeout = 60s) {
     @throw SSH2CLIENT-TIMEOUT timeout opening channel
     @throw SSH2-ERROR error opening channel
  */
-SSH2Channel SSH2Client::openDirectTcpipChannel(string host, softint port, string source_host = "127.0.0.1", softint source_port = 22, timeout timeout = 60s) {
+SSH2Channel SSH2Client::openDirectTcpipChannel(string host, softint port, string source_host = "127.0.0.1", softint source_port = 22, timeout timeout = 60s) [flags=NAMED_ARGS] {
     static const char *SSH2CLIENT_OPENDIRECTTCPIPCHANNEL_ERR = "SSH2CLIENT-OPENDIRECTTCPIPCHANNEL-ERROR";
 
     if (!port) {
@@ -232,7 +232,7 @@ SSH2Channel SSH2Client::openDirectTcpipChannel(string host, softint port, string
 
     @since ssh2 2.0
 */
-SSH2Channel SSH2Client::openDirectStreamLocalChannel(string socket_path, string source_host = "127.0.0.1", softint source_port = 22, timeout timeout = 60s) {
+SSH2Channel SSH2Client::openDirectStreamLocalChannel(string socket_path, string source_host = "127.0.0.1", softint source_port = 22, timeout timeout = 60s) [flags=NAMED_ARGS] {
 #ifdef HAVE_LIBSSH2_CHANNEL_DIRECT_STREAMLOCAL
     return c->openDirectStreamLocalChannel(xsink, socket_path->c_str(), source_host->c_str(), source_port, timeout);
 #else
@@ -249,7 +249,7 @@ SS2Channel chan = ssh2client.scpGet("/tmp/file.txt", 30s, \info); @endcode
 
     @param path the path of the remote file to get
     @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds)
-    @param statinfo an optional reference to an Ssh2StatInfo hash for file status info with the following keys:
+    @param stat_info an optional reference to an Ssh2StatInfo hash for file status info with the following keys:
     - \c "mode": the file's mode
     - \c "permissions": a string of the file's mode (ex: \c "drwxr-xr-x")
     - \c "size": the size of the file in bytes
@@ -262,12 +262,12 @@ SS2Channel chan = ssh2client.scpGet("/tmp/file.txt", 30s, \info); @endcode
     @throw SSH2CLIENT-TIMEOUT timeout opening channel
     @throw SSH2-ERROR error opening channel
  */
-SSH2Channel SSH2Client::scpGet(string path, timeout timeout = 60s, *reference<hash<Ssh2StatInfo>> statinfo) {
-    ReferenceHolder<QoreHashNode> ref(statinfo ? new QoreHashNode(hashdeclSsh2StatInfo, xsink) : nullptr, xsink);
+SSH2Channel SSH2Client::scpGet(string path, timeout timeout = 60s, *reference<hash<Ssh2StatInfo>> stat_info) [flags=NAMED_ARGS] {
+    ReferenceHolder<QoreHashNode> ref(stat_info ? new QoreHashNode(hashdeclSsh2StatInfo, xsink) : nullptr, xsink);
 
     ReferenceHolder<QoreObject> o(c->scpGet(xsink, path->c_str(), timeout, *ref), xsink);
-    if (o && statinfo) {
-        QoreTypeSafeReferenceHelper rh(statinfo, xsink);
+    if (o && stat_info) {
+        QoreTypeSafeReferenceHelper rh(stat_info, xsink);
         // a deadlock exception occurred accessing the reference's value pointer
         if (!rh || rh.assign(ref.release()))
             return QoreValue();
@@ -280,7 +280,7 @@ SSH2Channel SSH2Client::scpGet(string path, timeout timeout = 60s, *reference<ha
     @code{.py} ssh2client.scpGet("file.txt", outputStream); @endcode
 
     @param path the path of the remote file to get
-    @param os the output stream
+    @param output_stream the output stream
     @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds)
 
     @throw SSH2CLIENT-NOT-CONNECTED client is not connected
@@ -289,8 +289,8 @@ SSH2Channel SSH2Client::scpGet(string path, timeout timeout = 60s, *reference<ha
 
     @since ssh2 1.1
  */
-nothing SSH2Client::scpGet(string path, Qore::OutputStream[OutputStream] os, timeout timeout = 60s) {
-    c->scpGet(xsink, path->getBuffer(), *os, timeout);
+nothing SSH2Client::scpGet(string path, Qore::OutputStream[OutputStream] output_stream, timeout timeout = 60s) [flags=NAMED_ARGS] {
+    c->scpGet(xsink, path->getBuffer(), *output_stream, timeout);
 }
 
 //! Opens a channel for sending a file to the remote server; an SSH2Channel object is returned to use to send the file's data
@@ -300,8 +300,8 @@ nothing SSH2Client::scpGet(string path, Qore::OutputStream[OutputStream] os, tim
     @param remote_path the path of the file to save on the remote server
     @param size the size of the file to send; this parameter is required
     @param mode the file's mode on the remote machine
-    @param mtime the file's last modified time to create on the remote machine
-    @param atime the file's last access time to create on the remote machine
+    @param modified_time the file's last modified time to create on the remote machine
+    @param access_time the file's last access time to create on the remote machine
     @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds)
 
     @return an SSH2Channel object is returned to use to send the file's data
@@ -310,7 +310,7 @@ nothing SSH2Client::scpGet(string path, Qore::OutputStream[OutputStream] os, tim
     @throw SSH2CLIENT-TIMEOUT timeout opening channel
     @throw SSH2-ERROR error opening channel
  */
-SSH2Channel SSH2Client::scpPut(string remote_path, softint size, softint mode = 0644, *date mtime, *date atime, timeout timeout = 60s) {
+SSH2Channel SSH2Client::scpPut(string remote_path, softint size, softint mode = 0644, *date modified_time, *date access_time, timeout timeout = 60s) [flags=NAMED_ARGS] {
     static const char *SSH2CLIENT_SCPPUT_ERR = "SSH2CLIENT-SCPPUT-ERROR";
 
     if (size <= 0) {
@@ -318,7 +318,9 @@ SSH2Channel SSH2Client::scpPut(string remote_path, softint size, softint mode = 
         return QoreValue();
     }
 
-    return c->scpPut(xsink, remote_path->getBuffer(), size, (int)mode, mtime ? mtime->getEpochSeconds() : 0, atime ? atime->getEpochSeconds() : 0, timeout);
+    return c->scpPut(xsink, remote_path->getBuffer(), size, (int)mode,
+        modified_time ? modified_time->getEpochSeconds() : 0,
+        access_time ? access_time->getEpochSeconds() : 0, timeout);
 }
 
 //! Sends a file to the remote server; the content of the file is read from an @ref InputStream
@@ -326,11 +328,11 @@ SSH2Channel SSH2Client::scpPut(string remote_path, softint size, softint mode = 
     @code{.py} ssh2client.scpPut("/tmp/file.txt", inputStream, size, 0644, 2010-12-25, 2010-12-25, 30s); @endcode
 
     @param remote_path the path of the file to save on the remote server
-    @param is the input stream to read from
+    @param input_stream the input stream to read from
     @param size the size of the file to send; this parameter is required
     @param mode the file's mode on the remote machine
-    @param mtime the file's last modified time to create on the remote machine
-    @param atime the file's last access time to create on the remote machine
+    @param modified_time the file's last modified time to create on the remote machine
+    @param access_time the file's last access time to create on the remote machine
     @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds)
 
     @throw SSH2CLIENT-NOT-CONNECTED client is not connected
@@ -339,7 +341,7 @@ SSH2Channel SSH2Client::scpPut(string remote_path, softint size, softint mode = 
 
     @since ssh2 1.1
  */
-nothing SSH2Client::scpPut(string remote_path, Qore::InputStream[InputStream] is, softint size, softint mode = 0644, *date mtime, *date atime, timeout timeout = 60s) {
+nothing SSH2Client::scpPut(string remote_path, Qore::InputStream[InputStream] input_stream, softint size, softint mode = 0644, *date modified_time, *date access_time, timeout timeout = 60s) [flags=NAMED_ARGS] {
     static const char *SSH2CLIENT_SCPPUT_ERR = "SSH2CLIENT-SCPPUT-ERROR";
 
     if (size <= 0) {
@@ -347,7 +349,9 @@ nothing SSH2Client::scpPut(string remote_path, Qore::InputStream[InputStream] is
         return QoreValue();
     }
 
-    c->scpPut(xsink, remote_path->getBuffer(), *is, size, (int)mode, mtime ? mtime->getEpochSeconds() : 0, atime ? atime->getEpochSeconds() : 0, timeout);
+    c->scpPut(xsink, remote_path->getBuffer(), *input_stream, size, (int)mode,
+        modified_time ? modified_time->getEpochSeconds() : 0,
+        access_time ? access_time->getEpochSeconds() : 0, timeout);
 }
 
 //! Opens a reverse port forwarding listener on the remote server
@@ -378,7 +382,7 @@ SSH2Channel chan = listener.accept(60s);
 
     @since ssh2 2.0
 */
-SSH2Listener SSH2Client::forwardListen(string host, softint port, softint queue_maxsize = 1, timeout timeout = 60s) {
+SSH2Listener SSH2Client::forwardListen(string host, softint port, softint queue_maxsize = 1, timeout timeout = 60s) [flags=NAMED_ARGS] {
 #ifdef HAVE_LIBSSH2_FORWARD_LISTEN
     return c->forwardListen(xsink, host->c_str(), (int)port, (int)queue_maxsize, timeout);
 #else

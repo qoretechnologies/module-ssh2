@@ -72,7 +72,7 @@ SSH2Channel::destructor() {
 /** @par Example:
     @code{.py} chan.setenv("", "", 30s); @endcode
 
-    @param var the environment variable to set
+    @param name the environment variable to set
     @param value the value to set
     @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds); a negative value means do not time out
 
@@ -81,8 +81,8 @@ SSH2Channel::destructor() {
     @throw SSH2CHANNEL-TIMEOUT timeout communicating on channel
     @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SSH2 protocol response; server returned an error message
  */
-nothing SSH2Channel::setenv(string var, string value, timeout timeout = -1) {
-   c->setenv(var->getBuffer(), value->getBuffer(), timeout, xsink);
+nothing SSH2Channel::setenv(string name, string value, timeout timeout = -1) [flags=NAMED_ARGS] {
+   c->setenv(name->getBuffer(), value->getBuffer(), timeout, xsink);
    return 0;
 }
 
@@ -90,7 +90,7 @@ nothing SSH2Channel::setenv(string var, string value, timeout timeout = -1) {
 /** @par Example:
     @code{.py} chan.requestPty("vt100"); @endcode
 
-    @param term terminal emulation requested
+    @param terminal terminal emulation requested
     @param modes terminal mode modifier values
     @param width width of the pty in characters
     @param height height of the pty in characters
@@ -103,7 +103,7 @@ nothing SSH2Channel::setenv(string var, string value, timeout timeout = -1) {
     @throw SSH2CHANNEL-TIMEOUT timeout communicating on channel
     @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SSH2 protocol response; server returned an error message
  */
-nothing SSH2Channel::requestPty(string term = "vanilla", string modes = "", softint width = LIBSSH2_TERM_WIDTH, softint height = LIBSSH2_TERM_HEIGHT, softint width_px = LIBSSH2_TERM_WIDTH_PX, softint height_px = LIBSSH2_TERM_HEIGHT_PX, timeout timeout = -1) {
+nothing SSH2Channel::requestPty(string terminal = "vanilla", string modes = "", softint width = LIBSSH2_TERM_WIDTH, softint height = LIBSSH2_TERM_HEIGHT, softint width_px = LIBSSH2_TERM_WIDTH_PX, softint height_px = LIBSSH2_TERM_HEIGHT_PX, timeout timeout = -1) [flags=NAMED_ARGS] {
    static const char *SSH2CHANNEL_REQUESTPTY_ERR = "SSH2CHANNEL-REQUESTPTY-ERROR";
 
    if (width < 0) {
@@ -123,7 +123,7 @@ nothing SSH2Channel::requestPty(string term = "vanilla", string modes = "", soft
       return 0;
    }
 
-   c->requestPty(xsink, *term, *modes, (int)width, (int)height, (int)width_px, (int)height_px, timeout);
+   c->requestPty(xsink, *terminal, *modes, (int)width, (int)height, (int)width_px, (int)height_px, timeout);
    return 0;
 }
 
@@ -138,7 +138,7 @@ nothing SSH2Channel::requestPty(string term = "vanilla", string modes = "", soft
     @throw SSH2CHANNEL-TIMEOUT timeout communicating on channel
     @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SSH2 protocol response; server returned an error message
  */
-nothing SSH2Channel::shell(timeout timeout = -1) {
+nothing SSH2Channel::shell(timeout timeout = -1) [flags=NAMED_ARGS] {
    c->shell(xsink, timeout);
 }
 
@@ -166,7 +166,7 @@ bool SSH2Channel::eof() {
     @throw SSH2CHANNEL-TIMEOUT timeout communicating on channel
     @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SSH2 protocol response; server returned an error message
  */
-nothing SSH2Channel::sendEof(timeout timeout = -1) {
+nothing SSH2Channel::sendEof(timeout timeout = -1) [flags=NAMED_ARGS] {
    c->sendEof(xsink, timeout);
 }
 
@@ -181,7 +181,7 @@ nothing SSH2Channel::sendEof(timeout timeout = -1) {
     @throw SSH2CHANNEL-TIMEOUT timeout communicating on channel
     @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SSH2 protocol response; server returned an error message
  */
-nothing SSH2Channel::waitEof(timeout timeout = -1) {
+nothing SSH2Channel::waitEof(timeout timeout = -1) [flags=NAMED_ARGS] {
    c->waitEof(xsink, timeout);
 }
 
@@ -199,7 +199,7 @@ nothing SSH2Channel::waitEof(timeout timeout = -1) {
     @throw SSH2CHANNEL-TIMEOUT timeout communicating on channel
     @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SSH2 protocol response; server returned an error message
  */
-nothing SSH2Channel::exec(string command, timeout timeout = -1) {
+nothing SSH2Channel::exec(string command, timeout timeout = -1) [flags=NAMED_ARGS] {
    c->exec(command->getBuffer(), timeout, xsink);
 }
 
@@ -216,7 +216,7 @@ nothing SSH2Channel::exec(string command, timeout timeout = -1) {
     @throw SSH2CHANNEL-TIMEOUT timeout communicating on channel
     @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SSH2 protocol response; server returned an error message
  */
-nothing SSH2Channel::subsystem(string command, timeout timeout = -1) {
+nothing SSH2Channel::subsystem(string command, timeout timeout = -1) [flags=NAMED_ARGS] {
    c->subsystem(command->getBuffer(), timeout, xsink);
 }
 
@@ -232,7 +232,7 @@ nothing SSH2Channel::subsystem(string command, timeout timeout = -1) {
     @throw SSH2CHANNEL-TIMEOUT timeout communicating on channel
     @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SSH2 protocol response; server returned an error message
  */
-string SSH2Channel::read(softint stream_id = 0, timeout timeout = 10000) {
+string SSH2Channel::read(softint stream_id = 0, timeout timeout = 10000) [flags=NAMED_ARGS] {
    if (stream_id < 0) {
       xsink->raiseException("SSH2CHANNEL-READ-ERROR", "expecting non-negative integer for stream id as optional first argument to SSH2Channel::read([streamid], [timeout_ms]), got " QLLD " instead; use 0 for stdin, 1 for stderr", stream_id);
       return 0;
@@ -252,7 +252,7 @@ string SSH2Channel::read(softint stream_id = 0, timeout timeout = 10000) {
     @throw SSH2CHANNEL-TIMEOUT timeout communicating on channel
     @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SSH2 protocol response; server returned an error message
  */
-binary SSH2Channel::readBinary(softint stream_id = 0, timeout timeout = 10000) {
+binary SSH2Channel::readBinary(softint stream_id = 0, timeout timeout = 10000) [flags=NAMED_ARGS] {
    if (stream_id < 0) {
       xsink->raiseException("SSH2CHANNEL-READBINARY-ERROR", "expecting non-negative integer for stream id as optional first argument to SSH2Channel::readBinary([streamid], [timeout_ms]), got " QLLD " instead; use 0 for stdin, 1 for stderr", stream_id);
       return 0;
@@ -275,7 +275,7 @@ binary SSH2Channel::readBinary(softint stream_id = 0, timeout timeout = 10000) {
     @throw SSH2CHANNEL-TIMEOUT timeout communicating on channel
     @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SSH2 protocol response; server returned an error message
  */
-string SSH2Channel::readBlock(softint size, softint stream_id = 0, timeout timeout = -1) {
+string SSH2Channel::readBlock(softint size, softint stream_id = 0, timeout timeout = -1) [flags=NAMED_ARGS] {
    static const char *SSH2CHANNEL_READBLOCK_ERROR = "SSH2CHANNEL-READBLOCK-ERROR";
    if (size <= 0) {
       xsink->raiseException(SSH2CHANNEL_READBLOCK_ERROR, "expecting a positive size for the block size to read, got " QLLD " instead; use SSH2Channel::read() to read available data without a block size", size);
@@ -304,7 +304,7 @@ string SSH2Channel::readBlock(softint size, softint stream_id = 0, timeout timeo
     @throw SSH2CHANNEL-TIMEOUT timeout communicating on channel
     @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SSH2 protocol response; server returned an error message
  */
-binary SSH2Channel::readBinaryBlock(softint size, softint stream_id = 0, timeout timeout = -1) {
+binary SSH2Channel::readBinaryBlock(softint size, softint stream_id = 0, timeout timeout = -1) [flags=NAMED_ARGS] {
    static const char *SSH2CHANNEL_READBINARYBLOCK_ERROR = "SSH2CHANNEL-READBINARYBLOCK-ERROR";
    if (size <= 0) {
       xsink->raiseException(SSH2CHANNEL_READBINARYBLOCK_ERROR, "expecting a positive size for the block size to read, got " QLLD " instead; use SSH2Channel::readBinary() to read available data without a block size", size);
@@ -330,7 +330,7 @@ binary SSH2Channel::readBinaryBlock(softint size, softint stream_id = 0, timeout
     @throw SSH2CHANNEL-TIMEOUT timeout communicating on channel
     @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SSH2 protocol response; server returned an error message
  */
-nothing SSH2Channel::write(data data, softint stream_id = 0, timeout timeout_ms = -1) {
+nothing SSH2Channel::write(data data, softint stream_id = 0, timeout timeout_ms = -1) [flags=NAMED_ARGS] {
    static const char *SSH2CHANNEL_WRITE_ERROR = "SSH2CHANNEL-WRITE-ERROR";
    const void *buf = 0;
    qore_size_t buflen;
@@ -376,7 +376,7 @@ nothing SSH2Channel::write(data data, softint stream_id = 0, timeout timeout_ms 
     @throw SSH2CHANNEL-TIMEOUT timeout communicating on channel
     @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SSH2 protocol response; server returned an error message
  */
-nothing SSH2Channel::close(timeout timeout = -1) {
+nothing SSH2Channel::close(timeout timeout = -1) [flags=NAMED_ARGS] {
    c->close(xsink, timeout);
 }
 
@@ -391,7 +391,7 @@ nothing SSH2Channel::close(timeout timeout = -1) {
     @throw SSH2CHANNEL-TIMEOUT timeout communicating on channel
     @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SSH2 protocol response; server returned an error message
  */
-nothing SSH2Channel::waitClosed(timeout timeout = -1) {
+nothing SSH2Channel::waitClosed(timeout timeout = -1) [flags=NAMED_ARGS] {
    c->waitClosed(xsink, timeout);
 }
 
@@ -424,7 +424,7 @@ int SSH2Channel::getExitStatus() {
     @throw SSH2CHANNEL-TIMEOUT timeout communicating on channel
     @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SSH2 protocol response; server returned an error message
  */
-nothing SSH2Channel::requestX11Forwarding(softint screen_no = 0, bool single_connection = False, string auth_proto = "", string auth_cookie = "", timeout timeout = -1) {
+nothing SSH2Channel::requestX11Forwarding(softint screen_no = 0, bool single_connection = False, string auth_proto = "", string auth_cookie = "", timeout timeout = -1) [flags=NAMED_ARGS] {
    c->requestX11Forwarding(xsink, (int)screen_no, single_connection, auth_proto->strlen() ? auth_proto->getBuffer() : 0, auth_cookie->strlen() ? auth_cookie->getBuffer() : 0, timeout);
 }
 
@@ -434,7 +434,7 @@ nothing SSH2Channel::requestX11Forwarding(softint screen_no = 0, bool single_con
 
     @param encoding the string encoding to set for the channel
  */
-nothing SSH2Channel::setEncoding(string encoding) {
+nothing SSH2Channel::setEncoding(string encoding) [flags=NAMED_ARGS] {
    c->setEncoding(QEM.findCreate(encoding));
 }
 
@@ -459,7 +459,7 @@ string SSH2Channel::getEncoding() [flags=CONSTANT] {
     @throw SSH2CHANNEL-TIMEOUT timeout communicating on channel
     @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SSH2 protocol response; server returned an error message
  */
-nothing SSH2Channel::extendedDataNormal(timeout timeout = -1) {
+nothing SSH2Channel::extendedDataNormal(timeout timeout = -1) [flags=NAMED_ARGS] {
    c->extendedDataNormal(xsink, timeout);
 }
 
@@ -474,7 +474,7 @@ nothing SSH2Channel::extendedDataNormal(timeout timeout = -1) {
     @throw SSH2CHANNEL-TIMEOUT timeout communicating on channel
     @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SSH2 protocol response; server returned an error message
  */
-nothing SSH2Channel::extendedDataMerge(timeout timeout = -1) {
+nothing SSH2Channel::extendedDataMerge(timeout timeout = -1) [flags=NAMED_ARGS] {
    c->extendedDataMerge(xsink, timeout);
 }
 
@@ -489,7 +489,7 @@ nothing SSH2Channel::extendedDataMerge(timeout timeout = -1) {
     @throw SSH2CHANNEL-TIMEOUT timeout communicating on channel
     @throw SSH2-ERROR socket error sending data; timeout on socket; invalid SSH2 protocol response; server returned an error message
  */
-nothing SSH2Channel::extendedDataIgnore(timeout timeout = -1) {
+nothing SSH2Channel::extendedDataIgnore(timeout timeout = -1) [flags=NAMED_ARGS] {
    c->extendedDataIgnore(xsink, timeout);
 }
 
@@ -510,7 +510,7 @@ nothing SSH2Channel::extendedDataIgnore(timeout timeout = -1) {
 
     @since ssh2 2.0
 */
-nothing SSH2Channel::requestPtySize(softint width, softint height, softint width_px = 0, softint height_px = 0, timeout timeout = -1) {
+nothing SSH2Channel::requestPtySize(softint width, softint height, softint width_px = 0, softint height_px = 0, timeout timeout = -1) [flags=NAMED_ARGS] {
     static const char* SSH2CHANNEL_REQUESTPTYSIZE_ERR = "SSH2CHANNEL-REQUESTPTYSIZE-ERROR";
 
     if (width < 0) {
@@ -563,7 +563,7 @@ hash<Ssh2ExitSignalInfo> SSH2Channel::getExitSignal() [flags=RET_VALUE_ONLY] {
 
     @since ssh2 2.0
 */
-nothing SSH2Channel::sendSignal(string signal_name, timeout timeout = -1) {
+nothing SSH2Channel::sendSignal(string signal_name, timeout timeout = -1) [flags=NAMED_ARGS] {
 #ifdef HAVE_LIBSSH2_CHANNEL_SIGNAL_EX
     c->sendSignal(signal_name->c_str(), xsink, timeout);
 #else
@@ -588,7 +588,7 @@ nothing SSH2Channel::sendSignal(string signal_name, timeout timeout = -1) {
 
     @since ssh2 2.0
 */
-nothing SSH2Channel::requestAuthAgent(timeout timeout = -1) {
+nothing SSH2Channel::requestAuthAgent(timeout timeout = -1) [flags=NAMED_ARGS] {
 #ifdef HAVE_LIBSSH2_CHANNEL_REQUEST_AUTH_AGENT
     c->requestAuthAgent(xsink, timeout);
 #else
