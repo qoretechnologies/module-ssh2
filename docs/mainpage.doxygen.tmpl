@@ -146,6 +146,18 @@ chan.close();
 # print out the exit status after the channel is closed
 stdout.printf("exit status: %d\n", chan.getExitStatus());@endcode
 
+    Example of retrieving a file without blocking the calling thread:
+
+    @code{.py}
+SFTPClient sftp("sftp://user:pass@host.com:22");
+# the operation performs the connection, authentication, and transfer without blocking
+AbstractPollOperation op = sftp.startPollGetFile("/path/to/file.dat");
+while (*hash<SocketPollInfo> info = op.continuePoll()) {
+    # wait for the events the operation reported, along with any other I/O being managed
+    Socket::poll((info,), 10s);
+}
+binary data = op.getOutput();@endcode
+
     @section codetags Function and Method Tags
 
     @subsection NOOP NOOP
@@ -225,6 +237,27 @@ stdout.printf("exit status: %d\n", chan.getExitStatus());@endcode
     - added @ref Qore::SSH2::SSH2Base::addKnownHost() "SSH2Base::addKnownHost()" for manual host key management
     - added the @ref Qore::SSH2::Ssh2HostKeyPolicy "Ssh2HostKeyPolicy" enum and legacy
       \c SSH2_HOSTKEY_REJECT, \c SSH2_HOSTKEY_TOFU, and \c SSH2_HOSTKEY_TOFU_SESSION constants
+
+    <b>Non-Blocking I/O:</b>
+    - added @ref Qore::SSH2::SFTPClient::startPollGetFile() "SFTPClient::startPollGetFile()", which
+      returns an @ref Qore::AbstractPollOperation "AbstractPollOperation" object
+      (@ref Qore::SSH2::SftpPollOperation "SftpPollOperation") that retrieves a remote file without
+      blocking the calling thread; the TCP connection, the SSH handshake, host key verification,
+      authentication, and the transfer itself are all driven by the caller's poll loop, so an
+      \c "sftp://" location can be read by an event loop or an I/O controller managing many
+      connections at once
+    - authentication policy and ordering and host key verification are shared with the blocking
+      connect path, so blocking and non-blocking connections make identical security decisions
+    - @ref Qore::SSH2::SSH2Base "SSH2Base" objects are now
+      @ref Qore::AbstractPollableIoObject "AbstractPollableIoObject" objects; the descriptor of the
+      underlying connection is available with
+      @ref Qore::SSH2::SSH2Base::getPollableDescriptor() "SSH2Base::getPollableDescriptor()"
+    - a client running a poll operation is reserved for that operation; other operations on the
+      same object fail with an \c SSH2-POLL-IN-PROGRESS exception until it completes, is aborted,
+      or is destroyed
+    - a poll operation that adopts an already-established connection that the server has since
+      closed reestablishes it once and starts over, matching the implicit reconnection behavior of
+      the blocking methods
 
     <b>Session Configuration:</b>
     - added algorithm preference control

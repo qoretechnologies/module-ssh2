@@ -42,8 +42,10 @@
 #include <stdint.h>
 #endif
 
+#include <map>
 #include <set>
 #include <string>
+#include <vector>
 
 // for maximum SSH2 performance, a 32K buffer is needed
 #define QSSH2_BUFSIZE 32768
@@ -68,6 +70,102 @@ DLLLOCAL extern const char *SSH2_CONNECTED;
 class SSH2Channel;
 class SSH2Listener;
 class BlockingHelper;
+class SftpPollOperationPriv;
+
+//! a single authentication attempt in an ordered authentication plan
+/** The plan is built once from the client's configuration and the authentication methods
+    advertised by the server; it gives the blocking connect path and the non-blocking poll
+    operation a single definition of authentication policy and ordering, so the two cannot
+    diverge.
+*/
+class Ssh2AuthAttempt {
+public:
+    enum Kind {
+        AGENT,                  //!< SSH agent authentication
+        PROVIDER,               //!< client identity provider candidates
+        PUBKEY_FILE,            //!< public key authentication with key files
+        PUBKEY_MEMORY,          //!< public key authentication with in-memory key data
+        PASSWORD,               //!< password authentication
+        KEYBOARD_INTERACTIVE,   //!< keyboard-interactive authentication with the password
+    };
+
+    //! the kind of authentication to attempt
+    Kind kind;
+
+    //! public key file path (\c PUBKEY_FILE) or public key data (\c PUBKEY_MEMORY); may be empty
+    std::string pub_key;
+
+    //! private key file path (\c PUBKEY_FILE) or private key data (\c PUBKEY_MEMORY)
+    std::string priv_key;
+
+    //! the passphrase for the private key
+    std::string passphrase;
+
+    DLLLOCAL Ssh2AuthAttempt(Kind kind) : kind(kind) {
+    }
+
+    DLLLOCAL Ssh2AuthAttempt(Kind kind, const char* pub, size_t pub_len, const char* priv, size_t priv_len,
+            const char* pass) : kind(kind), pub_key(pub ? std::string(pub, pub_len) : std::string()),
+            priv_key(priv ? std::string(priv, priv_len) : std::string()),
+            passphrase(pass ? pass : "") {
+    }
+
+    //! returns the value to report from SSH2Base::getAuthenticatedWith() for this attempt
+    DLLLOCAL const char* getAuthenticatedWith() const {
+        switch (kind) {
+            case AGENT: return "agent";
+            case PASSWORD: return "password";
+            case KEYBOARD_INTERACTIVE: return "keyboard-interactive";
+            default: break;
+        }
+        return "publickey";
+    }
+};
+
+typedef std::vector<Ssh2AuthAttempt> ssh2_auth_plan_t;
+
+//! manages the lifecycle of an SSH agent connection used for authentication
+/** Separating the agent handle from the authentication loop allows agent authentication to be
+    driven either with blocking waits (SSH2Client::tryAgentAuth()) or one step at a time from a
+    poll operation.
+
+    The agent connection is always released in the destructor, including when a poll operation
+    holding it is abandoned mid-flight.
+*/
+class Ssh2AgentHelper {
+public:
+    DLLLOCAL Ssh2AgentHelper(LIBSSH2_SESSION* session) : session(session) {
+    }
+
+    DLLLOCAL ~Ssh2AgentHelper() {
+        reset();
+    }
+
+    //! connects to the agent and retrieves the identity list; returns 0 if usable, -1 if not
+    DLLLOCAL int init();
+
+    //! positions on the next identity; returns 0 if an identity is available, 1 if there are no more
+    DLLLOCAL int nextIdentity();
+
+    //! makes a single non-blocking authentication call with the current identity
+    /** @return the libssh2 return code; \c LIBSSH2_ERROR_EAGAIN means that the call must be
+        repeated when the socket is ready
+    */
+    DLLLOCAL int userauth(const char* user);
+
+    //! releases the agent connection
+    DLLLOCAL void reset();
+
+private:
+    LIBSSH2_SESSION* session;
+#ifdef HAVE_LIBSSH2_AGENT_API
+    LIBSSH2_AGENT* agent = nullptr;
+    struct libssh2_agent_publickey* identity = nullptr;
+    struct libssh2_agent_publickey* prev_identity = nullptr;
+    bool connected = false;
+#endif
+    size_t identity_count = 0;
+};
 
 class AbstractDisconnectionHelper {
 public:
@@ -82,6 +180,7 @@ class SSH2Client : public AbstractPrivateData {
     friend class SSH2Channel;
     friend class SSH2Listener;
     friend class BlockingHelper;
+    friend class SftpPollOperationPriv;
 
 private:
     typedef std::set<SSH2Channel*> channel_set_t;
@@ -124,9 +223,16 @@ private:
     bool explicit_key_data;
     bool auto_key_files;
 
+    // the authentication methods advertised by the server in the current connect attempt
+    std::string auth_methods;
+
     // server info
     const char *sshauthenticatedwith;
     bool connect_in_progress;
+
+    // set while a non-blocking poll operation owns the session; the poll operation drives the
+    // session from the caller's thread between poll waits, so no other operation may touch it
+    bool poll_op_in_progress = false;
 
     // set of connected channels
     channel_set_t channel_set;
@@ -158,7 +264,19 @@ protected:
     DLLLOCAL int startupUnlocked();
     DLLLOCAL int sshConnectedUnlocked();
     DLLLOCAL bool sshSessionActiveUnlocked() const {
-        return connect_in_progress || ssh_session;
+        return connect_in_progress || poll_op_in_progress || ssh_session;
+    }
+
+    //! Raises an exception if a non-blocking poll operation owns the session
+    /** @return 0 for OK, -1 if an exception was raised
+    */
+    DLLLOCAL int checkPollOpUnlocked(const char* meth, ExceptionSink* xsink) const {
+        if (poll_op_in_progress) {
+            xsink && xsink->raiseException("SSH2-POLL-IN-PROGRESS",
+                "cannot call %s() while a non-blocking poll operation is in progress on this object", meth);
+            return -1;
+        }
+        return 0;
     }
 
     class ConnectInProgressHelper {
@@ -177,18 +295,102 @@ protected:
     };
 
     DLLLOCAL int sshConnectUnlocked(int timeout_ms, ExceptionSink *xsink);
+
+    // ==========================================================================================
+    // connect stages shared by the blocking connect path and the non-blocking poll operation;
+    // each stage is free of blocking waits on the SSH socket so that both drivers can use it
+    // ==========================================================================================
+
+    //! validates the connection configuration and closes any established session
+    /** does not perform any I/O
+
+        @return 0 for OK, -1 if an exception was raised
+    */
+    DLLLOCAL int checkConnectPreconditionsUnlocked(ExceptionSink* xsink);
+
+    //! validates the configuration and establishes the libssh2 session before the handshake
+    /** does not perform any I/O on the SSH socket
+
+        @return 0 for OK, -1 if an exception was raised
+    */
+    DLLLOCAL int prepareSessionUnlocked(ExceptionSink* xsink);
+
+    //! verifies the server's host key according to the configured policy
+    /** performs no I/O on the SSH socket; may call %Qore code if a host key store is configured
+
+        @return 0 for OK, -1 if an exception was raised (the connection is closed in this case)
+    */
+    DLLLOCAL int verifyHostKeyUnlocked(int timeout_ms, ExceptionSink* xsink);
+
+    //! builds the ordered list of authentication attempts to make
+    /** this is the single definition of authentication policy and ordering used by both the
+        blocking connect path and the non-blocking poll operation
+
+        @param userauthlist the authentication method list advertised by the server (may be null)
+        @param plan the plan to fill in
+    */
+    DLLLOCAL void buildAuthPlanUnlocked(const char* userauthlist, ssh2_auth_plan_t& plan);
+
+    //! returns True if the server advertised public key authentication in the last connect attempt
+    DLLLOCAL bool publicKeyAuthAvailableUnlocked() const {
+        return auth_methods.find("publickey") != std::string::npos;
+    }
+
+    //! appends an in-memory public key authentication attempt to the plan if the build supports it
+    DLLLOCAL void addMemoryKeyAttemptUnlocked(const char* pub, size_t pub_len, const char* priv, size_t priv_len,
+        ssh2_auth_plan_t& plan) const;
+
+    //! enforces sandboxing restrictions for the given authentication attempt
+    /** @return 0 for OK, -1 if an exception was raised (the connection is closed in this case)
+    */
+    DLLLOCAL int checkAuthAttemptAccessUnlocked(const Ssh2AuthAttempt& attempt, ExceptionSink* xsink);
+
+    //! makes a single non-blocking libssh2 authentication call for the given attempt
+    /** only valid for attempts that map to a single libssh2 call (i.e. not \c AGENT or
+        \c PROVIDER)
+
+        @return the libssh2 return code; \c LIBSSH2_ERROR_EAGAIN means that the call must be
+        repeated when the socket is ready
+    */
+    DLLLOCAL int authCallUnlocked(const Ssh2AuthAttempt& attempt);
+
+    //! records the authentication method used after a successful attempt
+    DLLLOCAL void setAuthenticatedWithUnlocked(const Ssh2AuthAttempt& attempt) {
+        sshauthenticatedwith = attempt.getAuthenticatedWith();
+    }
+
+    //! executes a single authentication attempt, blocking on the socket as needed
+    /** @return 0 for OK (\a loggedin indicates success), -1 if an exception was raised
+    */
+    DLLLOCAL int runAuthAttemptUnlocked(const Ssh2AuthAttempt& attempt, int timeout_ms, bool& loggedin,
+        ExceptionSink* xsink);
+
+    //! retrieves the client identity provider's candidate list; performs no I/O on the SSH socket
+    /** @return the candidate list; nullptr if an exception was raised
+    */
+    DLLLOCAL QoreListNode* getProviderCandidatesUnlocked(int timeout_ms, ExceptionSink* xsink);
+
+    //! converts one client identity provider candidate into concrete authentication attempts
+    /** may call %Qore code; performs no I/O on the SSH socket
+
+        @param candidates the candidate list returned by getProviderCandidatesUnlocked()
+        @param index the index of the candidate to resolve
+        @param plan the plan to append to
+        @return 0 for OK, -1 if an exception was raised
+    */
+    DLLLOCAL int resolveProviderCandidateUnlocked(const QoreListNode* candidates, size_t index, int timeout_ms,
+        ssh2_auth_plan_t& plan, ExceptionSink* xsink);
+
+    //! applies post-authentication session settings
+    DLLLOCAL void finishConnectUnlocked();
+
     DLLLOCAL QoreHashNode* makeProviderContext(const char* purpose, int timeout_ms, ExceptionSink* xsink) const;
     DLLLOCAL QoreHashNode* makeObservedHostKeyInfo(const char* hostkey, size_t hostkey_len, int hostkey_type,
         ExceptionSink* xsink) const;
     DLLLOCAL int verifyHostKeyWithStore(QoreObject* store, const char* hostkey, size_t hostkey_len, int hostkey_type,
         int timeout_ms, ExceptionSink* xsink);
-    DLLLOCAL int tryAgentAuth(const char* userauthlist, int timeout_ms, bool& loggedin, ExceptionSink* xsink);
-    DLLLOCAL int tryPublicKeyDataAuth(const char* userauthlist, int timeout_ms, bool& loggedin, ExceptionSink* xsink);
-    DLLLOCAL int tryPublicKeyMemoryAuth(const char* public_key, size_t public_key_len, const char* private_key,
-        size_t private_key_len, const char* passphrase, int timeout_ms, bool& loggedin, ExceptionSink* xsink);
-    DLLLOCAL int tryPublicKeyFileAuth(const char* public_key_path, const char* private_key_path,
-        const char* passphrase, int timeout_ms, bool& loggedin, ExceptionSink* xsink);
-    DLLLOCAL int tryProviderAuth(const char* userauthlist, int timeout_ms, bool& loggedin, ExceptionSink* xsink);
+    DLLLOCAL int tryAgentAuth(int timeout_ms, bool& loggedin, ExceptionSink* xsink);
+    DLLLOCAL int tryProviderAuth(int timeout_ms, bool& loggedin, ExceptionSink* xsink);
     DLLLOCAL void channelDeletedUnlocked(SSH2Channel *channel) {
 #ifdef DEBUG
         int rc =
@@ -337,6 +539,9 @@ public:
 
     DLLLOCAL int disconnect(bool force = false, int timeout_ms = DEFAULT_TIMEOUT_MS, ExceptionSink *xsink = 0) {
         AutoLocker al(m);
+        if (checkPollOpUnlocked("SSH2Base::disconnect", xsink)) {
+            return -1;
+        }
         if (connect_in_progress) {
             xsink && xsink->raiseException("SSH2-CONNECT-IN-PROGRESS",
                 "cannot disconnect while SSH2Base::connect() is in progress");
@@ -349,6 +554,36 @@ public:
     DLLLOCAL int sshConnect(int timeout_ms, ExceptionSink *xsink);
 
     DLLLOCAL int sshConnected();
+
+    //! Reserves the client for a non-blocking poll operation
+    /** A poll operation drives the session from the caller's thread between waits, so no other
+        operation may use the client while one is in progress.
+
+        @return 0 for OK, -1 if an exception was raised
+    */
+    DLLLOCAL int reservePollOperation(ExceptionSink* xsink) {
+        AutoLocker al(m);
+        if (poll_op_in_progress) {
+            xsink->raiseException("SSH2-POLL-IN-PROGRESS",
+                "a non-blocking poll operation is already in progress on this object");
+            return -1;
+        }
+        if (connect_in_progress) {
+            xsink->raiseException("SSH2-CONNECT-IN-PROGRESS",
+                "cannot start a non-blocking poll operation while SSH2Base::connect() is in progress");
+            return -1;
+        }
+        poll_op_in_progress = true;
+        return 0;
+    }
+
+    //! Returns the file descriptor of the underlying socket or -1 if not connected
+    /** implements the Qore::AbstractPollableIoObject interface for this class
+    */
+    DLLLOCAL int getPollableDescriptorLocked() const {
+        AutoLocker al(m);
+        return socket.getSocket();
+    }
 
     DLLLOCAL QoreHashNode *sshInfo(const TypedHashDecl* hashdecl, ExceptionSink* xsink);
     DLLLOCAL QoreHashNode *sshInfoIntern(const TypedHashDecl* hashdecl, ExceptionSink* xsink);

@@ -25,6 +25,7 @@
 
 #include "SFTPClient.h"
 #include "QC_SSH2Base.h"
+#include "SftpPollOperation.h"
 
 static QoreHashNode* attr2hash(const LIBSSH2_SFTP_ATTRIBUTES& attr, ExceptionSink* xsink) {
     ReferenceHolder<QoreHashNode> ret(new QoreHashNode(hashdeclSsh2StatInfo, xsink), xsink);
@@ -431,6 +432,83 @@ int SFTPClient::get(string remote_path, Qore::OutputStream[OutputStream] output_
 */
 binary SFTPClient::getFile(string path, timeout timeout = 60s) [flags=NAMED_ARGS] {
     return myself->sftpGetFile(path->c_str(), (int)timeout, xsink);
+}
+
+//! Returns a poll operation that retrieves a remote file without blocking the calling thread
+/** @par Example:
+    @code{.py}
+AbstractPollOperation op = sftpclient.startPollGetFile("file.bin");
+while (*hash<SocketPollInfo> info = op.continuePoll()) {
+    Socket::poll((info,), 10s);
+}
+binary b = op.getOutput();
+    @endcode
+
+    The operation returned is not started until
+    @ref Qore::AbstractPollOperation::continuePoll() "continuePoll()" is called; the caller drives
+    it by waiting for the events reported in the returned
+    @ref Qore::SocketPollInfo "SocketPollInfo" hashes until
+    @ref Qore::AbstractPollOperation::goalReached() "goalReached()" returns
+    @ref Qore::True "True", after which
+    @ref Qore::AbstractPollOperation::getOutput() "getOutput()" returns the file's data as a
+    binary value.  The data returned is identical to the data returned by
+    @ref SFTPClient::getFile() for the same file; an empty file is returned as an empty binary
+    value.
+
+    If a connection has not yet been established, it is established as part of the poll operation;
+    the TCP connection, the SSH handshake, host key verification, and authentication are all
+    performed without blocking the calling thread.  If a connection is already established, it is
+    used as it is.
+
+    @param path the pathname of the file to retrieve
+
+    @return an @ref Qore::AbstractPollOperation "AbstractPollOperation" object that retrieves the
+    file's data
+
+    @throw SSH2-POLL-IN-PROGRESS a non-blocking poll operation is already in progress on this
+    object
+    @throw SSH2-CONNECT-IN-PROGRESS a connection is being established on this object
+
+    @note
+    - this object must not be used for any other operation while the poll operation is in
+      progress; other operations fail with an \c SSH2-POLL-IN-PROGRESS exception until the
+      operation completes, is aborted, or is destroyed
+    - errors in the transfer itself are raised from
+      @ref Qore::AbstractPollOperation::continuePoll() "continuePoll()"
+    - if a connection is already established but the server has closed it in the meantime, the
+      operation reestablishes it once and starts over, giving the same implicit reconnection
+      behavior as the blocking API; no separate liveness check is made, because the first use of
+      the session is itself the probe
+    - @ref Qore::AbstractPollOperation::continuePoll() "continuePoll()" can execute %Qore code
+      (a host key store or a client identity provider, if configured) and can read key files from
+      the filesystem, so it must not be called on an I/O thread
+    - the operation must be driven by the caller; it cannot be submitted to the async I/O
+      controller
+
+    @see
+    - SFTPClient::getFile()
+    - @ref Qore::SSH2::SftpPollOperation "SftpPollOperation"
+
+    @since ssh2 2.0
+*/
+AbstractPollOperation<*binary> SFTPClient::startPollGetFile(string path) [dom=NETWORK,FILESYSTEM;flags=NAMED_ARGS] {
+    if (myself->reservePollOperation(xsink)) {
+        return QoreValue();
+    }
+
+    // the operation object owns the reservation from this point on
+    ReferenceHolder<QoreObject> obj(new QoreObject(QC_SFTPPOLLOPERATION, getProgram()), xsink);
+    SftpPollOperationPriv* poll_priv = new SftpPollOperationPriv(*obj, myself, path->c_str(),
+        DEFAULT_TIMEOUT_MS);
+    (*obj)->setPrivate(CID_SFTPPOLLOPERATION, poll_priv);
+
+    // the DGC-visible strong reference to the client keeps it alive for the life of the operation
+    (*obj)->setMemberValue("client", QC_SFTPPOLLOPERATION, self->objectRefSelf(), xsink);
+    if (*xsink) {
+        return QoreValue();
+    }
+
+    return obj.release();
 }
 
 //! Retrieves a remote file and returns it as a string; throws an exception if any errors occur

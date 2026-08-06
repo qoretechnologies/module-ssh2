@@ -106,6 +106,7 @@ public:
 
 class SFTPClient : public SSH2Client {
     friend class QSftpHelper;
+    friend class SftpPollOperationPriv;
 
 protected:
     DLLLOCAL virtual ~SFTPClient();

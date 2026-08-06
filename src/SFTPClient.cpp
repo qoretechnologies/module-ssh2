@@ -719,6 +719,10 @@ bool SFTPClient::sftpIsAliveEx(int timeout_ms, ExceptionSink* xsink) {
  * 4	session init failure
  */
 int SFTPClient::sftpConnectUnlocked(int timeout_ms, ExceptionSink* xsink) {
+    if (checkPollOpUnlocked("SFTPClient::connect", xsink)) {
+        return -1;
+    }
+
     if (sftp_session)
         disconnectUnlocked(true);
 

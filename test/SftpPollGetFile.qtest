@@ -1,0 +1,362 @@
+#!/usr/bin/env qore
+# -*- mode: qore; indent-tabs-mode: nil -*-
+
+%modern
+
+%requires ssh2 >= 2.0
+
+%requires Util
+%requires QUnit
+
+%exec-class SftpPollGetFileTest
+
+#! Tests non-blocking SFTP file retrieval with SFTPClient::startPollGetFile()
+class SftpPollGetFileTest inherits QUnit::Test {
+    private {
+        timeout timeout = 10s;
+
+        #! the URI used to connect to the test server
+        string uri;
+
+        #! the private key to use, if any
+        *string privkey;
+
+        #! the directory where test files are created
+        string tmp_dir;
+
+        #! a file large enough to require many libssh2_sftp_read() calls
+        const LargeContents = strmul("0123456789abcdef", 64 * 1024);
+
+        #! a small file with multi-byte characters
+        const SmallContents = "hi there ýčšěáýžšěčéář\n";
+
+        const MyOpts = Opts + {
+            "privkey": "k,private-key=s",
+            "timeout": "t,timeout=i",
+            "dir": "d,dir=s",
+        };
+    }
+
+    constructor() : Test("SftpPollGetFileTest", "1.0", \ARGV, MyOpts) {
+        if (m_options.timeout) {
+            timeout = m_options.timeout * 1000;
+        }
+        uri = shift ARGV ?? sprintf("%s@localhost", getusername());
+        tmp_dir = m_options.dir ?? tmp_location();
+
+        if (m_options.privkey) {
+            privkey = m_options.privkey;
+        } else {
+            if (PlatformOS == "Windows") {
+                exit(0);
+            }
+            string sshdir = ENV.HOME + DirSep + ".ssh";
+            if (is_file(sshdir + "/id_rsa")) {
+                privkey = sshdir + "/id_rsa";
+            } else if (is_file(sshdir + "/id_dsa")) {
+                privkey = sshdir + "/id_dsa";
+            }
+        }
+
+        addTestCase("polled read matches the blocking read", \pollGetFileTest());
+        addTestCase("large file read loop", \largeFileTest());
+        addTestCase("empty file", \emptyFileTest());
+        addTestCase("missing file", \missingFileTest());
+        addTestCase("permission denied", \permissionDeniedTest());
+        addTestCase("abort mid-flight", \abortTest());
+        addTestCase("authentication failure", \authFailureTest());
+        addTestCase("client reuse and exclusivity", \reuseTest());
+
+        set_return_value(main());
+    }
+
+    #! Returns a new client for the test server
+    private SFTPClient getClient() {
+        SFTPClient sc(uri);
+        if (privkey) {
+            sc.setKeys(privkey);
+        }
+        return sc;
+    }
+
+    #! Creates a local file with the given contents and returns its path
+    /** the test server runs on the same host, so files created locally are visible over SFTP
+    */
+    private string makeFile(data contents, *softint mode) {
+        string fn = sprintf("%s%s%s-%s", tmp_dir, DirSep, "ssh2-poll", get_random_string(20));
+        File f();
+        f.open2(fn, O_CREAT | O_TRUNC | O_WRONLY, 0600);
+        if (contents.size()) {
+            f.write(contents);
+        }
+        f.close();
+        if (exists mode) {
+            chmod(fn, mode);
+        }
+        return fn;
+    }
+
+    #! Drives a poll operation to completion and returns its output
+    private auto runPoller(AbstractPollOperation op, *reference<int> polls) {
+        date start = now_us();
+        while (!op.goalReached()) {
+            if ((now_us() - start) > timeout) {
+                throw "POLL-TIMEOUT", sprintf("poll operation timed out in state %y", op.getState());
+            }
+            *hash<SocketPollInfo> pi = op.continuePoll();
+            if (!pi) {
+                break;
+            }
+            if (exists polls) {
+                ++polls;
+            }
+            # the operation is its own pollable object; the descriptor must be valid whenever the
+            # operation asks the caller to wait for it
+            assertGt(0, pi.socket.getPollableDescriptor());
+            Socket::poll((pi,), timeout);
+        }
+        return op.getOutput();
+    }
+
+    #! The polled read must return exactly what the blocking read returns
+    pollGetFileTest() {
+        string fn = makeFile(SmallContents);
+        on_exit unlink(fn);
+
+        SFTPClient sc = getClient();
+
+        AbstractPollOperation op = sc.startPollGetFile(fn);
+        assertEq("start", op.getState());
+        assertEq(sprintf("sftp-get-file %s", fn), op.getGoal());
+        assertFalse(op.goalReached());
+        assertNothing(op.getOutput());
+
+        int polls = 0;
+        auto rv = runPoller(op, \polls);
+        assertTrue(op.goalReached());
+        assertEq("done", op.getState());
+        assertEq(Type::Binary, rv.type());
+        assertEq(binary(SmallContents), rv);
+        # the operation cannot complete without waiting for the server at least once
+        assertGt(0, polls);
+
+        # the same client is usable for blocking operations after the poll operation completes
+        assertEq(binary(SmallContents), sc.getFile(fn, timeout));
+        assertTrue(boolean(sc.connected()));
+
+        # the two paths must return the same data for the same file
+        SFTPClient blocking_client = getClient();
+        assertEq(blocking_client.getFile(fn, timeout), rv);
+    }
+
+    #! A file larger than the SFTP block size exercises the read loop and its EAGAIN handling
+    largeFileTest() {
+        string fn = makeFile(LargeContents);
+        on_exit unlink(fn);
+
+        SFTPClient sc = getClient();
+        int polls = 0;
+        auto rv = runPoller(sc.startPollGetFile(fn), \polls);
+        assertEq(LargeContents.size(), rv.size());
+        assertEq(binary(LargeContents), rv);
+        # a file of this size cannot be read in a single pass
+        assertGt(2, polls);
+
+        assertEq(sc.getFile(fn, timeout), rv);
+    }
+
+    #! An empty file must be returned as an empty binary value, not as NOTHING
+    emptyFileTest() {
+        string fn = makeFile("");
+        on_exit unlink(fn);
+
+        SFTPClient sc = getClient();
+        auto rv = runPoller(sc.startPollGetFile(fn));
+        assertEq(Type::Binary, rv.type());
+        assertEq(0, rv.size());
+        assertEq(binary(), rv);
+        assertEq(sc.getFile(fn, timeout), rv);
+    }
+
+    #! A missing file must be reported with the same error the blocking API reports
+    missingFileTest() {
+        string fn = sprintf("%s%sssh2-poll-missing-%s", tmp_dir, DirSep, get_random_string(20));
+
+        SFTPClient sc = getClient();
+        AbstractPollOperation op = sc.startPollGetFile(fn);
+
+        hash<ExceptionInfo> poll_ex;
+        try {
+            runPoller(op);
+            fail("retrieving a missing file must fail");
+        } catch (hash<ExceptionInfo> ex) {
+            poll_ex = ex;
+        }
+
+        hash<ExceptionInfo> blocking_ex;
+        try {
+            getClient().getFile(fn, timeout);
+            fail("retrieving a missing file must fail");
+        } catch (hash<ExceptionInfo> ex) {
+            blocking_ex = ex;
+        }
+
+        assertEq(blocking_ex.err, poll_ex.err);
+        assertEq(blocking_ex.desc, poll_ex.desc);
+        assertRegex("LIBSSH2_FX_NO_SUCH_FILE", poll_ex.desc);
+
+        # the failed operation must not be left in a state where it reports success
+        assertFalse(op.goalReached());
+        assertEq("closed", op.getState());
+        assertNothing(op.getOutput());
+
+        # a poll operation that adopts an established session reconnects if the session turns out
+        # to be dead; a file error is not a dead session, so it must be reported as it is rather
+        # than causing a reconnect and a retry
+        SFTPClient connected = getClient();
+        connected.connect(timeout);
+        assertTrue(boolean(connected.connected()));
+        AbstractPollOperation op2 = connected.startPollGetFile(fn);
+        try {
+            runPoller(op2);
+            fail("retrieving a missing file over an established session must fail");
+        } catch (hash<ExceptionInfo> ex) {
+            assertEq(poll_ex.err, ex.err);
+            assertRegex("LIBSSH2_FX_NO_SUCH_FILE", ex.desc);
+        }
+        # the session is still usable: it was never treated as lost
+        assertTrue(boolean(connected.connected()));
+        string good = makeFile(SmallContents);
+        on_exit unlink(good);
+        assertEq(binary(SmallContents), runPoller(connected.startPollGetFile(good)));
+    }
+
+    #! A file that cannot be read must be reported with the same error the blocking API reports
+    permissionDeniedTest() {
+        if (!getuid()) {
+            testSkip("cannot test permission errors as the superuser");
+        }
+
+        string fn = makeFile(SmallContents, 0);
+        on_exit unlink(fn);
+
+        hash<ExceptionInfo> poll_ex;
+        try {
+            runPoller(getClient().startPollGetFile(fn));
+            fail("retrieving an unreadable file must fail");
+        } catch (hash<ExceptionInfo> ex) {
+            poll_ex = ex;
+        }
+
+        hash<ExceptionInfo> blocking_ex;
+        try {
+            getClient().getFile(fn, timeout);
+            fail("retrieving an unreadable file must fail");
+        } catch (hash<ExceptionInfo> ex) {
+            blocking_ex = ex;
+        }
+
+        assertEq(blocking_ex.err, poll_ex.err);
+        assertEq(blocking_ex.desc, poll_ex.desc);
+        assertRegex("LIBSSH2_FX_PERMISSION_DENIED", poll_ex.desc);
+    }
+
+    #! Aborting an operation mid-flight releases the remote file handle and the connection
+    abortTest() {
+        string fn = makeFile(LargeContents);
+        on_exit unlink(fn);
+
+        SFTPClient sc = getClient();
+        AbstractPollOperation op = sc.startPollGetFile(fn);
+
+        # advance the operation into the transfer, then abort it
+        date start = now_us();
+        while (op.getState() != "sftp-read") {
+            if ((now_us() - start) > timeout) {
+                throw "POLL-TIMEOUT", sprintf("the transfer did not start; state: %y", op.getState());
+            }
+            *hash<SocketPollInfo> pi = op.continuePoll();
+            if (!pi) {
+                break;
+            }
+            Socket::poll((pi,), timeout);
+        }
+        assertEq("sftp-read", op.getState());
+        assertTrue(boolean(sc.connected()));
+
+        op.abort();
+
+        # the remote handle and the session are released by the abort
+        assertEq("closed", op.getState());
+        assertFalse(op.goalReached());
+        assertNothing(op.getOutput());
+        assertFalse(boolean(sc.connected()));
+        # further polling on an aborted operation does nothing
+        assertNothing(op.continuePoll());
+
+        # the client is usable again after the abort; the poll reservation was released
+        assertEq(binary(LargeContents), sc.getFile(fn, timeout));
+
+        # aborting a completed operation is a no-op
+        SFTPClient sc2 = getClient();
+        AbstractPollOperation op2 = sc2.startPollGetFile(fn);
+        assertEq(binary(LargeContents), runPoller(op2));
+        op2.abort();
+        assertTrue(op2.goalReached());
+        assertEq(binary(LargeContents), op2.getOutput());
+    }
+
+    #! Authentication failures are reported from the poll operation
+    authFailureTest() {
+        string user = "qore-ssh2-no-such-user-" + get_random_string(10);
+        SFTPClient sc(sprintf("%s@localhost", user));
+        # the local user's agent and key files must not be used for this user
+        sc.setUseAgent(False);
+
+        AbstractPollOperation op = sc.startPollGetFile("/etc/hostname");
+        assertThrows("SSH2CLIENT-AUTH-ERROR", "No proper authentication method found",
+            sub () { runPoller(op); });
+        assertEq("closed", op.getState());
+        assertFalse(op.goalReached());
+        # the connection is closed after an authentication failure
+        assertFalse(boolean(sc.connected()));
+
+        # the blocking API reports the same error
+        SFTPClient sc2(sprintf("%s@localhost", user));
+        sc2.setUseAgent(False);
+        assertThrows("SSH2CLIENT-AUTH-ERROR", "No proper authentication method found",
+            sub () { sc2.getFile("/etc/hostname", timeout); });
+    }
+
+    #! A client can only run one poll operation at a time, and can be reused afterwards
+    reuseTest() {
+        string fn = makeFile(SmallContents);
+        on_exit unlink(fn);
+
+        SFTPClient sc = getClient();
+
+        AbstractPollOperation op = sc.startPollGetFile(fn);
+        # no other operation may use the client while the poll operation is in progress
+        assertThrows("SSH2-POLL-IN-PROGRESS", sub () { sc.startPollGetFile(fn); });
+        assertThrows("SSH2-POLL-IN-PROGRESS", sub () { sc.getFile(fn, timeout); });
+        assertThrows("SSH2-POLL-IN-PROGRESS", sub () { sc.connect(timeout); });
+        assertThrows("SSH2-POLL-IN-PROGRESS", sub () { sc.disconnect(timeout); });
+
+        assertEq(binary(SmallContents), runPoller(op));
+
+        # the reservation is released when the operation completes: the established session is
+        # reused by the next operation
+        assertTrue(boolean(sc.connected()));
+        AbstractPollOperation op2 = sc.startPollGetFile(fn);
+        assertEq(binary(SmallContents), runPoller(op2));
+
+        # the operation object can be destroyed without completing it
+        {
+            AbstractPollOperation op3 = sc.startPollGetFile(fn);
+            assertEq("start", op3.getState());
+            delete op3;
+        }
+        # the client is usable again after the abandoned operation
+        assertEq(binary(SmallContents), runPoller(sc.startPollGetFile(fn)));
+    }
+}

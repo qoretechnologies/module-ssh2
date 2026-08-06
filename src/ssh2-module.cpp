@@ -31,6 +31,7 @@
 #include "SFTPClient.h"
 #include "SSH2Channel.h"
 #include "SSH2Listener.h"
+#include "SftpPollOperation.h"
 
 #include <string.h>
 #include <strings.h>
@@ -356,6 +357,9 @@ static void ssh2_module_init(QoreModuleInitContext& ctx, ExceptionSink& xsink) {
     ssh2ns.addSystemClass(initSSH2ListenerClass(ssh2ns));
 #endif
     ssh2ns.addSystemClass(initSSH2ClientClass(ssh2ns));
+    // NOTE: SftpPollOperation must be initialized before SFTPClient because SFTPClient
+    // references SftpPollOperation as the return type for startPollGetFile()
+    ssh2ns.addSystemClass(initSftpPollOperationClass(ssh2ns));
     ssh2ns.addSystemClass(initSFTPClientClass(ssh2ns));
 
     // constants

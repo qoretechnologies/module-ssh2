@@ -1,7 +1,7 @@
 # Process this file with autoconf to produce a configure script.
 
 # AC_PREREQ(2.59)
-AC_INIT([qore-ssh2-module], [1.5.0],
+AC_INIT([qore-ssh2-module], [2.0.0],
         [David Nichols <david(a)qore(dot)org>, Wolfgang Ritzinger <aargon(a)rat(dot)at>],
         [qore-ssh2-module])
 AM_INIT_AUTOMAKE([no-dist-gzip dist-bzip2])
@@ -284,11 +284,22 @@ else
    bits=32
 fi
 
-# test for C++11
-AX_CXX_COMPILE_STDCXX_11([noext], [mandatory])
-if test "$HAVE_CXX11" = "1"; then
-    AM_CXXFLAGS=-std=gnu++11
-fi
+# test for C++17; the public Qore poll operation headers require it
+AC_LANG_PUSH([C++])
+AC_MSG_CHECKING([whether $CXX supports C++17])
+qore_ssh2_save_CXXFLAGS="$CXXFLAGS"
+CXXFLAGS="$CXXFLAGS -std=c++17"
+AC_COMPILE_IFELSE([AC_LANG_SOURCE([[
+#if __cplusplus < 201703L
+#error C++17 support is required
+#endif
+int test_cxx17(void) { return 0; }
+]])],
+    [AC_MSG_RESULT([yes])],
+    [AC_MSG_RESULT([no])
+     CXXFLAGS="$qore_ssh2_save_CXXFLAGS"
+     AC_MSG_ERROR([the C++ compiler $CXX does not support C++17, which is required to build this module])])
+AC_LANG_POP([C++])
 
 # checks for how to build threads
 ACX_PTHREAD

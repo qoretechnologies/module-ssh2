@@ -83,7 +83,7 @@ enum Qore::SSH2::Ssh2ClientIdentityFallbackPolicy : int {
 //! base class for SFTPClient and SSH2Client
 /** The SSH2Base class provides common methods to the SSH2Client and SFTPClient classes
  */
-qclass SSH2Base [arg=SSH2Client* myself; ns=Qore::SSH2; dom=NETWORK];
+qclass SSH2Base [arg=SSH2Client* myself; ns=Qore::SSH2; dom=NETWORK; vparent=AbstractPollableIoObject];
 
 //! Throws an exception; the constructor cannot be called manually
 /** Throws an exception if called directly; this class cannot be instantiated directly
@@ -178,6 +178,26 @@ nothing SSH2Base::setKeys(string private_key, *string public_key) [dom=FILESYSTE
  */
 bool SSH2Base::connected() [flags=CONSTANT] {
   return myself->sshConnected();
+}
+
+//! Returns the file descriptor of the underlying socket or -1 if not connected
+/** @par Example:
+    @code{.py} int fd = sftpclient.getPollableDescriptor(); @endcode
+
+    @return the file descriptor of the underlying socket connection or -1 if the object is not connected
+
+    This method implements the @ref Qore::AbstractPollableIoObject "AbstractPollableIoObject" interface, so
+    that objects of this class can be used in @ref Qore::SocketPollInfo "SocketPollInfo" hashes with
+    @ref Qore::Socket::poll() "Socket::poll()"; this is how non-blocking operations such as
+    @ref Qore::SSH2::SFTPClient::startPollGetFile() "SFTPClient::startPollGetFile()" are driven
+
+    @note the descriptor returned is owned by this object and must not be closed by the caller; it is only
+    valid while the connection is established
+
+    @since ssh2 2.0
+ */
+int SSH2Base::getPollableDescriptor() [flags=CONSTANT] {
+    return myself->getPollableDescriptorLocked();
 }
 
 //! Removes any warning @ref Qore::Thread::Queue "Queue" object from the Socket

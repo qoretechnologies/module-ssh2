@@ -1,0 +1,143 @@
+/* -*- mode: c++; indent-tabs-mode: nil -*- */
+/** @file QC_SftpPollOperation.qpp defines the SftpPollOperation class */
+/*
+    QC_SftpPollOperation.qpp
+
+    non-blocking SFTP file retrieval for the ssh2 module
+
+    Copyright (C) 2026 Qore Technologies, s.r.o.
+
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
+
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public
+    License along with this library; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+
+#include "SftpPollOperation.h"
+
+//! Poll operation object for retrieving a file over SFTP without blocking the calling thread
+/** Objects of this class are returned by
+    @ref Qore::SSH2::SFTPClient::startPollGetFile() "SFTPClient::startPollGetFile()"; they are not
+    created directly.
+
+    The caller drives the operation by calling
+    @ref Qore::AbstractPollOperation::continuePoll() "continuePoll()" and waiting for the events
+    reported in the returned @ref Qore::SocketPollInfo "SocketPollInfo" hash until
+    @ref Qore::AbstractPollOperation::goalReached() "goalReached()" returns @ref Qore::True "True",
+    at which point @ref Qore::AbstractPollOperation::getOutput() "getOutput()" returns the file's
+    data.
+
+    Every stage of the operation - the TCP connection, the SSH handshake, host key verification,
+    authentication, the SFTP session, and the file transfer itself - is executed without blocking
+    the calling thread.
+
+    Objects of this class are also
+    @ref Qore::AbstractPollableIoObject "AbstractPollableIoObject" objects reporting the
+    descriptor that the current stage is waiting on, which is why they appear as the \c socket
+    value of the @ref Qore::SocketPollInfo "SocketPollInfo" hashes they return; the descriptor
+    changes as the operation progresses (for example, while the remote host name is being
+    resolved asynchronously the resolver's descriptors are polled instead of the SSH socket).
+
+    @note
+    - The @ref Qore::SSH2::SFTPClient "SFTPClient" object used by the operation must not be used
+      for any other operation while the poll operation is in progress; other operations on the
+      client fail with an \c SSH2-POLL-IN-PROGRESS exception until the operation completes or is
+      aborted
+    - @ref Qore::AbstractPollOperation::continuePoll() "continuePoll()" can execute %Qore code
+      (a host key store or a client identity provider, if configured) and can read key files from
+      the filesystem, so it must not be called on an I/O thread
+    - the operation must be driven by the caller; it cannot be submitted to the async I/O
+      controller
+    - objects of this class must be driven by one thread at a time; the state of an operation in
+      progress is only consistent for the thread calling
+      @ref Qore::AbstractPollOperation::continuePoll() "continuePoll()"
+
+    @see @ref Qore::SSH2::SFTPClient::startPollGetFile() "SFTPClient::startPollGetFile()"
+
+    @since ssh2 2.0
+*/
+qclass SftpPollOperation [
+    private_members=object client;
+    ns=Qore::SSH2;
+    arg=SftpPollOperationPriv* priv;
+    vparent=SocketPollOperationBase<*binary>,AbstractPollableIoObject;
+    dom=NETWORK,FILESYSTEM
+];
+
+//! Throws an exception; this class cannot be created directly
+/** @throw SFTPPOLLOPERATION-CONSTRUCTOR-ERROR objects of this class can only be created by
+    @ref Qore::SSH2::SFTPClient::startPollGetFile() "SFTPClient::startPollGetFile()"
+*/
+SftpPollOperation::constructor() {
+    xsink->raiseException("SFTPPOLLOPERATION-CONSTRUCTOR-ERROR", "objects of this class can only be created by "
+        "SFTPClient::startPollGetFile()");
+}
+
+//! Destroys the object, releasing any remote and local resources still held
+/** If the operation is destroyed before it completes, any open remote file handle is closed and
+    the SSH connection is released
+*/
+SftpPollOperation::destructor() {
+    priv->deref(xsink);
+}
+
+//! Returns a description of the operation's goal
+/** @par Example:
+    @code{.py} string goal = op.getGoal(); @endcode
+
+    @return a string describing the file being retrieved
+*/
+string SftpPollOperation::getGoal() [flags=CONSTANT] {
+    return priv->getGoal();
+}
+
+//! Returns the descriptor that the current stage of the operation is waiting on
+/** @par Example:
+    @code{.py} int fd = op.getPollableDescriptor(); @endcode
+
+    @return the descriptor that the current stage of the operation is waiting on, or -1 if the
+    operation has not yet reported anything to wait for
+
+    @note the descriptor changes as the operation progresses and is owned by the operation; it
+    must not be closed by the caller
+*/
+int SftpPollOperation::getPollableDescriptor() [flags=CONSTANT] {
+    return priv->getPollableDescriptor();
+}
+
+//! Advances the operation and returns the events to wait for
+/** @par Example:
+    @code{.py}
+while (*hash<SocketPollInfo> info = op.continuePoll()) {
+    Socket::poll((info,), 10s);
+}
+binary data = op.getOutput();
+    @endcode
+
+    @return a @ref Qore::SocketPollInfo "SocketPollInfo" hash giving the events to wait for
+    before calling this method again, or @ref nothing when the operation has completed
+
+    @throw SSH2-POLL-ERROR there is no descriptor to wait on in the current state
+    @throw SSH2CLIENT-CONNECT-ERROR the connection could not be started
+    @throw SSH2CLIENT-AUTH-ERROR no proper authentication method found
+    @throw SSH2-ERROR an error occurred in the SSH or SFTP conversation
+    @throw SSH2-HOSTKEY-ERROR the server's host key could not be verified
+    @throw SSH2-HOSTKEY-MISMATCH the server's host key does not match the known hosts file
+    @throw SSH2-HOSTKEY-UNKNOWN the server's host key is not in the known hosts file
+
+    @note all exceptions that the blocking
+    @ref Qore::SSH2::SFTPClient::getFile() "SFTPClient::getFile()" method can throw can also be
+    thrown here
+*/
+*hash<SocketPollInfo> SftpPollOperation::continuePoll() {
+    return priv->continuePoll(xsink);
+}

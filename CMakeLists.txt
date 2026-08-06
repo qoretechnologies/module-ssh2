@@ -6,7 +6,7 @@ include(CheckCXXCompilerFlag)
 include(CheckCXXSymbolExists)
 include(CheckIncludeFileCXX)
 
-find_package(Qore 2.3 REQUIRED)
+find_package(Qore 3.0 REQUIRED)
 find_package(OpenSSL REQUIRED)
 
 if(WIN32 OR MSYS OR MINGW)
@@ -41,13 +41,13 @@ check_include_file_cxx(sys/socket.h HAVE_SYS_SOCKET_H)
 check_include_file_cxx(sys/time.h HAVE_SYS_TIME_H)
 check_include_file_cxx(unistd.h HAVE_UNISTD_H)
 
-# Check for C++11.
+# Check for C++17; the public Qore poll operation headers require it
 include(CheckCXXCompilerFlag)
-CHECK_CXX_COMPILER_FLAG("-std=c++11" COMPILER_SUPPORTS_CXX11)
-if(COMPILER_SUPPORTS_CXX11)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+CHECK_CXX_COMPILER_FLAG("-std=c++17" COMPILER_SUPPORTS_CXX17)
+if(COMPILER_SUPPORTS_CXX17)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
 else()
-    message(FATAL_ERROR "The compiler ${CMAKE_CXX_COMPILER} has no C++11 support. Please use a different C++ compiler.")
+    message(FATAL_ERROR "The compiler ${CMAKE_CXX_COMPILER} has no C++17 support. Please use a different C++ compiler.")
 endif()
 
 set(CMAKE_REQUIRED_INCLUDES ${LIBSSH2_INCLUDE_DIRS})
@@ -81,6 +81,7 @@ configure_file(${CMAKE_SOURCE_DIR}/cmake/config.h.cmake
 
 set(QPP_SRC
     src/QC_SFTPClient.qpp
+    src/QC_SftpPollOperation.qpp
     src/QC_SSH2Base.qpp
     src/QC_SSH2Channel.qpp
     src/QC_SSH2Client.qpp
@@ -89,6 +90,7 @@ set(QPP_SRC
 
 set(CPP_SRC
     src/SFTPClient.cpp
+    src/SftpPollOperation.cpp
     src/SSH2Channel.cpp
     src/SSH2Client.cpp
     src/SSH2Listener.cpp
