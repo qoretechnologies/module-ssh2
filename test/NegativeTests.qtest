@@ -160,8 +160,12 @@ class NegativeTests inherits QUnit::Test {
                 # If we get here, SSH is running and very fast, so disconnect
                 sc.disconnect();
             } catch (hash<ExceptionInfo> ex) {
-                # Expected: either timeout or connection error
-                assertTrue(ex.err =~ /SOCKET-CONNECT-ERROR|SSH2CLIENT-TIMEOUT|SSH2-ERROR/);
+                # Expected: either timeout or connection error.  \c SOCKET-TIMEOUT is what a host
+                # actually running sshd gives here: the TCP connect to the loopback interface
+                # completes immediately and the 1ms budget then expires in the SSH handshake, which
+                # is a socket operation, so the timeout is reported by the socket layer
+                assertTrue(ex.err =~ /SOCKET-CONNECT-ERROR|SOCKET-TIMEOUT|SSH2CLIENT-TIMEOUT|SSH2-ERROR/,
+                    sprintf("Expected connection error or timeout, got: %s", ex.err));
             }
         }
     }
