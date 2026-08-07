@@ -47,6 +47,7 @@ module SftpPoller {
         # NOTE: this application is also registed in the SftpPoller module
         DataProviderActionCatalog::registerApp(<DataProviderAppInfo>{
             "name": SftpPoller::AppName,
+            "presentation_source_locale": "en",
             "display_name": "SFTP Server",
             "short_desc": "Generic SFTP server for exchanging files with SFTP",
             "desc": "Generic SFTP server for exchanging files with SFTP",
