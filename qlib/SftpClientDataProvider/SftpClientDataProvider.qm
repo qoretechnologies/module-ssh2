@@ -200,6 +200,8 @@ module SftpClientDataProvider {
     @subsection sftpclientdataprovider_v2_0 SftpClientDataProvider v2.0
     - added host-key verification constructor options: \c known_hosts, \c host_key_policy,
       \c verify_host_key, \c use_agent, and \c keepalive_interval
+    - corrected the source-owned provider presentation catalog so it contains the SFTP client actions without
+      duplicating actions contributed by the SFTP poller module
 
     @subsection sftpclientdataprovider_v1_1 SftpClientDataProvider v1.1
     - added chmod, exists, and rmdir actions

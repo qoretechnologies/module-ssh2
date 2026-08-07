@@ -142,6 +142,8 @@ hash opts = (
 
     @section sftppollerv1_5 Version 1.5
     - added data provider and app action support
+    - corrected the source-owned provider presentation catalog so it contains the SFTP poller action without
+      duplicating actions contributed by the SFTP client module
 
     @section sftppollerv1_4_1 Version 1.4.1
     - fixed a bug registering the sftp event type
