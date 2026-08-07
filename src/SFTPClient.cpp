@@ -1539,10 +1539,60 @@ int SFTPClient::sftpSymlink(const char* target, const char* link_path, int timeo
     }
 
     if (rc < 0) {
-        qh.err("libssh2_sftp_symlink(%s, %s) returned an error", tstr.c_str(), lstr.c_str());
+        // capture the error state before the verification request below overwrites it
+        int session_err = libssh2_session_last_errno(ssh_session);
+        unsigned long sftp_err = libssh2_sftp_last_error(sftp_session);
+
+        // work around a libssh2 defect that reports a successful SSH_FXP_SYMLINK as a failure.
+        // libssh2 commit 2dae302 (the fix for CVE-2025-15661, PR #1717) rewrote the response parser in
+        // sftp_symlink() and reads the status code of an SSH_FXP_STATUS response at the offset of the
+        // request id, so a status of SSH_FX_OK is seen as the (non-zero) request id and reported as
+        // LIBSSH2_ERROR_SFTP_PROTOCOL.  Upstream fixed this in commit 4ed26f5 (PR #1731), but that fix
+        // is in no release yet, while distributions have backported the CVE fix alone into 1.11.1 -
+        // and LIBSSH2_VERSION_NUM is identical in patched and unpatched builds, so an affected library
+        // cannot be recognized from its version.  Because the real status is unavailable on such a
+        // build, success and failure are indistinguishable from the return value, and the only way to
+        // tell them apart is to ask the server what the link now points to.
+        // Note that this affects the SSH_FXP_SYMLINK response only: SFTPClient::readlink() (and the
+        // realpath call in sftpConnectUnlocked()) succeed with an SSH_FXP_NAME response, which the
+        // rewritten parser reads correctly; on those paths an affected libssh2 only reports a
+        // misleading status code for a genuine failure, which no code here depends on
+        if (session_err == LIBSSH2_ERROR_SFTP_PROTOCOL && sftpSymlinkResolvesUnlocked(lstr, tstr, qh)) {
+            return 0;
+        }
+        if (*xsink) {
+            // the verification request failed with an exception of its own
+            return -3;
+        }
+
+        qh.err(session_err, sftp_err, "libssh2_sftp_symlink(%s, %s) returned an error", tstr.c_str(),
+            lstr.c_str());
     }
 
     return rc;
+}
+
+bool SFTPClient::sftpSymlinkResolvesUnlocked(const std::string& link_path, const std::string& target,
+        QSftpHelper& qh) {
+    char buff[PATH_MAX];
+    int rc;
+    {
+        QoreSocketTimeoutHelper th(socket, "symlink (verify)");
+
+        while ((rc = libssh2_sftp_symlink_ex(sftp_session, link_path.c_str(), link_path.size(),
+                buff, sizeof(buff) - 1, LIBSSH2_SFTP_READLINK)) == LIBSSH2_ERROR_EAGAIN) {
+            if (qh.waitSocket()) {
+                return false;
+            }
+        }
+    }
+
+    if (rc < 0) {
+        return false;
+    }
+
+    buff[rc] = '\0';
+    return target == buff;
 }
 
 QoreStringNode* SFTPClient::sftpReadlink(const char* path, int timeout_ms, ExceptionSink* xsink) {
@@ -1707,21 +1757,35 @@ QoreHashNode* SFTPClient::sftpStatvfs(const char* path, int timeout_ms, Exceptio
 
 void SFTPClient::doSessionErrUnlocked(ExceptionSink* xsink, QoreStringNode* desc) {
     if (ssh_session) {
-        int err = libssh2_session_last_errno(ssh_session);
-        if (err == LIBSSH2_ERROR_SFTP_PROTOCOL) {
-            unsigned long serr = libssh2_sftp_last_error(sftp_session);
-
-            desc->sprintf(": sftp error code %lu", serr);
-
-            edmap_t::const_iterator i = sftp_emap.find((int)serr);
-            if (i != sftp_emap.end())
-                desc->sprintf(" (%s): %s", i->second.err, i->second.desc);
-            else
-                desc->concat(": unknown sftp error code");
-        }
-        else
-            desc->sprintf(": ssh2 error %d: %s", err, getSessionErrUnlocked());
+        doSessionErrUnlocked(xsink, desc, libssh2_session_last_errno(ssh_session),
+            libssh2_sftp_last_error(sftp_session));
+        return;
     }
+
+    xsink->raiseException(SSH2_ERROR, desc);
+
+    // check if we're still connected: if there is data to be read, we assume it's the EOF marker and close the session
+    int rc = waitSocketUnlocked(LIBSSH2_SESSION_BLOCK_INBOUND, 0);
+
+    if (rc > 0) {
+        printd(5, "doSessionErrUnlocked() session %p: detected disconnected session, marking as closed\n", ssh_session);
+        disconnectUnlocked(true, 10, 0, xsink);
+    }
+}
+
+void SFTPClient::doSessionErrUnlocked(ExceptionSink* xsink, QoreStringNode* desc, int err,
+        unsigned long serr) {
+    if (err == LIBSSH2_ERROR_SFTP_PROTOCOL) {
+        desc->sprintf(": sftp error code %lu", serr);
+
+        edmap_t::const_iterator i = sftp_emap.find((int)serr);
+        if (i != sftp_emap.end())
+            desc->sprintf(" (%s): %s", i->second.err, i->second.desc);
+        else
+            desc->concat(": unknown sftp error code");
+    }
+    else
+        desc->sprintf(": ssh2 error %d: %s", err, getSessionErrUnlocked());
 
     xsink->raiseException(SSH2_ERROR, desc);
 
@@ -1756,6 +1820,23 @@ void QSftpHelper::err(const char* fmt, ...) {
     }
 
     client->doSessionErrUnlocked(xsink, desc);
+}
+
+void QSftpHelper::err(int session_err, unsigned long sftp_err, const char* fmt, ...) {
+    tryClose();
+
+    va_list args;
+    QoreStringNode* desc = new QoreStringNode;
+
+    while (true) {
+        va_start(args, fmt);
+        int rc = desc->vsprintf(fmt, args);
+        va_end(args);
+        if (!rc)
+            break;
+    }
+
+    client->doSessionErrUnlocked(xsink, desc, session_err, sftp_err);
 }
 
 int QSftpHelper::closeIntern() {

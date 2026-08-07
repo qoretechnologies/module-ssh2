@@ -312,6 +312,17 @@ binary data = op.getOutput();@endcode
       default), consistent with the underlying client classes
 
     <b>Bug Fixes:</b>
+    - worked around a libssh2 defect that made
+      @ref Qore::SSH2::SFTPClient::symlink() "SFTPClient::symlink()" report every successful call as
+      an error: libssh2 commit \c 2dae302 (the fix for \c CVE-2025-15661) reads the status code of
+      the \c SSH_FXP_SYMLINK response at the offset of the request id, so a status of \c SSH_FX_OK
+      is reported as \c LIBSSH2_ERROR_SFTP_PROTOCOL with the request id as the SFTP status code;
+      the real status is unavailable on such a build, so the link is now verified against the server
+      when libssh2 reports an SFTP protocol error, and the exception is raised only if the link does
+      not resolve to the requested target.  Upstream fixed the defect in commit \c 4ed26f5, which is
+      in no libssh2 release yet, while distributions have backported the CVE fix alone into 1.11.1;
+      patched and unpatched builds report the same \c LIBSSH2_VERSION_NUM, so an affected library
+      cannot be recognized from its version
     - removed stale TODO in mkdir implementation
     - documented known memory leak in sftp_shutdown timeout (libssh2 limitation)
     - updated copyright years to 2026

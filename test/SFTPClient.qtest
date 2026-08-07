@@ -295,6 +295,25 @@ class SFTPClientTest inherits QUnit::Test {
         assertThrows("SSH2-ERROR", sub () {
             sc.readlink(target_file, timeout);
         });
+
+        # a symlink that the server refuses must still be reported as an error.  SFTPClient::symlink()
+        # verifies the link out of band when libssh2 reports an SFTP protocol error, because an
+        # affected libssh2 reports a *successful* SSH_FXP_SYMLINK that way (see sftpSymlink() in
+        # src/SFTPClient.cpp); these cases prove the verification does not swallow genuine failures.
+
+        # the link path's parent directory does not exist
+        string missing_dir = sprintf("%s/ssh2_symlink_missing_%s", tmpDir, get_random_string(10));
+        assertThrows("SSH2-ERROR", sub () {
+            sc.symlink(target_file, missing_dir + "/link", timeout);
+        });
+
+        # the link path already exists and resolves somewhere else
+        assertThrows("SSH2-ERROR", sub () {
+            sc.symlink(target_file + "_other", link_file, timeout);
+        });
+        # ... and the pre-existing link is untouched
+        assertEq(target_file, sc.readlink(link_file, timeout),
+            "a refused symlink() must not change the existing link");
     }
 
     chownTests() {

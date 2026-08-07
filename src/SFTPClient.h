@@ -98,6 +98,16 @@ public:
 
     DLLLOCAL void err(const char* fmt, ...);
 
+    //! raises an exception reporting error codes captured earlier instead of the live session state
+    /** libssh2's session and SFTP error codes are session-global and are overwritten by the next
+        request, so an operation that issues a further request before reporting its failure must
+        capture them first
+
+        @param session_err the \c libssh2_session_last_errno() value captured for the failed operation
+        @param sftp_err the \c libssh2_sftp_last_error() value captured for the failed operation
+    */
+    DLLLOCAL void err(int session_err, unsigned long sftp_err, const char* fmt, ...);
+
     DLLLOCAL virtual void preDisconnect() {
         if (sftp_handle)
             closeIntern();
@@ -125,7 +135,20 @@ protected:
     DLLLOCAL int sftpConnectUnlocked(int timeout_ms, ExceptionSink* xsink);
 
     DLLLOCAL void doSessionErrUnlocked(ExceptionSink* xsink, QoreStringNode* desc);
+    DLLLOCAL void doSessionErrUnlocked(ExceptionSink* xsink, QoreStringNode* desc, int err,
+            unsigned long serr);
     DLLLOCAL void doShutdown(int timeout_ms = DEFAULT_TIMEOUT_MS, ExceptionSink* xsink = nullptr);
+
+    //! returns true if \a link_path is a symbolic link on the server resolving to \a target
+    /** used to establish out of band whether an \c SSH_FXP_SYMLINK request succeeded; see
+        SFTPClient::sftpSymlink()
+
+        @note must be called with the lock held, with the session in non-blocking mode, and only
+        from an error path: it issues an SFTP request and therefore overwrites the session's error
+        state
+    */
+    DLLLOCAL bool sftpSymlinkResolvesUnlocked(const std::string& link_path, const std::string& target,
+            QSftpHelper& qh);
 
     DLLLOCAL virtual int disconnectUnlocked(bool force, int timeout_ms = DEFAULT_TIMEOUT_MS, AbstractDisconnectionHelper* adh = nullptr, ExceptionSink* xsink = nullptr);
     DLLLOCAL bool sftpIsAliveUnlocked(int timeout_ms, ExceptionSink* xsink);
