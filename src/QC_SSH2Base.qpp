@@ -54,7 +54,7 @@ enum Qore::SSH2::Ssh2HostKeyPolicy : int {
 /** Controls whether explicit caller-supplied keys or provider-supplied identity candidates are
     tried first when a client identity provider is configured.
 
-    @since ssh2 2.1
+    @since ssh2 2.0
 */
 enum Qore::SSH2::Ssh2ClientAuthOrder : int {
     //! Try explicit caller keys before provider candidates
@@ -67,7 +67,7 @@ enum Qore::SSH2::Ssh2ClientAuthOrder : int {
 /** Controls which process-user identity sources may be used after explicit keys and provider
     candidates when a client identity provider is configured.
 
-    @since ssh2 2.1
+    @since ssh2 2.0
 */
 enum Qore::SSH2::Ssh2ClientIdentityFallbackPolicy : int {
     //! Do not use process-user SSH agent or default key discovery
@@ -530,7 +530,7 @@ enum<Ssh2HostKeyPolicy> SSH2Base::getHostKeyPolicy() [flags=CONSTANT] {
 
     @throw SSH2-CONNECTED this method cannot be called when a connection is established
 
-    @since ssh2 2.1
+    @since ssh2 2.0
 */
 nothing SSH2Base::setClientIdentityProvider(*AbstractSshClientIdentityProvider provider) [flags=NAMED_ARGS] {
     myself->setClientIdentityProvider(const_cast<QoreObject*>(provider), xsink);
@@ -539,7 +539,7 @@ nothing SSH2Base::setClientIdentityProvider(*AbstractSshClientIdentityProvider p
 //! Returns the configured client identity provider object
 /** @return the configured provider object or @c NOTHING if none is configured
 
-    @since ssh2 2.1
+    @since ssh2 2.0
 */
 *AbstractSshClientIdentityProvider SSH2Base::getClientIdentityProvider() [flags=CONSTANT] {
     return myself->getClientIdentityProvider();
@@ -556,7 +556,7 @@ nothing SSH2Base::setClientIdentityProvider(*AbstractSshClientIdentityProvider p
 
     @throw SSH2-CONNECTED this method cannot be called when a connection is established
 
-    @since ssh2 2.1
+    @since ssh2 2.0
 */
 nothing SSH2Base::setHostKeyStore(*AbstractSshHostKeyStore store) [flags=NAMED_ARGS] {
     myself->setHostKeyStore(const_cast<QoreObject*>(store), xsink);
@@ -565,7 +565,7 @@ nothing SSH2Base::setHostKeyStore(*AbstractSshHostKeyStore store) [flags=NAMED_A
 //! Returns the configured remote host-key trust store object
 /** @return the configured store object or @c NOTHING if none is configured
 
-    @since ssh2 2.1
+    @since ssh2 2.0
 */
 *AbstractSshHostKeyStore SSH2Base::getHostKeyStore() [flags=CONSTANT] {
     return myself->getHostKeyStore();
@@ -576,7 +576,7 @@ nothing SSH2Base::setHostKeyStore(*AbstractSshHostKeyStore store) [flags=NAMED_A
 
     @throw SSH2-CLIENT-AUTH-ORDER-ERROR invalid order value
 
-    @since ssh2 2.1
+    @since ssh2 2.0
 */
 nothing SSH2Base::setClientAuthOrder(enum<Ssh2ClientAuthOrder> order) [flags=NAMED_ARGS] {
     myself->setClientAuthOrder((int)order, xsink);
@@ -585,7 +585,7 @@ nothing SSH2Base::setClientAuthOrder(enum<Ssh2ClientAuthOrder> order) [flags=NAM
 //! Sets client public-key authentication ordering using integer constants
 /** @see setClientAuthOrder()
 
-    @since ssh2 2.1
+    @since ssh2 2.0
 */
 nothing SSH2Base::setClientAuthOrder(int order) {
     myself->setClientAuthOrder((int)order, xsink);
@@ -594,7 +594,7 @@ nothing SSH2Base::setClientAuthOrder(int order) {
 //! Returns client public-key authentication ordering
 /** @return the client authentication order
 
-    @since ssh2 2.1
+    @since ssh2 2.0
 */
 enum<Ssh2ClientAuthOrder> SSH2Base::getClientAuthOrder() [flags=CONSTANT] {
     return (int64)myself->getClientAuthOrder();
@@ -609,7 +609,7 @@ enum<Ssh2ClientAuthOrder> SSH2Base::getClientAuthOrder() [flags=CONSTANT] {
 
     @throw SSH2-CLIENT-IDENTITY-FALLBACK-POLICY-ERROR invalid policy value
 
-    @since ssh2 2.1
+    @since ssh2 2.0
 */
 nothing SSH2Base::setClientIdentityFallbackPolicy(enum<Ssh2ClientIdentityFallbackPolicy> policy) [flags=NAMED_ARGS] {
     myself->setClientIdentityFallbackPolicy((int)policy, xsink);
@@ -618,7 +618,7 @@ nothing SSH2Base::setClientIdentityFallbackPolicy(enum<Ssh2ClientIdentityFallbac
 //! Sets process-user client identity fallback policy using integer constants
 /** @see setClientIdentityFallbackPolicy()
 
-    @since ssh2 2.1
+    @since ssh2 2.0
 */
 nothing SSH2Base::setClientIdentityFallbackPolicy(int policy) {
     myself->setClientIdentityFallbackPolicy((int)policy, xsink);
@@ -627,7 +627,7 @@ nothing SSH2Base::setClientIdentityFallbackPolicy(int policy) {
 //! Returns process-user client identity fallback policy
 /** @return the client identity fallback policy
 
-    @since ssh2 2.1
+    @since ssh2 2.0
 */
 enum<Ssh2ClientIdentityFallbackPolicy> SSH2Base::getClientIdentityFallbackPolicy() [flags=CONSTANT] {
     return (int64)myself->getClientIdentityFallbackPolicy();
