@@ -25,25 +25,37 @@ For OS/X, use macports: http://www.macports.org
 
 BUILDING
 --------
-Requires qore 3.0+, sshutil, and libssh2 1.1+ to build and run
+Requires cmake 3.5+, a C++17 compiler, qore 3.0+, sshutil, and libssh2 1.1+ to
+build and run
 
-to configure the build, execute
-        configure --disable-debug
+to configure and build the module, execute
 
-if the qore library cannot be found, then you can use:
-        configure --disable-debug --with-qore=<dir>
+        mkdir build
+        cd build
+        cmake .. -DCMAKE_BUILD_TYPE=Release
+        make
 
-if libssh2 cannot be found, then you can use:
-        configure --disable-debug --with-libssh2-dir=<dir>
+The install prefix must match the prefix of the qore installation in use; if
+"which qore" gives "/usr/bin/qore", for example, then configure the build with
 
-The qore binary also needs to be in the path so configure can determine the
+        cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
+
+libssh2 is located with pkg-config; if it is installed in a non-standard
+location, set PKG_CONFIG_PATH accordingly before running cmake (on Windows and
+MinGW builds, set the LIBSSH2_LIBRARY environment variable instead)
+
+The qore binary also needs to be in the path so that the build can determine the
 module directory
 
 Then execute
 
-make && make install
+make install
 
-(or 'make && sudo make install' as needed)
+(or 'sudo make install' as needed)
+
+to build the API documentation, execute
+
+make docs
 
 please direct any questions to:
 david@qore.org

@@ -1,50 +1,37 @@
-Makefile
-Makefile.in
-acinclude.m4
-aclocal.m4
-compile
-config.guess
+# build directories
+build/
+build-debug/
+
+# cmake artifacts
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+CPackConfig.cmake
+CPackSourceConfig.cmake
+install_manifest.txt
 config.h
-config.h.in
-config.log
-config.status
-config.sub
-configure
-depcomp
-install-sh
-libtool
-ltmain.sh
-missing
-stamp-h1
-*~
-*.lo
-*.la
-autom4te.cache/
-m4/
-src/.deps/
-src/.libs/
-src/Makefile
-src/Makefile.in
+
+# generated sources
 src/*.dox.h
 src/qc_*.cpp
 src/ql_*.cpp
 src/QC_*.cpp
-build/
+*.dox.h
 
-# Eclipse files
+# editor / IDE files
+*~
 .cproject
 .project
 .settings/
-
-# Visual Studio Code 
 .vscode
 
-# ignore temp doxygen files
+# temporary doxygen files
 docs/*.tag
 docs/ssh2/
+docs/SftpClientDataProvider/
 docs/SftpPoller/
+docs/SftpPollerUtil/
+docs/Ssh2Connections/
 docs/doxyfile
 docs/*.doxygen
 docs/qlib/Doxyfile.*
-*.dox.h
-docs/*.tag
