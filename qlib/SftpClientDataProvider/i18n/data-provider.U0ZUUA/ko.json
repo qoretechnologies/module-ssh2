@@ -1,0 +1,225 @@
+{
+  "schema_version": 1,
+  "locales": {
+    "ko": {
+      "messages": {
+        "app.U0ZUUA.action.Y2htb2Q.desc": {
+          "source": "Changes file or directory permissions on an SFTP server",
+          "message": "SFTP 서버의 파일 또는 디렉토리 권한을 변경합니다."
+        },
+        "app.U0ZUUA.action.Y2htb2Q.display_name": {
+          "source": "Change File Permissions With SFTP",
+          "message": "SFTP로 파일 권한 변경"
+        },
+        "app.U0ZUUA.action.Y2htb2Q.option.bW9kZQ.desc": {
+          "source": "The file permission mode as an octal integer (e.g., 0755 for rwxr-xr-x). Only the lower 9 bits (owner/group/other permissions) are used; sticky bits and setuid/setgid bits are not supported.",
+          "message": "8진수 정수 형태의 파일 권한 모드입니다(예: rwxr-xr-x의 경우 0755). 하위 9비트(소유자/그룹/기타 권한)만 사용되며, 스티키 비트 및 setuid/setgid 비트는 지원되지 않습니다."
+        },
+        "app.U0ZUUA.action.Y2htb2Q.option.bW9kZQ.display_name": {
+          "source": "Mode",
+          "message": "모드"
+        },
+        "app.U0ZUUA.action.Y2htb2Q.option.bW9kZQ.short_desc": {
+          "source": "The file permission mode",
+          "message": "파일 권한 모드"
+        },
+        "app.U0ZUUA.action.Y2htb2Q.option.cGF0aA.desc": {
+          "source": "The remote path on the SFTP server for the chmod operation",
+          "message": "chmod 작업을 위한 SFTP 서버의 원격 경로"
+        },
+        "app.U0ZUUA.action.Y2htb2Q.option.cGF0aA.display_name": {
+          "source": "Path",
+          "message": "경로"
+        },
+        "app.U0ZUUA.action.Y2htb2Q.option.cGF0aA.short_desc": {
+          "source": "The SFTP path for the operation",
+          "message": "작업을 위한 SFTP 경로"
+        },
+        "app.U0ZUUA.action.Y2htb2Q.short_desc": {
+          "source": "Changes file or directory permissions on an SFTP server",
+          "message": "SFTP 서버의 파일 또는 디렉토리 권한을 변경합니다."
+        },
+        "app.U0ZUUA.action.Z2V0LWZpbGU.desc": {
+          "source": "Retrieve a file from an SFTP server",
+          "message": "SFTP 서버에서 파일 가져오기"
+        },
+        "app.U0ZUUA.action.Z2V0LWZpbGU.display_name": {
+          "source": "Retrieve File With SFTP",
+          "message": "SFTP로 파일 가져오기"
+        },
+        "app.U0ZUUA.action.Z2V0LWZpbGU.option.ZW5jb2Rpbmc.desc": {
+          "source": "The string encoding to use if `text` = `True` (default: `UTF-8`)",
+          "message": "`text` = `True`인 경우 사용할 문자열 인코딩입니다(기본값: `UTF-8`)"
+        },
+        "app.U0ZUUA.action.Z2V0LWZpbGU.option.ZW5jb2Rpbmc.display_name": {
+          "source": "Encoding",
+          "message": "인코딩"
+        },
+        "app.U0ZUUA.action.Z2V0LWZpbGU.option.ZW5jb2Rpbmc.short_desc": {
+          "source": "Text encoding for text mode",
+          "message": "텍스트 모드용 텍스트 인코딩"
+        },
+        "app.U0ZUUA.action.Z2V0LWZpbGU.option.cGF0aA.desc": {
+          "source": "The remote path on the SFTP server to the file to retrieve",
+          "message": "가져올 파일의 SFTP 서버 원격 경로"
+        },
+        "app.U0ZUUA.action.Z2V0LWZpbGU.option.cGF0aA.display_name": {
+          "source": "Path",
+          "message": "경로"
+        },
+        "app.U0ZUUA.action.Z2V0LWZpbGU.option.cGF0aA.short_desc": {
+          "source": "The path on the SFTP server",
+          "message": "SFTP 서버의 경로"
+        },
+        "app.U0ZUUA.action.Z2V0LWZpbGU.option.dGV4dA.desc": {
+          "source": "If `True` the file will be returned as a string, `False` (the default) as binary data",
+          "message": "`True`인 경우 파일이 문자열로 반환되고, `False`(기본값)인 경우 바이너리 데이터로 반환됩니다."
+        },
+        "app.U0ZUUA.action.Z2V0LWZpbGU.option.dGV4dA.display_name": {
+          "source": "Text Mode",
+          "message": "텍스트 모드"
+        },
+        "app.U0ZUUA.action.Z2V0LWZpbGU.option.dGV4dA.short_desc": {
+          "source": "Return file as text string",
+          "message": "파일을 텍스트 문자열로 반환"
+        },
+        "app.U0ZUUA.action.Z2V0LWZpbGU.short_desc": {
+          "source": "Get a file from an SFTP server",
+          "message": "SFTP 서버에서 파일 가져오기"
+        },
+        "app.U0ZUUA.action.ZGVsZXRlLWZpbGU.desc": {
+          "source": "Deletes a file on an SFTP server",
+          "message": "SFTP 서버의 파일을 삭제합니다."
+        },
+        "app.U0ZUUA.action.ZGVsZXRlLWZpbGU.display_name": {
+          "source": "Delete File With SFTP",
+          "message": "SFTP로 파일 삭제"
+        },
+        "app.U0ZUUA.action.ZGVsZXRlLWZpbGU.option.cGF0aA.desc": {
+          "source": "The remote path on the SFTP server for the operation",
+          "message": "작업을 위한 SFTP 서버의 원격 경로"
+        },
+        "app.U0ZUUA.action.ZGVsZXRlLWZpbGU.option.cGF0aA.display_name": {
+          "source": "Path",
+          "message": "경로"
+        },
+        "app.U0ZUUA.action.ZGVsZXRlLWZpbGU.option.cGF0aA.short_desc": {
+          "source": "The SFTP path for the operation",
+          "message": "작업을 위한 SFTP 경로"
+        },
+        "app.U0ZUUA.action.ZGVsZXRlLWZpbGU.short_desc": {
+          "source": "Deletes a file on an SFTP server",
+          "message": "SFTP 서버의 파일을 삭제합니다."
+        },
+        "app.U0ZUUA.action.ZXhpc3Rz.desc": {
+          "source": "Checks if a file or directory exists on an SFTP server",
+          "message": "SFTP 서버에 파일이나 디렉토리가 있는지 확인합니다."
+        },
+        "app.U0ZUUA.action.ZXhpc3Rz.display_name": {
+          "source": "Check If Path Exists With SFTP",
+          "message": "SFTP로 경로 존재 여부 확인"
+        },
+        "app.U0ZUUA.action.ZXhpc3Rz.option.cGF0aA.desc": {
+          "source": "The remote path on the SFTP server for the operation",
+          "message": "작업을 위한 SFTP 서버의 원격 경로"
+        },
+        "app.U0ZUUA.action.ZXhpc3Rz.option.cGF0aA.display_name": {
+          "source": "Path",
+          "message": "경로"
+        },
+        "app.U0ZUUA.action.ZXhpc3Rz.option.cGF0aA.short_desc": {
+          "source": "The SFTP path for the operation",
+          "message": "작업을 위한 SFTP 경로"
+        },
+        "app.U0ZUUA.action.ZXhpc3Rz.short_desc": {
+          "source": "Checks if a file or directory exists on an SFTP server",
+          "message": "SFTP 서버에 파일이나 디렉토리가 있는지 확인합니다."
+        },
+        "app.U0ZUUA.action.c2VuZC1maWxl.desc": {
+          "source": "Sends a file to an SFTP server",
+          "message": "SFTP 서버로 파일을 전송합니다."
+        },
+        "app.U0ZUUA.action.c2VuZC1maWxl.display_name": {
+          "source": "Send File With SFTP",
+          "message": "SFTP로 파일 전송"
+        },
+        "app.U0ZUUA.action.c2VuZC1maWxl.option.ZW5jb2Rpbmc.desc": {
+          "source": "The string encoding to use if `text` = `True` (default: `UTF-8`)",
+          "message": "`text` = `True`인 경우 사용할 문자열 인코딩입니다(기본값: `UTF-8`)"
+        },
+        "app.U0ZUUA.action.c2VuZC1maWxl.option.ZW5jb2Rpbmc.display_name": {
+          "source": "Encoding",
+          "message": "인코딩"
+        },
+        "app.U0ZUUA.action.c2VuZC1maWxl.option.ZW5jb2Rpbmc.short_desc": {
+          "source": "Text encoding for text mode",
+          "message": "텍스트 모드용 텍스트 인코딩"
+        },
+        "app.U0ZUUA.action.c2VuZC1maWxl.option.cGF0aA.desc": {
+          "source": "The remote path on the SFTP server to the file to retrieve",
+          "message": "가져올 파일의 SFTP 서버 원격 경로"
+        },
+        "app.U0ZUUA.action.c2VuZC1maWxl.option.cGF0aA.display_name": {
+          "source": "Path",
+          "message": "경로"
+        },
+        "app.U0ZUUA.action.c2VuZC1maWxl.option.cGF0aA.short_desc": {
+          "source": "The path on the SFTP server",
+          "message": "SFTP 서버의 경로"
+        },
+        "app.U0ZUUA.action.c2VuZC1maWxl.option.dGV4dA.desc": {
+          "source": "If `True` the file will be returned as a string, `False` (the default) as binary data",
+          "message": "`True`인 경우 파일이 문자열로 반환되고, `False`(기본값)인 경우 바이너리 데이터로 반환됩니다."
+        },
+        "app.U0ZUUA.action.c2VuZC1maWxl.option.dGV4dA.display_name": {
+          "source": "Text Mode",
+          "message": "텍스트 모드"
+        },
+        "app.U0ZUUA.action.c2VuZC1maWxl.option.dGV4dA.short_desc": {
+          "source": "Return file as text string",
+          "message": "파일을 텍스트 문자열로 반환"
+        },
+        "app.U0ZUUA.action.c2VuZC1maWxl.short_desc": {
+          "source": "Sends a file to an SFTP server",
+          "message": "SFTP 서버로 파일을 전송합니다."
+        },
+        "app.U0ZUUA.action.cm1kaXI.desc": {
+          "source": "Removes an empty directory on an SFTP server",
+          "message": "SFTP 서버의 빈 디렉토리를 제거합니다."
+        },
+        "app.U0ZUUA.action.cm1kaXI.display_name": {
+          "source": "Remove Directory With SFTP",
+          "message": "SFTP로 디렉토리 제거"
+        },
+        "app.U0ZUUA.action.cm1kaXI.option.cGF0aA.desc": {
+          "source": "The remote path on the SFTP server for the operation",
+          "message": "작업을 위한 SFTP 서버의 원격 경로"
+        },
+        "app.U0ZUUA.action.cm1kaXI.option.cGF0aA.display_name": {
+          "source": "Path",
+          "message": "경로"
+        },
+        "app.U0ZUUA.action.cm1kaXI.option.cGF0aA.short_desc": {
+          "source": "The SFTP path for the operation",
+          "message": "작업을 위한 SFTP 경로"
+        },
+        "app.U0ZUUA.action.cm1kaXI.short_desc": {
+          "source": "Removes an empty directory on an SFTP server",
+          "message": "SFTP 서버의 빈 디렉토리를 제거합니다."
+        },
+        "app.U0ZUUA.desc": {
+          "source": "Generic SFTP server for exchanging files with SFTP",
+          "message": "SFTP로 파일을 교환하기 위한 일반 SFTP 서버"
+        },
+        "app.U0ZUUA.display_name": {
+          "source": "SFTP Server",
+          "message": "SFTP 서버"
+        },
+        "app.U0ZUUA.short_desc": {
+          "source": "Generic SFTP server for exchanging files with SFTP",
+          "message": "SFTP로 파일을 교환하기 위한 일반 SFTP 서버"
+        }
+      }
+    }
+  }
+}

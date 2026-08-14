@@ -1,0 +1,225 @@
+{
+  "schema_version": 1,
+  "locales": {
+    "zh-TW": {
+      "messages": {
+        "app.U0ZUUA.action.Y2htb2Q.desc": {
+          "source": "Changes file or directory permissions on an SFTP server",
+          "message": "變更 SFTP 伺服器上的檔案或目錄權限"
+        },
+        "app.U0ZUUA.action.Y2htb2Q.display_name": {
+          "source": "Change File Permissions With SFTP",
+          "message": "使用 SFTP 變更檔案權限"
+        },
+        "app.U0ZUUA.action.Y2htb2Q.option.bW9kZQ.desc": {
+          "source": "The file permission mode as an octal integer (e.g., 0755 for rwxr-xr-x). Only the lower 9 bits (owner/group/other permissions) are used; sticky bits and setuid/setgid bits are not supported.",
+          "message": "以八進位整數表示的檔案權限模式（例如 rwxr-xr-x 為 0755）。僅使用低 9 位元（擁有者/群組/其他權限）；不支援粘滯位元與 setuid/setgid 位元。"
+        },
+        "app.U0ZUUA.action.Y2htb2Q.option.bW9kZQ.display_name": {
+          "source": "Mode",
+          "message": "模式"
+        },
+        "app.U0ZUUA.action.Y2htb2Q.option.bW9kZQ.short_desc": {
+          "source": "The file permission mode",
+          "message": "檔案權限模式"
+        },
+        "app.U0ZUUA.action.Y2htb2Q.option.cGF0aA.desc": {
+          "source": "The remote path on the SFTP server for the chmod operation",
+          "message": "用於 chmod 操作的 SFTP 伺服器遠端路徑"
+        },
+        "app.U0ZUUA.action.Y2htb2Q.option.cGF0aA.display_name": {
+          "source": "Path",
+          "message": "路徑"
+        },
+        "app.U0ZUUA.action.Y2htb2Q.option.cGF0aA.short_desc": {
+          "source": "The SFTP path for the operation",
+          "message": "操作的 SFTP 路徑"
+        },
+        "app.U0ZUUA.action.Y2htb2Q.short_desc": {
+          "source": "Changes file or directory permissions on an SFTP server",
+          "message": "變更 SFTP 伺服器上的檔案或目錄權限"
+        },
+        "app.U0ZUUA.action.Z2V0LWZpbGU.desc": {
+          "source": "Retrieve a file from an SFTP server",
+          "message": "從 SFTP 伺服器檢索檔案"
+        },
+        "app.U0ZUUA.action.Z2V0LWZpbGU.display_name": {
+          "source": "Retrieve File With SFTP",
+          "message": "使用 SFTP 檢索檔案"
+        },
+        "app.U0ZUUA.action.Z2V0LWZpbGU.option.ZW5jb2Rpbmc.desc": {
+          "source": "The string encoding to use if `text` = `True` (default: `UTF-8`)",
+          "message": "當 `text` = `True` 時要使用的字串編碼（預設：`UTF-8`）"
+        },
+        "app.U0ZUUA.action.Z2V0LWZpbGU.option.ZW5jb2Rpbmc.display_name": {
+          "source": "Encoding",
+          "message": "編碼"
+        },
+        "app.U0ZUUA.action.Z2V0LWZpbGU.option.ZW5jb2Rpbmc.short_desc": {
+          "source": "Text encoding for text mode",
+          "message": "文字模式的文字編碼"
+        },
+        "app.U0ZUUA.action.Z2V0LWZpbGU.option.cGF0aA.desc": {
+          "source": "The remote path on the SFTP server to the file to retrieve",
+          "message": "要檢索的檔案在 SFTP 伺服器上的遠端路徑"
+        },
+        "app.U0ZUUA.action.Z2V0LWZpbGU.option.cGF0aA.display_name": {
+          "source": "Path",
+          "message": "路徑"
+        },
+        "app.U0ZUUA.action.Z2V0LWZpbGU.option.cGF0aA.short_desc": {
+          "source": "The path on the SFTP server",
+          "message": "SFTP 伺服器上的路徑"
+        },
+        "app.U0ZUUA.action.Z2V0LWZpbGU.option.dGV4dA.desc": {
+          "source": "If `True` the file will be returned as a string, `False` (the default) as binary data",
+          "message": "若為 `True`，檔案將作為字串傳回；若為 `False`（預設），將作為二進位資料傳回"
+        },
+        "app.U0ZUUA.action.Z2V0LWZpbGU.option.dGV4dA.display_name": {
+          "source": "Text Mode",
+          "message": "文字模式"
+        },
+        "app.U0ZUUA.action.Z2V0LWZpbGU.option.dGV4dA.short_desc": {
+          "source": "Return file as text string",
+          "message": "將檔案作為文字字串傳回"
+        },
+        "app.U0ZUUA.action.Z2V0LWZpbGU.short_desc": {
+          "source": "Get a file from an SFTP server",
+          "message": "從 SFTP 伺服器取得檔案"
+        },
+        "app.U0ZUUA.action.ZGVsZXRlLWZpbGU.desc": {
+          "source": "Deletes a file on an SFTP server",
+          "message": "刪除 SFTP 伺服器上的檔案"
+        },
+        "app.U0ZUUA.action.ZGVsZXRlLWZpbGU.display_name": {
+          "source": "Delete File With SFTP",
+          "message": "使用 SFTP 刪除檔案"
+        },
+        "app.U0ZUUA.action.ZGVsZXRlLWZpbGU.option.cGF0aA.desc": {
+          "source": "The remote path on the SFTP server for the operation",
+          "message": "用於該操作的 SFTP 伺服器遠端路徑"
+        },
+        "app.U0ZUUA.action.ZGVsZXRlLWZpbGU.option.cGF0aA.display_name": {
+          "source": "Path",
+          "message": "路徑"
+        },
+        "app.U0ZUUA.action.ZGVsZXRlLWZpbGU.option.cGF0aA.short_desc": {
+          "source": "The SFTP path for the operation",
+          "message": "操作的 SFTP 路徑"
+        },
+        "app.U0ZUUA.action.ZGVsZXRlLWZpbGU.short_desc": {
+          "source": "Deletes a file on an SFTP server",
+          "message": "刪除 SFTP 伺服器上的檔案"
+        },
+        "app.U0ZUUA.action.ZXhpc3Rz.desc": {
+          "source": "Checks if a file or directory exists on an SFTP server",
+          "message": "檢查 SFTP 伺服器上是否存在檔案或目錄"
+        },
+        "app.U0ZUUA.action.ZXhpc3Rz.display_name": {
+          "source": "Check If Path Exists With SFTP",
+          "message": "使用 SFTP 檢查路徑是否存在"
+        },
+        "app.U0ZUUA.action.ZXhpc3Rz.option.cGF0aA.desc": {
+          "source": "The remote path on the SFTP server for the operation",
+          "message": "用於該操作的 SFTP 伺服器遠端路徑"
+        },
+        "app.U0ZUUA.action.ZXhpc3Rz.option.cGF0aA.display_name": {
+          "source": "Path",
+          "message": "路徑"
+        },
+        "app.U0ZUUA.action.ZXhpc3Rz.option.cGF0aA.short_desc": {
+          "source": "The SFTP path for the operation",
+          "message": "操作的 SFTP 路徑"
+        },
+        "app.U0ZUUA.action.ZXhpc3Rz.short_desc": {
+          "source": "Checks if a file or directory exists on an SFTP server",
+          "message": "檢查 SFTP 伺服器上是否存在檔案或目錄"
+        },
+        "app.U0ZUUA.action.c2VuZC1maWxl.desc": {
+          "source": "Sends a file to an SFTP server",
+          "message": "傳送檔案至 SFTP 伺服器"
+        },
+        "app.U0ZUUA.action.c2VuZC1maWxl.display_name": {
+          "source": "Send File With SFTP",
+          "message": "使用 SFTP 傳送檔案"
+        },
+        "app.U0ZUUA.action.c2VuZC1maWxl.option.ZW5jb2Rpbmc.desc": {
+          "source": "The string encoding to use if `text` = `True` (default: `UTF-8`)",
+          "message": "當 `text` = `True` 時要使用的字串編碼（預設：`UTF-8`）"
+        },
+        "app.U0ZUUA.action.c2VuZC1maWxl.option.ZW5jb2Rpbmc.display_name": {
+          "source": "Encoding",
+          "message": "編碼"
+        },
+        "app.U0ZUUA.action.c2VuZC1maWxl.option.ZW5jb2Rpbmc.short_desc": {
+          "source": "Text encoding for text mode",
+          "message": "文字模式的文字編碼"
+        },
+        "app.U0ZUUA.action.c2VuZC1maWxl.option.cGF0aA.desc": {
+          "source": "The remote path on the SFTP server to the file to retrieve",
+          "message": "要檢索的檔案在 SFTP 伺服器上的遠端路徑"
+        },
+        "app.U0ZUUA.action.c2VuZC1maWxl.option.cGF0aA.display_name": {
+          "source": "Path",
+          "message": "路徑"
+        },
+        "app.U0ZUUA.action.c2VuZC1maWxl.option.cGF0aA.short_desc": {
+          "source": "The path on the SFTP server",
+          "message": "SFTP 伺服器上的路徑"
+        },
+        "app.U0ZUUA.action.c2VuZC1maWxl.option.dGV4dA.desc": {
+          "source": "If `True` the file will be returned as a string, `False` (the default) as binary data",
+          "message": "若為 `True`，檔案將作為字串傳回；若為 `False`（預設），將作為二進位資料傳回"
+        },
+        "app.U0ZUUA.action.c2VuZC1maWxl.option.dGV4dA.display_name": {
+          "source": "Text Mode",
+          "message": "文字模式"
+        },
+        "app.U0ZUUA.action.c2VuZC1maWxl.option.dGV4dA.short_desc": {
+          "source": "Return file as text string",
+          "message": "將檔案作為文字字串傳回"
+        },
+        "app.U0ZUUA.action.c2VuZC1maWxl.short_desc": {
+          "source": "Sends a file to an SFTP server",
+          "message": "傳送檔案至 SFTP 伺服器"
+        },
+        "app.U0ZUUA.action.cm1kaXI.desc": {
+          "source": "Removes an empty directory on an SFTP server",
+          "message": "移除 SFTP 伺服器上的空目錄"
+        },
+        "app.U0ZUUA.action.cm1kaXI.display_name": {
+          "source": "Remove Directory With SFTP",
+          "message": "使用 SFTP 移除目錄"
+        },
+        "app.U0ZUUA.action.cm1kaXI.option.cGF0aA.desc": {
+          "source": "The remote path on the SFTP server for the operation",
+          "message": "用於該操作的 SFTP 伺服器遠端路徑"
+        },
+        "app.U0ZUUA.action.cm1kaXI.option.cGF0aA.display_name": {
+          "source": "Path",
+          "message": "路徑"
+        },
+        "app.U0ZUUA.action.cm1kaXI.option.cGF0aA.short_desc": {
+          "source": "The SFTP path for the operation",
+          "message": "操作的 SFTP 路徑"
+        },
+        "app.U0ZUUA.action.cm1kaXI.short_desc": {
+          "source": "Removes an empty directory on an SFTP server",
+          "message": "移除 SFTP 伺服器上的空目錄"
+        },
+        "app.U0ZUUA.desc": {
+          "source": "Generic SFTP server for exchanging files with SFTP",
+          "message": "用於透過 SFTP 交換檔案的通用 SFTP 伺服器"
+        },
+        "app.U0ZUUA.display_name": {
+          "source": "SFTP Server",
+          "message": "SFTP Server"
+        },
+        "app.U0ZUUA.short_desc": {
+          "source": "Generic SFTP server for exchanging files with SFTP",
+          "message": "用於透過 SFTP 交換檔案的通用 SFTP 伺服器"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,225 @@
+{
+  "schema_version": 1,
+  "locales": {
+    "fr": {
+      "messages": {
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.desc": {
+          "source": "React to files uploaded to an SFTP server; the action configuration determines if the event contains the file data itself or a link to the location of the file on the local filesystem. In any case, the event indicates that the file data has already been downloaded and is available locally",
+          "message": "Réagir aux fichiers téléversés sur un serveur SFTP ; la configuration de l'action détermine si l'événement contient les données du fichier elles-mêmes ou un lien vers l'emplacement du fichier sur le système de fichiers local. Dans tous les cas, l'événement indique que les données du fichier ont déjà été téléchargées et sont disponibles localement"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.display_name": {
+          "source": "SFTP File Received",
+          "message": "Fichier SFTP reçu"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.YXRvbWljX3RyYW5zZmVy.desc": {
+          "source": "Use an atomic transfer mechanism with `local_dir` where remote files are first moved to a temporary location and then moved to the final location when they have been fully transferred.\n\nThis ensures that files will never be read until they are fully transferred",
+          "message": "Utiliser un mécanisme de transfert atomique avec `local_dir` dans lequel les fichiers distants sont d'abord déplacés vers un emplacement temporaire, puis déplacés vers l'emplacement final lorsqu'ils ont été entièrement transférés.\n\nCela garantit que les fichiers ne seront jamais lus tant qu'ils ne sont pas entièrement transférés"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.YXRvbWljX3RyYW5zZmVy.display_name": {
+          "source": "Atomic File Transfer",
+          "message": "Transfert de fichier atomique"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.YXRvbWljX3RyYW5zZmVy.short_desc": {
+          "source": "Use an atomic file transfer mechanism",
+          "message": "Utiliser un mécanisme de transfert de fichier atomique"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.a2V5ZmlsZQ.desc": {
+          "source": "A path to an SSH private key file in PEM format to use for key-based authentication",
+          "message": "Un chemin vers un fichier de clé privée SSH au format PEM à utiliser pour l'authentification par clé"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.a2V5ZmlsZQ.display_name": {
+          "source": "SSH Private Key",
+          "message": "Clé privée SSH"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.a2V5ZmlsZQ.short_desc": {
+          "source": "A path to an SSH private key file in PEM format",
+          "message": "Un chemin vers un fichier de clé privée SSH au format PEM"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.bG9jYWxfZGly.desc": {
+          "source": "A local directory that will be used to retrieve files",
+          "message": "Un répertoire local qui sera utilisé pour récupérer les fichiers"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.bG9jYWxfZGly.display_name": {
+          "source": "Local Directory",
+          "message": "Répertoire local"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.bG9jYWxfZGly.short_desc": {
+          "source": "A local directory that will be used to retrieve files",
+          "message": "Un répertoire local qui sera utilisé pour récupérer les fichiers"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.bWFzaw.desc": {
+          "source": "The glob mask to use to match files to poll; will be treated as a regex if `regex` is `true`",
+          "message": "Le masque glob à utiliser pour faire correspondre les fichiers à sonder ; sera traité comme une expression régulière si `regex` est `true`"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.bWFzaw.display_name": {
+          "source": "Glob Mask",
+          "message": "Masque glob"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.bWFzaw.short_desc": {
+          "source": "The glob mask to use to match files to poll",
+          "message": "Le masque glob à utiliser pour faire correspondre les fichiers à sonder"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.bWluYWdl.desc": {
+          "source": "An integer giving the minimum file age in seconds before the file will be polled; this is meant to work around non-atomic file transfer operations.\n\nIf this option is necessary, set it to a value that is larger than the longest time it should take to transfer a file",
+          "message": "Un entier indiquant l'âge minimum du fichier en secondes avant qu'il ne soit sondé ; ceci est destiné à contourner les opérations de transfert de fichiers non atomiques.\n\nSi cette option est nécessaire, définissez-la sur une valeur supérieure au temps le plus long nécessaire pour transférer un fichier"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.bWluYWdl.display_name": {
+          "source": "Minimum Polling Age",
+          "message": "Âge minimum de sondage"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.bWluYWdl.short_desc": {
+          "source": "The minimum age of files to poll in seconds",
+          "message": "L'âge minimum des fichiers à sonder en secondes"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.c29ydF90eXBl.desc": {
+          "source": "Either `name` or `date` for the data to use for sorting",
+          "message": "Soit `name`, soit `date` pour les données à utiliser pour le tri"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.c29ydF90eXBl.display_name": {
+          "source": "Sort Type",
+          "message": "Type de tri"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.c29ydF90eXBl.short_desc": {
+          "source": "Field to sort files on",
+          "message": "Champ sur lequel trier les fichiers"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.c29ydF9kZXNj.desc": {
+          "source": "Sort descending; if not given then an ascending sort is assumed if a `sort_type` is given",
+          "message": "Trier par ordre décroissant ; si non spécifié, un tri croissant est présumé si un `sort_type` est fourni"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.c29ydF9kZXNj.display_name": {
+          "source": "Sort Descending",
+          "message": "Trier par ordre décroissant"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.c29ydF9kZXNj.short_desc": {
+          "source": "Sort files in descending order",
+          "message": "Trier les fichiers par ordre décroissant"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cG9sbF9pbnRlcnZhbA.desc": {
+          "source": "The interval in seconds between polling for files",
+          "message": "L'intervalle en secondes entre les sondages de fichiers"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cG9sbF9pbnRlcnZhbA.display_name": {
+          "source": "Poll Interval",
+          "message": "Intervalle de sondage"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cG9sbF9pbnRlcnZhbA.short_desc": {
+          "source": "The poll interval in seconds",
+          "message": "L'intervalle de sondage en secondes"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cmVnZXg.desc": {
+          "source": "If `true` then `mask` is treated as a regular expression instead of a glob pattern",
+          "message": "Si `true`, alors `mask` est traité comme une expression régulière au lieu d'un motif glob"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cmVnZXg.display_name": {
+          "source": "Regular Expression Match",
+          "message": "Correspondance d'expression régulière"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cmVnZXg.short_desc": {
+          "source": "If true then the 'mask' argument is treated as a regular expression",
+          "message": "Si vrai, l'argument 'mask' est traité comme une expression régulière"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cmVtb3RlX2ZpbGVfZGlzcG9zaXRpb24.allowed-value.c3RyaW5nOk1PVkU.desc": {
+          "source": "Move the remote file after processing; in this case `remote_file_move_target` must be set",
+          "message": "Déplacer le fichier distant après le traitement ; dans ce cas, `remote_file_move_target` doit être défini"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cmVtb3RlX2ZpbGVfZGlzcG9zaXRpb24.allowed-value.c3RyaW5nOk1PVkU.display_name": {
+          "source": "MOVE",
+          "message": "MOVE"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cmVtb3RlX2ZpbGVfZGlzcG9zaXRpb24.allowed-value.c3RyaW5nOk1PVkU.short_desc": {
+          "source": "Move the remote file after processing",
+          "message": "Déplacer le fichier distant après le traitement"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cmVtb3RlX2ZpbGVfZGlzcG9zaXRpb24.allowed-value.c3RyaW5nOk5PTkU.desc": {
+          "source": "Leave the file untouched after processing; the file must be moved or deleted manually during post-processing, or the file will appear in subsequent polls as well",
+          "message": "Laisser le fichier intact après le traitement ; le fichier doit être déplacé ou supprimé manuellement lors du post-traitement, sinon il apparaîtra également dans les sondages ultérieurs"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cmVtb3RlX2ZpbGVfZGlzcG9zaXRpb24.allowed-value.c3RyaW5nOk5PTkU.display_name": {
+          "source": "NONE",
+          "message": "NONE"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cmVtb3RlX2ZpbGVfZGlzcG9zaXRpb24.allowed-value.c3RyaW5nOk5PTkU.short_desc": {
+          "source": "Leave the file untouched after processing",
+          "message": "Laisser le fichier intact après le traitement"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cmVtb3RlX2ZpbGVfZGlzcG9zaXRpb24.allowed-value.c3RyaW5nOkRFTEVURQ.desc": {
+          "source": "Delete the remote file after processing",
+          "message": "Supprimer le fichier distant après le traitement"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cmVtb3RlX2ZpbGVfZGlzcG9zaXRpb24.allowed-value.c3RyaW5nOkRFTEVURQ.display_name": {
+          "source": "DELETE",
+          "message": "DELETE"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cmVtb3RlX2ZpbGVfZGlzcG9zaXRpb24.allowed-value.c3RyaW5nOkRFTEVURQ.short_desc": {
+          "source": "Delete the remote file after processing",
+          "message": "Supprimer le fichier distant après le traitement"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cmVtb3RlX2ZpbGVfZGlzcG9zaXRpb24.desc": {
+          "source": "Delete or move remote file after processing? If `MOVE`, `remote_file_move_target` must also be set",
+          "message": "Supprimer ou déplacer le fichier distant après le traitement ? Si `MOVE`, `remote_file_move_target` doit également être défini"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cmVtb3RlX2ZpbGVfZGlzcG9zaXRpb24.display_name": {
+          "source": "Remote File Disposition",
+          "message": "Disposition du fichier distant"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cmVtb3RlX2ZpbGVfZGlzcG9zaXRpb24.short_desc": {
+          "source": "Delete or move remote file after processing?",
+          "message": "Supprimer ou déplacer le fichier distant après le traitement ?"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cmVtb3RlX2ZpbGVfbW92ZV90YXJnZXQ.desc": {
+          "source": "The target template for the remote file after processing; use `%s` for the original file name. This option is only used when `remote_file_disposition` is `MOVE`, otherwise it is ignored",
+          "message": "Le modèle cible pour le fichier distant après le traitement ; utilisez `%s` pour le nom de fichier d'origine. Cette option est uniquement utilisée lorsque `remote_file_disposition` est `MOVE`, sinon elle est ignorée"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cmVtb3RlX2ZpbGVfbW92ZV90YXJnZXQ.display_name": {
+          "source": "Remote File Move Target",
+          "message": "Cible de déplacement du fichier distant"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cmVtb3RlX2ZpbGVfbW92ZV90YXJnZXQ.short_desc": {
+          "source": "The target template for the remote file after processing",
+          "message": "Le modèle cible pour le fichier distant après le traitement"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cmVvcHQ.desc": {
+          "source": "A bitfield of regular expression options (`1` = ignore case, `2` = treat EOL as a regular character); ignored if `regex` is not `true`",
+          "message": "Un champ de bits d'options d'expressions régulières (`1` = ignorer la casse, `2` = traiter la fin de ligne comme un caractère normal) ; ignoré si `regex` n'est pas `true`"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cmVvcHQ.display_name": {
+          "source": "Regular Expression Options",
+          "message": "Options d'expressions régulières"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cmVvcHQ.short_desc": {
+          "source": "A bitfield of regular expression options",
+          "message": "Un champ de bits d'options d'expressions régulières"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.dGVtcGZpbGVfdGVtcGxhdGU.desc": {
+          "source": "The template for temporary filenames; use `%s` for the original filename",
+          "message": "Le modèle pour les noms de fichiers temporaires ; utilisez `%s` pour le nom de fichier d'origine"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.dGVtcGZpbGVfdGVtcGxhdGU.display_name": {
+          "source": "Temporary Filename Template",
+          "message": "Modèle de nom de fichier temporaire"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.dGVtcGZpbGVfdGVtcGxhdGU.short_desc": {
+          "source": "The template for temporary filenames",
+          "message": "Le modèle pour les noms de fichiers temporaires"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.short_desc": {
+          "source": "A file is uploaded to an SFTP server",
+          "message": "Un fichier est téléversé sur un serveur SFTP"
+        },
+        "app.U0ZUUA.desc": {
+          "source": "Generic SFTP server for exchanging files with SFTP",
+          "message": "Serveur SFTP générique pour échanger des fichiers avec SFTP"
+        },
+        "app.U0ZUUA.display_name": {
+          "source": "SFTP Server",
+          "message": "Serveur SFTP"
+        },
+        "app.U0ZUUA.short_desc": {
+          "source": "Generic SFTP server for exchanging files with SFTP",
+          "message": "Serveur SFTP générique pour échanger des fichiers avec SFTP"
+        }
+      }
+    }
+  }
+}

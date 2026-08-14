@@ -1,0 +1,225 @@
+{
+  "schema_version": 1,
+  "locales": {
+    "sk": {
+      "messages": {
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.desc": {
+          "source": "React to files uploaded to an SFTP server; the action configuration determines if the event contains the file data itself or a link to the location of the file on the local filesystem. In any case, the event indicates that the file data has already been downloaded and is available locally",
+          "message": "Reagovať na súbory nahraté na SFTP server; konfigurácia akcie určuje, či udalosť obsahuje samotné dáta súboru alebo odkaz na umiestnenie súboru v lokálnom súborovom systéme. V každom prípade udalosť indikuje, že dáta súboru už boli stiahnuté a sú dostupné lokálne"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.display_name": {
+          "source": "SFTP File Received",
+          "message": "Prijatý SFTP súbor"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.YXRvbWljX3RyYW5zZmVy.desc": {
+          "source": "Use an atomic transfer mechanism with `local_dir` where remote files are first moved to a temporary location and then moved to the final location when they have been fully transferred.\n\nThis ensures that files will never be read until they are fully transferred",
+          "message": "Použiť mechanizmus atomického prenosu s `local_dir`, kde sa vzdialené súbory najskôr presunú do dočasného umiestnenia a po úplnom prenesení sa presunú do konečného umiestnenia.\n\nTým sa zabezpečí, že súbory sa nikdy nebudú čítať, kým nebudú úplne prenesené"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.YXRvbWljX3RyYW5zZmVy.display_name": {
+          "source": "Atomic File Transfer",
+          "message": "Atomický prenos súborov"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.YXRvbWljX3RyYW5zZmVy.short_desc": {
+          "source": "Use an atomic file transfer mechanism",
+          "message": "Použiť mechanizmus atomického prenosu súborov"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.a2V5ZmlsZQ.desc": {
+          "source": "A path to an SSH private key file in PEM format to use for key-based authentication",
+          "message": "Cesta k súboru so súkromným kľúčom SSH vo formáte PEM na použitie pri autentifikácii pomocou kľúča"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.a2V5ZmlsZQ.display_name": {
+          "source": "SSH Private Key",
+          "message": "Súkromný kľúč SSH"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.a2V5ZmlsZQ.short_desc": {
+          "source": "A path to an SSH private key file in PEM format",
+          "message": "Cesta k súboru so súkromným kľúčom SSH vo formáte PEM"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.bG9jYWxfZGly.desc": {
+          "source": "A local directory that will be used to retrieve files",
+          "message": "Lokálny adresár, ktorý sa použije na získanie súborov"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.bG9jYWxfZGly.display_name": {
+          "source": "Local Directory",
+          "message": "Lokálny adresár"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.bG9jYWxfZGly.short_desc": {
+          "source": "A local directory that will be used to retrieve files",
+          "message": "Lokálny adresár, ktorý sa použije na získanie súborov"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.bWFzaw.desc": {
+          "source": "The glob mask to use to match files to poll; will be treated as a regex if `regex` is `true`",
+          "message": "Maska glob na vyhľadávanie súborov na sledovanie; bude sa považovať za regulárny výraz, ak `regex` je `true`"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.bWFzaw.display_name": {
+          "source": "Glob Mask",
+          "message": "Maska Glob"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.bWFzaw.short_desc": {
+          "source": "The glob mask to use to match files to poll",
+          "message": "Maska glob na vyhľadávanie súborov na sledovanie"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.bWluYWdl.desc": {
+          "source": "An integer giving the minimum file age in seconds before the file will be polled; this is meant to work around non-atomic file transfer operations.\n\nIf this option is necessary, set it to a value that is larger than the longest time it should take to transfer a file",
+          "message": "Celé číslo udávajúce minimálny vek súboru v sekundách pred jeho sledovaním; slúži to ako obchádzka pri neatomických operáciách prenosu súborov.\n\nAk je táto možnosť potrebná, nastavte ju na hodnotu vyššiu, než je najdlhší čas, ktorý by mal prenos súboru trvať"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.bWluYWdl.display_name": {
+          "source": "Minimum Polling Age",
+          "message": "Minimálny vek na sledovanie"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.bWluYWdl.short_desc": {
+          "source": "The minimum age of files to poll in seconds",
+          "message": "Minimálny vek sledovaných súborov v sekundách"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.c29ydF90eXBl.desc": {
+          "source": "Either `name` or `date` for the data to use for sorting",
+          "message": "Buď `name`, alebo `date` pre údaje použité na triedenie"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.c29ydF90eXBl.display_name": {
+          "source": "Sort Type",
+          "message": "Typ triedenia"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.c29ydF90eXBl.short_desc": {
+          "source": "Field to sort files on",
+          "message": "Pole, podľa ktorého sa majú súbory triediť"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.c29ydF9kZXNj.desc": {
+          "source": "Sort descending; if not given then an ascending sort is assumed if a `sort_type` is given",
+          "message": "Triediť zostostupne; ak nie je zadané, predpokladá sa vzostupné triedenie, ak je zadané `sort_type`"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.c29ydF9kZXNj.display_name": {
+          "source": "Sort Descending",
+          "message": "Triediť zostupne"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.c29ydF9kZXNj.short_desc": {
+          "source": "Sort files in descending order",
+          "message": "Triediť súbory v zostupnom poradí"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cG9sbF9pbnRlcnZhbA.desc": {
+          "source": "The interval in seconds between polling for files",
+          "message": "Interval v sekundách medzi kontrolami súborov"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cG9sbF9pbnRlcnZhbA.display_name": {
+          "source": "Poll Interval",
+          "message": "Interval sledovania"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cG9sbF9pbnRlcnZhbA.short_desc": {
+          "source": "The poll interval in seconds",
+          "message": "Interval sledovania v sekundách"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cmVnZXg.desc": {
+          "source": "If `true` then `mask` is treated as a regular expression instead of a glob pattern",
+          "message": "Ak `true`, potom sa `mask` považuje za regulárny výraz namiesto vzoru glob"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cmVnZXg.display_name": {
+          "source": "Regular Expression Match",
+          "message": "Zhoda s regulárnym výrazom"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cmVnZXg.short_desc": {
+          "source": "If true then the 'mask' argument is treated as a regular expression",
+          "message": "Ak je true, argument 'mask' sa považuje za regulárny výraz"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cmVtb3RlX2ZpbGVfZGlzcG9zaXRpb24.allowed-value.c3RyaW5nOk1PVkU.desc": {
+          "source": "Move the remote file after processing; in this case `remote_file_move_target` must be set",
+          "message": "Presunúť vzdialený súbor po spracovaní; v tomto prípade musí byť nastavené `remote_file_move_target`"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cmVtb3RlX2ZpbGVfZGlzcG9zaXRpb24.allowed-value.c3RyaW5nOk1PVkU.display_name": {
+          "source": "MOVE",
+          "message": "MOVE"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cmVtb3RlX2ZpbGVfZGlzcG9zaXRpb24.allowed-value.c3RyaW5nOk1PVkU.short_desc": {
+          "source": "Move the remote file after processing",
+          "message": "Presunúť vzdialený súbor po spracovaní"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cmVtb3RlX2ZpbGVfZGlzcG9zaXRpb24.allowed-value.c3RyaW5nOk5PTkU.desc": {
+          "source": "Leave the file untouched after processing; the file must be moved or deleted manually during post-processing, or the file will appear in subsequent polls as well",
+          "message": "Ponechať súbor po spracovaní nezmenený; súbor sa musí presunúť alebo vymazať manuálne počas následného spracovania, inak sa objaví aj pri nasledujúcich kontrolách"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cmVtb3RlX2ZpbGVfZGlzcG9zaXRpb24.allowed-value.c3RyaW5nOk5PTkU.display_name": {
+          "source": "NONE",
+          "message": "NONE"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cmVtb3RlX2ZpbGVfZGlzcG9zaXRpb24.allowed-value.c3RyaW5nOk5PTkU.short_desc": {
+          "source": "Leave the file untouched after processing",
+          "message": "Ponechať súbor po spracovaní nezmenený"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cmVtb3RlX2ZpbGVfZGlzcG9zaXRpb24.allowed-value.c3RyaW5nOkRFTEVURQ.desc": {
+          "source": "Delete the remote file after processing",
+          "message": "Vymazať vzdialený súbor po spracovaní"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cmVtb3RlX2ZpbGVfZGlzcG9zaXRpb24.allowed-value.c3RyaW5nOkRFTEVURQ.display_name": {
+          "source": "DELETE",
+          "message": "DELETE"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cmVtb3RlX2ZpbGVfZGlzcG9zaXRpb24.allowed-value.c3RyaW5nOkRFTEVURQ.short_desc": {
+          "source": "Delete the remote file after processing",
+          "message": "Vymazať vzdialený súbor po spracovaní"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cmVtb3RlX2ZpbGVfZGlzcG9zaXRpb24.desc": {
+          "source": "Delete or move remote file after processing? If `MOVE`, `remote_file_move_target` must also be set",
+          "message": "Vymazať alebo presunúť vzdialený súbor po spracovaní? Ak `MOVE`, musí byť nastavené aj `remote_file_move_target`"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cmVtb3RlX2ZpbGVfZGlzcG9zaXRpb24.display_name": {
+          "source": "Remote File Disposition",
+          "message": "Naloženie so vzdialeným súborom"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cmVtb3RlX2ZpbGVfZGlzcG9zaXRpb24.short_desc": {
+          "source": "Delete or move remote file after processing?",
+          "message": "Vymazať alebo presunúť vzdialený súbor po spracovaní?"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cmVtb3RlX2ZpbGVfbW92ZV90YXJnZXQ.desc": {
+          "source": "The target template for the remote file after processing; use `%s` for the original file name. This option is only used when `remote_file_disposition` is `MOVE`, otherwise it is ignored",
+          "message": "Cieľová šablóna pre vzdialený súbor po spracovaní; použite `%s` pre pôvodný názov súboru. Táto možnosť sa používa iba vtedy, keď je `remote_file_disposition` nastavené na `MOVE`, inak sa ignoruje"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cmVtb3RlX2ZpbGVfbW92ZV90YXJnZXQ.display_name": {
+          "source": "Remote File Move Target",
+          "message": "Cieľ presunutia vzdialeného súboru"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cmVtb3RlX2ZpbGVfbW92ZV90YXJnZXQ.short_desc": {
+          "source": "The target template for the remote file after processing",
+          "message": "Cieľová šablóna pre vzdialený súbor po spracovaní"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cmVvcHQ.desc": {
+          "source": "A bitfield of regular expression options (`1` = ignore case, `2` = treat EOL as a regular character); ignored if `regex` is not `true`",
+          "message": "Bitové pole možností regulárneho výrazu (`1` = ignorovať veľkosť písmen, `2` = považovať EOL za bežný znak); ignoruje sa, ak `regex` nie je `true`"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cmVvcHQ.display_name": {
+          "source": "Regular Expression Options",
+          "message": "Možnosti regulárneho výrazu"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cmVvcHQ.short_desc": {
+          "source": "A bitfield of regular expression options",
+          "message": "Bitové pole možností regulárneho výrazu"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.dGVtcGZpbGVfdGVtcGxhdGU.desc": {
+          "source": "The template for temporary filenames; use `%s` for the original filename",
+          "message": "Šablóna pre dočasné názvy súborov; použite `%s` pre pôvodný názov súboru"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.dGVtcGZpbGVfdGVtcGxhdGU.display_name": {
+          "source": "Temporary Filename Template",
+          "message": "Šablóna dočasného názvu súboru"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.dGVtcGZpbGVfdGVtcGxhdGU.short_desc": {
+          "source": "The template for temporary filenames",
+          "message": "Šablóna pre dočasné názvy súborov"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.short_desc": {
+          "source": "A file is uploaded to an SFTP server",
+          "message": "Súbor sa odovzdáva na SFTP server"
+        },
+        "app.U0ZUUA.desc": {
+          "source": "Generic SFTP server for exchanging files with SFTP",
+          "message": "Všeobecný SFTP server na výmenu súborov pomocou SFTP"
+        },
+        "app.U0ZUUA.display_name": {
+          "source": "SFTP Server",
+          "message": "SFTP server"
+        },
+        "app.U0ZUUA.short_desc": {
+          "source": "Generic SFTP server for exchanging files with SFTP",
+          "message": "Všeobecný SFTP server na výmenu súborov pomocou SFTP"
+        }
+      }
+    }
+  }
+}

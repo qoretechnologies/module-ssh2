@@ -1,0 +1,225 @@
+{
+  "schema_version": 1,
+  "locales": {
+    "uk": {
+      "messages": {
+        "app.U0ZUUA.action.Y2htb2Q.desc": {
+          "source": "Changes file or directory permissions on an SFTP server",
+          "message": "Змінює права доступу до файлу або каталогу на сервері SFTP"
+        },
+        "app.U0ZUUA.action.Y2htb2Q.display_name": {
+          "source": "Change File Permissions With SFTP",
+          "message": "Змінити права доступу до файлу через SFTP"
+        },
+        "app.U0ZUUA.action.Y2htb2Q.option.bW9kZQ.desc": {
+          "source": "The file permission mode as an octal integer (e.g., 0755 for rwxr-xr-x). Only the lower 9 bits (owner/group/other permissions) are used; sticky bits and setuid/setgid bits are not supported.",
+          "message": "Режим прав доступу до файлу у вигляді вісімкового цілого числа (наприклад, 0755 для rwxr-xr-x). Використовуються лише молодші 9 бітів (права власника/групи/інших); sticky-біти та біти setuid/setgid не підтримуються."
+        },
+        "app.U0ZUUA.action.Y2htb2Q.option.bW9kZQ.display_name": {
+          "source": "Mode",
+          "message": "Режим"
+        },
+        "app.U0ZUUA.action.Y2htb2Q.option.bW9kZQ.short_desc": {
+          "source": "The file permission mode",
+          "message": "Режим прав доступу до файлу"
+        },
+        "app.U0ZUUA.action.Y2htb2Q.option.cGF0aA.desc": {
+          "source": "The remote path on the SFTP server for the chmod operation",
+          "message": "Віддалений шлях на сервері SFTP для операції chmod"
+        },
+        "app.U0ZUUA.action.Y2htb2Q.option.cGF0aA.display_name": {
+          "source": "Path",
+          "message": "Шлях"
+        },
+        "app.U0ZUUA.action.Y2htb2Q.option.cGF0aA.short_desc": {
+          "source": "The SFTP path for the operation",
+          "message": "Шлях SFTP для операції"
+        },
+        "app.U0ZUUA.action.Y2htb2Q.short_desc": {
+          "source": "Changes file or directory permissions on an SFTP server",
+          "message": "Змінює права доступу до файлу або каталогу на сервері SFTP"
+        },
+        "app.U0ZUUA.action.Z2V0LWZpbGU.desc": {
+          "source": "Retrieve a file from an SFTP server",
+          "message": "Отримати файл із сервера SFTP"
+        },
+        "app.U0ZUUA.action.Z2V0LWZpbGU.display_name": {
+          "source": "Retrieve File With SFTP",
+          "message": "Отримати файл через SFTP"
+        },
+        "app.U0ZUUA.action.Z2V0LWZpbGU.option.ZW5jb2Rpbmc.desc": {
+          "source": "The string encoding to use if `text` = `True` (default: `UTF-8`)",
+          "message": "Кодування рядка для використання, якщо `text` = `True` (за замовчуванням: `UTF-8`)"
+        },
+        "app.U0ZUUA.action.Z2V0LWZpbGU.option.ZW5jb2Rpbmc.display_name": {
+          "source": "Encoding",
+          "message": "Кодування"
+        },
+        "app.U0ZUUA.action.Z2V0LWZpbGU.option.ZW5jb2Rpbmc.short_desc": {
+          "source": "Text encoding for text mode",
+          "message": "Кодування тексту для текстового режиму"
+        },
+        "app.U0ZUUA.action.Z2V0LWZpbGU.option.cGF0aA.desc": {
+          "source": "The remote path on the SFTP server to the file to retrieve",
+          "message": "Віддалений шлях на сервері SFTP до файла, який потрібно отримати"
+        },
+        "app.U0ZUUA.action.Z2V0LWZpbGU.option.cGF0aA.display_name": {
+          "source": "Path",
+          "message": "Шлях"
+        },
+        "app.U0ZUUA.action.Z2V0LWZpbGU.option.cGF0aA.short_desc": {
+          "source": "The path on the SFTP server",
+          "message": "Шлях на сервері SFTP"
+        },
+        "app.U0ZUUA.action.Z2V0LWZpbGU.option.dGV4dA.desc": {
+          "source": "If `True` the file will be returned as a string, `False` (the default) as binary data",
+          "message": "Якщо `True`, файл буде повернено як рядок, `False` (за замовчуванням) — як бінарні дані"
+        },
+        "app.U0ZUUA.action.Z2V0LWZpbGU.option.dGV4dA.display_name": {
+          "source": "Text Mode",
+          "message": "Текстовий режим"
+        },
+        "app.U0ZUUA.action.Z2V0LWZpbGU.option.dGV4dA.short_desc": {
+          "source": "Return file as text string",
+          "message": "Повернути файл як текстовий рядок"
+        },
+        "app.U0ZUUA.action.Z2V0LWZpbGU.short_desc": {
+          "source": "Get a file from an SFTP server",
+          "message": "Отримати файл із сервера SFTP"
+        },
+        "app.U0ZUUA.action.ZGVsZXRlLWZpbGU.desc": {
+          "source": "Deletes a file on an SFTP server",
+          "message": "Видаляє файл на сервері SFTP"
+        },
+        "app.U0ZUUA.action.ZGVsZXRlLWZpbGU.display_name": {
+          "source": "Delete File With SFTP",
+          "message": "Видалити файл через SFTP"
+        },
+        "app.U0ZUUA.action.ZGVsZXRlLWZpbGU.option.cGF0aA.desc": {
+          "source": "The remote path on the SFTP server for the operation",
+          "message": "Віддалений шлях на сервері SFTP для операції"
+        },
+        "app.U0ZUUA.action.ZGVsZXRlLWZpbGU.option.cGF0aA.display_name": {
+          "source": "Path",
+          "message": "Шлях"
+        },
+        "app.U0ZUUA.action.ZGVsZXRlLWZpbGU.option.cGF0aA.short_desc": {
+          "source": "The SFTP path for the operation",
+          "message": "Шлях SFTP для операції"
+        },
+        "app.U0ZUUA.action.ZGVsZXRlLWZpbGU.short_desc": {
+          "source": "Deletes a file on an SFTP server",
+          "message": "Видаляє файл на сервері SFTP"
+        },
+        "app.U0ZUUA.action.ZXhpc3Rz.desc": {
+          "source": "Checks if a file or directory exists on an SFTP server",
+          "message": "Перевіряє, чи існує файл або каталог на сервері SFTP"
+        },
+        "app.U0ZUUA.action.ZXhpc3Rz.display_name": {
+          "source": "Check If Path Exists With SFTP",
+          "message": "Перевірити існування шляху через SFTP"
+        },
+        "app.U0ZUUA.action.ZXhpc3Rz.option.cGF0aA.desc": {
+          "source": "The remote path on the SFTP server for the operation",
+          "message": "Віддалений шлях на сервері SFTP для операції"
+        },
+        "app.U0ZUUA.action.ZXhpc3Rz.option.cGF0aA.display_name": {
+          "source": "Path",
+          "message": "Шлях"
+        },
+        "app.U0ZUUA.action.ZXhpc3Rz.option.cGF0aA.short_desc": {
+          "source": "The SFTP path for the operation",
+          "message": "Шлях SFTP для операції"
+        },
+        "app.U0ZUUA.action.ZXhpc3Rz.short_desc": {
+          "source": "Checks if a file or directory exists on an SFTP server",
+          "message": "Перевіряє, чи існує файл або каталог на сервері SFTP"
+        },
+        "app.U0ZUUA.action.c2VuZC1maWxl.desc": {
+          "source": "Sends a file to an SFTP server",
+          "message": "Надсилає файл на сервер SFTP"
+        },
+        "app.U0ZUUA.action.c2VuZC1maWxl.display_name": {
+          "source": "Send File With SFTP",
+          "message": "Надіслати файл через SFTP"
+        },
+        "app.U0ZUUA.action.c2VuZC1maWxl.option.ZW5jb2Rpbmc.desc": {
+          "source": "The string encoding to use if `text` = `True` (default: `UTF-8`)",
+          "message": "Кодування рядка для використання, якщо `text` = `True` (за замовчуванням: `UTF-8`)"
+        },
+        "app.U0ZUUA.action.c2VuZC1maWxl.option.ZW5jb2Rpbmc.display_name": {
+          "source": "Encoding",
+          "message": "Кодування"
+        },
+        "app.U0ZUUA.action.c2VuZC1maWxl.option.ZW5jb2Rpbmc.short_desc": {
+          "source": "Text encoding for text mode",
+          "message": "Кодування тексту для текстового режиму"
+        },
+        "app.U0ZUUA.action.c2VuZC1maWxl.option.cGF0aA.desc": {
+          "source": "The remote path on the SFTP server to the file to retrieve",
+          "message": "Віддалений шлях на сервері SFTP до файла, який потрібно отримати"
+        },
+        "app.U0ZUUA.action.c2VuZC1maWxl.option.cGF0aA.display_name": {
+          "source": "Path",
+          "message": "Шлях"
+        },
+        "app.U0ZUUA.action.c2VuZC1maWxl.option.cGF0aA.short_desc": {
+          "source": "The path on the SFTP server",
+          "message": "Шлях на сервері SFTP"
+        },
+        "app.U0ZUUA.action.c2VuZC1maWxl.option.dGV4dA.desc": {
+          "source": "If `True` the file will be returned as a string, `False` (the default) as binary data",
+          "message": "Якщо `True`, файл буде повернено як рядок, `False` (за замовчуванням) — як бінарні дані"
+        },
+        "app.U0ZUUA.action.c2VuZC1maWxl.option.dGV4dA.display_name": {
+          "source": "Text Mode",
+          "message": "Текстовий режим"
+        },
+        "app.U0ZUUA.action.c2VuZC1maWxl.option.dGV4dA.short_desc": {
+          "source": "Return file as text string",
+          "message": "Повернути файл як текстовий рядок"
+        },
+        "app.U0ZUUA.action.c2VuZC1maWxl.short_desc": {
+          "source": "Sends a file to an SFTP server",
+          "message": "Надсилає файл на сервер SFTP"
+        },
+        "app.U0ZUUA.action.cm1kaXI.desc": {
+          "source": "Removes an empty directory on an SFTP server",
+          "message": "Видаляє порожній каталог на сервері SFTP"
+        },
+        "app.U0ZUUA.action.cm1kaXI.display_name": {
+          "source": "Remove Directory With SFTP",
+          "message": "Видалити каталог через SFTP"
+        },
+        "app.U0ZUUA.action.cm1kaXI.option.cGF0aA.desc": {
+          "source": "The remote path on the SFTP server for the operation",
+          "message": "Віддалений шлях на сервері SFTP для операції"
+        },
+        "app.U0ZUUA.action.cm1kaXI.option.cGF0aA.display_name": {
+          "source": "Path",
+          "message": "Шлях"
+        },
+        "app.U0ZUUA.action.cm1kaXI.option.cGF0aA.short_desc": {
+          "source": "The SFTP path for the operation",
+          "message": "Шлях SFTP для операції"
+        },
+        "app.U0ZUUA.action.cm1kaXI.short_desc": {
+          "source": "Removes an empty directory on an SFTP server",
+          "message": "Видаляє порожній каталог на сервері SFTP"
+        },
+        "app.U0ZUUA.desc": {
+          "source": "Generic SFTP server for exchanging files with SFTP",
+          "message": "Універсальний сервер SFTP для обміну файлами через SFTP"
+        },
+        "app.U0ZUUA.display_name": {
+          "source": "SFTP Server",
+          "message": "Сервер SFTP"
+        },
+        "app.U0ZUUA.short_desc": {
+          "source": "Generic SFTP server for exchanging files with SFTP",
+          "message": "Універсальний сервер SFTP для обміну файлами через SFTP"
+        }
+      }
+    }
+  }
+}

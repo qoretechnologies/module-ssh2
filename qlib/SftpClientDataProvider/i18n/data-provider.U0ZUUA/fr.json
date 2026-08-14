@@ -1,0 +1,225 @@
+{
+  "schema_version": 1,
+  "locales": {
+    "fr": {
+      "messages": {
+        "app.U0ZUUA.action.Y2htb2Q.desc": {
+          "source": "Changes file or directory permissions on an SFTP server",
+          "message": "Modifie les autorisations de fichier ou de répertoire sur un serveur SFTP"
+        },
+        "app.U0ZUUA.action.Y2htb2Q.display_name": {
+          "source": "Change File Permissions With SFTP",
+          "message": "Modifier les autorisations de fichier avec SFTP"
+        },
+        "app.U0ZUUA.action.Y2htb2Q.option.bW9kZQ.desc": {
+          "source": "The file permission mode as an octal integer (e.g., 0755 for rwxr-xr-x). Only the lower 9 bits (owner/group/other permissions) are used; sticky bits and setuid/setgid bits are not supported.",
+          "message": "Le mode d'autorisation de fichier sous forme d'entier octal (par ex. 0755 pour rwxr-xr-x). Seuls les 9 bits inférieurs (autorisations propriétaire/groupe/autres) sont utilisés ; les bits sticky et les bits setuid/setgid ne sont pas pris en charge."
+        },
+        "app.U0ZUUA.action.Y2htb2Q.option.bW9kZQ.display_name": {
+          "source": "Mode",
+          "message": "Mode"
+        },
+        "app.U0ZUUA.action.Y2htb2Q.option.bW9kZQ.short_desc": {
+          "source": "The file permission mode",
+          "message": "Le mode d'autorisation du fichier"
+        },
+        "app.U0ZUUA.action.Y2htb2Q.option.cGF0aA.desc": {
+          "source": "The remote path on the SFTP server for the chmod operation",
+          "message": "Le chemin distant sur le serveur SFTP pour l'opération chmod"
+        },
+        "app.U0ZUUA.action.Y2htb2Q.option.cGF0aA.display_name": {
+          "source": "Path",
+          "message": "Chemin"
+        },
+        "app.U0ZUUA.action.Y2htb2Q.option.cGF0aA.short_desc": {
+          "source": "The SFTP path for the operation",
+          "message": "Le chemin SFTP pour l'opération"
+        },
+        "app.U0ZUUA.action.Y2htb2Q.short_desc": {
+          "source": "Changes file or directory permissions on an SFTP server",
+          "message": "Modifie les autorisations de fichier ou de répertoire sur un serveur SFTP"
+        },
+        "app.U0ZUUA.action.Z2V0LWZpbGU.desc": {
+          "source": "Retrieve a file from an SFTP server",
+          "message": "Récupérer un fichier depuis un serveur SFTP"
+        },
+        "app.U0ZUUA.action.Z2V0LWZpbGU.display_name": {
+          "source": "Retrieve File With SFTP",
+          "message": "Récupérer un fichier avec SFTP"
+        },
+        "app.U0ZUUA.action.Z2V0LWZpbGU.option.ZW5jb2Rpbmc.desc": {
+          "source": "The string encoding to use if `text` = `True` (default: `UTF-8`)",
+          "message": "L'encodage de chaîne à utiliser si `text` = `True` (par défaut : `UTF-8`)"
+        },
+        "app.U0ZUUA.action.Z2V0LWZpbGU.option.ZW5jb2Rpbmc.display_name": {
+          "source": "Encoding",
+          "message": "Encodage"
+        },
+        "app.U0ZUUA.action.Z2V0LWZpbGU.option.ZW5jb2Rpbmc.short_desc": {
+          "source": "Text encoding for text mode",
+          "message": "Encodage de texte pour le mode texte"
+        },
+        "app.U0ZUUA.action.Z2V0LWZpbGU.option.cGF0aA.desc": {
+          "source": "The remote path on the SFTP server to the file to retrieve",
+          "message": "Le chemin distant sur le serveur SFTP vers le fichier à récupérer"
+        },
+        "app.U0ZUUA.action.Z2V0LWZpbGU.option.cGF0aA.display_name": {
+          "source": "Path",
+          "message": "Chemin"
+        },
+        "app.U0ZUUA.action.Z2V0LWZpbGU.option.cGF0aA.short_desc": {
+          "source": "The path on the SFTP server",
+          "message": "Le chemin sur le serveur SFTP"
+        },
+        "app.U0ZUUA.action.Z2V0LWZpbGU.option.dGV4dA.desc": {
+          "source": "If `True` the file will be returned as a string, `False` (the default) as binary data",
+          "message": "Si `True`, le fichier sera renvoyé sous forme de chaîne de caractères, `False` (par défaut) sous forme de données binaires"
+        },
+        "app.U0ZUUA.action.Z2V0LWZpbGU.option.dGV4dA.display_name": {
+          "source": "Text Mode",
+          "message": "Mode texte"
+        },
+        "app.U0ZUUA.action.Z2V0LWZpbGU.option.dGV4dA.short_desc": {
+          "source": "Return file as text string",
+          "message": "Renvoyer le fichier sous forme de chaîne de texte"
+        },
+        "app.U0ZUUA.action.Z2V0LWZpbGU.short_desc": {
+          "source": "Get a file from an SFTP server",
+          "message": "Obtenir un fichier depuis un serveur SFTP"
+        },
+        "app.U0ZUUA.action.ZGVsZXRlLWZpbGU.desc": {
+          "source": "Deletes a file on an SFTP server",
+          "message": "Supprime un fichier sur un serveur SFTP"
+        },
+        "app.U0ZUUA.action.ZGVsZXRlLWZpbGU.display_name": {
+          "source": "Delete File With SFTP",
+          "message": "Supprimer le fichier avec SFTP"
+        },
+        "app.U0ZUUA.action.ZGVsZXRlLWZpbGU.option.cGF0aA.desc": {
+          "source": "The remote path on the SFTP server for the operation",
+          "message": "Le chemin distant sur le serveur SFTP pour l'opération"
+        },
+        "app.U0ZUUA.action.ZGVsZXRlLWZpbGU.option.cGF0aA.display_name": {
+          "source": "Path",
+          "message": "Chemin"
+        },
+        "app.U0ZUUA.action.ZGVsZXRlLWZpbGU.option.cGF0aA.short_desc": {
+          "source": "The SFTP path for the operation",
+          "message": "Le chemin SFTP pour l'opération"
+        },
+        "app.U0ZUUA.action.ZGVsZXRlLWZpbGU.short_desc": {
+          "source": "Deletes a file on an SFTP server",
+          "message": "Supprime un fichier sur un serveur SFTP"
+        },
+        "app.U0ZUUA.action.ZXhpc3Rz.desc": {
+          "source": "Checks if a file or directory exists on an SFTP server",
+          "message": "Vérifie si un fichier ou un répertoire existe sur un serveur SFTP"
+        },
+        "app.U0ZUUA.action.ZXhpc3Rz.display_name": {
+          "source": "Check If Path Exists With SFTP",
+          "message": "Vérifier si le chemin existe avec SFTP"
+        },
+        "app.U0ZUUA.action.ZXhpc3Rz.option.cGF0aA.desc": {
+          "source": "The remote path on the SFTP server for the operation",
+          "message": "Le chemin distant sur le serveur SFTP pour l'opération"
+        },
+        "app.U0ZUUA.action.ZXhpc3Rz.option.cGF0aA.display_name": {
+          "source": "Path",
+          "message": "Chemin"
+        },
+        "app.U0ZUUA.action.ZXhpc3Rz.option.cGF0aA.short_desc": {
+          "source": "The SFTP path for the operation",
+          "message": "Le chemin SFTP pour l'opération"
+        },
+        "app.U0ZUUA.action.ZXhpc3Rz.short_desc": {
+          "source": "Checks if a file or directory exists on an SFTP server",
+          "message": "Vérifie si un fichier ou un répertoire existe sur un serveur SFTP"
+        },
+        "app.U0ZUUA.action.c2VuZC1maWxl.desc": {
+          "source": "Sends a file to an SFTP server",
+          "message": "Envoie un fichier vers un serveur SFTP"
+        },
+        "app.U0ZUUA.action.c2VuZC1maWxl.display_name": {
+          "source": "Send File With SFTP",
+          "message": "Envoyer un fichier avec SFTP"
+        },
+        "app.U0ZUUA.action.c2VuZC1maWxl.option.ZW5jb2Rpbmc.desc": {
+          "source": "The string encoding to use if `text` = `True` (default: `UTF-8`)",
+          "message": "L'encodage de chaîne à utiliser si `text` = `True` (par défaut : `UTF-8`)"
+        },
+        "app.U0ZUUA.action.c2VuZC1maWxl.option.ZW5jb2Rpbmc.display_name": {
+          "source": "Encoding",
+          "message": "Encodage"
+        },
+        "app.U0ZUUA.action.c2VuZC1maWxl.option.ZW5jb2Rpbmc.short_desc": {
+          "source": "Text encoding for text mode",
+          "message": "Encodage de texte pour le mode texte"
+        },
+        "app.U0ZUUA.action.c2VuZC1maWxl.option.cGF0aA.desc": {
+          "source": "The remote path on the SFTP server to the file to retrieve",
+          "message": "Le chemin distant sur le serveur SFTP vers le fichier à récupérer"
+        },
+        "app.U0ZUUA.action.c2VuZC1maWxl.option.cGF0aA.display_name": {
+          "source": "Path",
+          "message": "Chemin"
+        },
+        "app.U0ZUUA.action.c2VuZC1maWxl.option.cGF0aA.short_desc": {
+          "source": "The path on the SFTP server",
+          "message": "Le chemin sur le serveur SFTP"
+        },
+        "app.U0ZUUA.action.c2VuZC1maWxl.option.dGV4dA.desc": {
+          "source": "If `True` the file will be returned as a string, `False` (the default) as binary data",
+          "message": "Si `True`, le fichier sera renvoyé sous forme de chaîne de caractères, `False` (par défaut) sous forme de données binaires"
+        },
+        "app.U0ZUUA.action.c2VuZC1maWxl.option.dGV4dA.display_name": {
+          "source": "Text Mode",
+          "message": "Mode texte"
+        },
+        "app.U0ZUUA.action.c2VuZC1maWxl.option.dGV4dA.short_desc": {
+          "source": "Return file as text string",
+          "message": "Renvoyer le fichier sous forme de chaîne de texte"
+        },
+        "app.U0ZUUA.action.c2VuZC1maWxl.short_desc": {
+          "source": "Sends a file to an SFTP server",
+          "message": "Envoie un fichier vers un serveur SFTP"
+        },
+        "app.U0ZUUA.action.cm1kaXI.desc": {
+          "source": "Removes an empty directory on an SFTP server",
+          "message": "Supprime un répertoire vide sur un serveur SFTP"
+        },
+        "app.U0ZUUA.action.cm1kaXI.display_name": {
+          "source": "Remove Directory With SFTP",
+          "message": "Supprimer un répertoire avec SFTP"
+        },
+        "app.U0ZUUA.action.cm1kaXI.option.cGF0aA.desc": {
+          "source": "The remote path on the SFTP server for the operation",
+          "message": "Le chemin distant sur le serveur SFTP pour l'opération"
+        },
+        "app.U0ZUUA.action.cm1kaXI.option.cGF0aA.display_name": {
+          "source": "Path",
+          "message": "Chemin"
+        },
+        "app.U0ZUUA.action.cm1kaXI.option.cGF0aA.short_desc": {
+          "source": "The SFTP path for the operation",
+          "message": "Le chemin SFTP pour l'opération"
+        },
+        "app.U0ZUUA.action.cm1kaXI.short_desc": {
+          "source": "Removes an empty directory on an SFTP server",
+          "message": "Supprime un répertoire vide sur un serveur SFTP"
+        },
+        "app.U0ZUUA.desc": {
+          "source": "Generic SFTP server for exchanging files with SFTP",
+          "message": "Serveur SFTP générique pour échanger des fichiers avec SFTP"
+        },
+        "app.U0ZUUA.display_name": {
+          "source": "SFTP Server",
+          "message": "Serveur SFTP"
+        },
+        "app.U0ZUUA.short_desc": {
+          "source": "Generic SFTP server for exchanging files with SFTP",
+          "message": "Serveur SFTP générique pour échanger des fichiers avec SFTP"
+        }
+      }
+    }
+  }
+}

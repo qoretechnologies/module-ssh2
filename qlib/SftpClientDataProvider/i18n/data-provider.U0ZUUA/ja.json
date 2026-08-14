@@ -1,0 +1,225 @@
+{
+  "schema_version": 1,
+  "locales": {
+    "ja": {
+      "messages": {
+        "app.U0ZUUA.action.Y2htb2Q.desc": {
+          "source": "Changes file or directory permissions on an SFTP server",
+          "message": "SFTPサーバー上のファイルまたはディレクトリの権限を変更します"
+        },
+        "app.U0ZUUA.action.Y2htb2Q.display_name": {
+          "source": "Change File Permissions With SFTP",
+          "message": "SFTPでファイル権限を変更"
+        },
+        "app.U0ZUUA.action.Y2htb2Q.option.bW9kZQ.desc": {
+          "source": "The file permission mode as an octal integer (e.g., 0755 for rwxr-xr-x). Only the lower 9 bits (owner/group/other permissions) are used; sticky bits and setuid/setgid bits are not supported.",
+          "message": "8進数整数形式のファイル権限モード（例: rwxr-xr-x の場合は 0755）。下位9ビット（所有者/グループ/その他の権限）のみが使用され、スティッキービットおよび setuid/setgid ビットはサポートされていません。"
+        },
+        "app.U0ZUUA.action.Y2htb2Q.option.bW9kZQ.display_name": {
+          "source": "Mode",
+          "message": "モード"
+        },
+        "app.U0ZUUA.action.Y2htb2Q.option.bW9kZQ.short_desc": {
+          "source": "The file permission mode",
+          "message": "ファイル権限モード"
+        },
+        "app.U0ZUUA.action.Y2htb2Q.option.cGF0aA.desc": {
+          "source": "The remote path on the SFTP server for the chmod operation",
+          "message": "chmod操作のためのSFTPサーバー上のリモートパス"
+        },
+        "app.U0ZUUA.action.Y2htb2Q.option.cGF0aA.display_name": {
+          "source": "Path",
+          "message": "パス"
+        },
+        "app.U0ZUUA.action.Y2htb2Q.option.cGF0aA.short_desc": {
+          "source": "The SFTP path for the operation",
+          "message": "操作対象のSFTPパス"
+        },
+        "app.U0ZUUA.action.Y2htb2Q.short_desc": {
+          "source": "Changes file or directory permissions on an SFTP server",
+          "message": "SFTPサーバー上のファイルまたはディレクトリの権限を変更します"
+        },
+        "app.U0ZUUA.action.Z2V0LWZpbGU.desc": {
+          "source": "Retrieve a file from an SFTP server",
+          "message": "SFTPサーバーからファイルを取得します"
+        },
+        "app.U0ZUUA.action.Z2V0LWZpbGU.display_name": {
+          "source": "Retrieve File With SFTP",
+          "message": "SFTPでファイルを取得"
+        },
+        "app.U0ZUUA.action.Z2V0LWZpbGU.option.ZW5jb2Rpbmc.desc": {
+          "source": "The string encoding to use if `text` = `True` (default: `UTF-8`)",
+          "message": "`text` = `True` の場合に使用する文字列エンコーディング（デフォルト: `UTF-8`）"
+        },
+        "app.U0ZUUA.action.Z2V0LWZpbGU.option.ZW5jb2Rpbmc.display_name": {
+          "source": "Encoding",
+          "message": "エンコーディング"
+        },
+        "app.U0ZUUA.action.Z2V0LWZpbGU.option.ZW5jb2Rpbmc.short_desc": {
+          "source": "Text encoding for text mode",
+          "message": "テキストモードのテキストエンコーディング"
+        },
+        "app.U0ZUUA.action.Z2V0LWZpbGU.option.cGF0aA.desc": {
+          "source": "The remote path on the SFTP server to the file to retrieve",
+          "message": "取得するファイルへのSFTPサーバー上のリモートパス"
+        },
+        "app.U0ZUUA.action.Z2V0LWZpbGU.option.cGF0aA.display_name": {
+          "source": "Path",
+          "message": "パス"
+        },
+        "app.U0ZUUA.action.Z2V0LWZpbGU.option.cGF0aA.short_desc": {
+          "source": "The path on the SFTP server",
+          "message": "SFTPサーバー上のパス"
+        },
+        "app.U0ZUUA.action.Z2V0LWZpbGU.option.dGV4dA.desc": {
+          "source": "If `True` the file will be returned as a string, `False` (the default) as binary data",
+          "message": "`True` の場合、ファイルは文字列として返され、`False`（デフォルト）の場合はバイナリデータとして返されます"
+        },
+        "app.U0ZUUA.action.Z2V0LWZpbGU.option.dGV4dA.display_name": {
+          "source": "Text Mode",
+          "message": "テキストモード"
+        },
+        "app.U0ZUUA.action.Z2V0LWZpbGU.option.dGV4dA.short_desc": {
+          "source": "Return file as text string",
+          "message": "ファイルをテキスト文字列として返す"
+        },
+        "app.U0ZUUA.action.Z2V0LWZpbGU.short_desc": {
+          "source": "Get a file from an SFTP server",
+          "message": "SFTPサーバーからファイルを取得します"
+        },
+        "app.U0ZUUA.action.ZGVsZXRlLWZpbGU.desc": {
+          "source": "Deletes a file on an SFTP server",
+          "message": "SFTPサーバー上のファイルを削除します"
+        },
+        "app.U0ZUUA.action.ZGVsZXRlLWZpbGU.display_name": {
+          "source": "Delete File With SFTP",
+          "message": "SFTPでファイルを削除"
+        },
+        "app.U0ZUUA.action.ZGVsZXRlLWZpbGU.option.cGF0aA.desc": {
+          "source": "The remote path on the SFTP server for the operation",
+          "message": "操作対象のSFTPサーバー上のリモートパス"
+        },
+        "app.U0ZUUA.action.ZGVsZXRlLWZpbGU.option.cGF0aA.display_name": {
+          "source": "Path",
+          "message": "パス"
+        },
+        "app.U0ZUUA.action.ZGVsZXRlLWZpbGU.option.cGF0aA.short_desc": {
+          "source": "The SFTP path for the operation",
+          "message": "操作対象のSFTPパス"
+        },
+        "app.U0ZUUA.action.ZGVsZXRlLWZpbGU.short_desc": {
+          "source": "Deletes a file on an SFTP server",
+          "message": "SFTPサーバー上のファイルを削除します"
+        },
+        "app.U0ZUUA.action.ZXhpc3Rz.desc": {
+          "source": "Checks if a file or directory exists on an SFTP server",
+          "message": "SFTPサーバー上にファイルまたはディレクトリが存在するか確認します"
+        },
+        "app.U0ZUUA.action.ZXhpc3Rz.display_name": {
+          "source": "Check If Path Exists With SFTP",
+          "message": "SFTPでパスの存在を確認"
+        },
+        "app.U0ZUUA.action.ZXhpc3Rz.option.cGF0aA.desc": {
+          "source": "The remote path on the SFTP server for the operation",
+          "message": "操作対象のSFTPサーバー上のリモートパス"
+        },
+        "app.U0ZUUA.action.ZXhpc3Rz.option.cGF0aA.display_name": {
+          "source": "Path",
+          "message": "パス"
+        },
+        "app.U0ZUUA.action.ZXhpc3Rz.option.cGF0aA.short_desc": {
+          "source": "The SFTP path for the operation",
+          "message": "操作対象のSFTPパス"
+        },
+        "app.U0ZUUA.action.ZXhpc3Rz.short_desc": {
+          "source": "Checks if a file or directory exists on an SFTP server",
+          "message": "SFTPサーバー上にファイルまたはディレクトリが存在するか確認します"
+        },
+        "app.U0ZUUA.action.c2VuZC1maWxl.desc": {
+          "source": "Sends a file to an SFTP server",
+          "message": "SFTPサーバーにファイルを送信します"
+        },
+        "app.U0ZUUA.action.c2VuZC1maWxl.display_name": {
+          "source": "Send File With SFTP",
+          "message": "SFTPでファイルを送信"
+        },
+        "app.U0ZUUA.action.c2VuZC1maWxl.option.ZW5jb2Rpbmc.desc": {
+          "source": "The string encoding to use if `text` = `True` (default: `UTF-8`)",
+          "message": "`text` = `True` の場合に使用する文字列エンコーディング（デフォルト: `UTF-8`）"
+        },
+        "app.U0ZUUA.action.c2VuZC1maWxl.option.ZW5jb2Rpbmc.display_name": {
+          "source": "Encoding",
+          "message": "エンコーディング"
+        },
+        "app.U0ZUUA.action.c2VuZC1maWxl.option.ZW5jb2Rpbmc.short_desc": {
+          "source": "Text encoding for text mode",
+          "message": "テキストモードのテキストエンコーディング"
+        },
+        "app.U0ZUUA.action.c2VuZC1maWxl.option.cGF0aA.desc": {
+          "source": "The remote path on the SFTP server to the file to retrieve",
+          "message": "取得するファイルへのSFTPサーバー上のリモートパス"
+        },
+        "app.U0ZUUA.action.c2VuZC1maWxl.option.cGF0aA.display_name": {
+          "source": "Path",
+          "message": "パス"
+        },
+        "app.U0ZUUA.action.c2VuZC1maWxl.option.cGF0aA.short_desc": {
+          "source": "The path on the SFTP server",
+          "message": "SFTPサーバー上のパス"
+        },
+        "app.U0ZUUA.action.c2VuZC1maWxl.option.dGV4dA.desc": {
+          "source": "If `True` the file will be returned as a string, `False` (the default) as binary data",
+          "message": "`True` の場合、ファイルは文字列として返され、`False`（デフォルト）の場合はバイナリデータとして返されます"
+        },
+        "app.U0ZUUA.action.c2VuZC1maWxl.option.dGV4dA.display_name": {
+          "source": "Text Mode",
+          "message": "テキストモード"
+        },
+        "app.U0ZUUA.action.c2VuZC1maWxl.option.dGV4dA.short_desc": {
+          "source": "Return file as text string",
+          "message": "ファイルをテキスト文字列として返す"
+        },
+        "app.U0ZUUA.action.c2VuZC1maWxl.short_desc": {
+          "source": "Sends a file to an SFTP server",
+          "message": "SFTPサーバーにファイルを送信します"
+        },
+        "app.U0ZUUA.action.cm1kaXI.desc": {
+          "source": "Removes an empty directory on an SFTP server",
+          "message": "SFTPサーバー上の空のディレクトリを削除します"
+        },
+        "app.U0ZUUA.action.cm1kaXI.display_name": {
+          "source": "Remove Directory With SFTP",
+          "message": "SFTPでディレクトリを削除"
+        },
+        "app.U0ZUUA.action.cm1kaXI.option.cGF0aA.desc": {
+          "source": "The remote path on the SFTP server for the operation",
+          "message": "操作対象のSFTPサーバー上のリモートパス"
+        },
+        "app.U0ZUUA.action.cm1kaXI.option.cGF0aA.display_name": {
+          "source": "Path",
+          "message": "パス"
+        },
+        "app.U0ZUUA.action.cm1kaXI.option.cGF0aA.short_desc": {
+          "source": "The SFTP path for the operation",
+          "message": "操作対象のSFTPパス"
+        },
+        "app.U0ZUUA.action.cm1kaXI.short_desc": {
+          "source": "Removes an empty directory on an SFTP server",
+          "message": "SFTPサーバー上の空のディレクトリを削除します"
+        },
+        "app.U0ZUUA.desc": {
+          "source": "Generic SFTP server for exchanging files with SFTP",
+          "message": "SFTPでファイルを交換するための汎用SFTPサーバー"
+        },
+        "app.U0ZUUA.display_name": {
+          "source": "SFTP Server",
+          "message": "SFTPサーバー"
+        },
+        "app.U0ZUUA.short_desc": {
+          "source": "Generic SFTP server for exchanging files with SFTP",
+          "message": "SFTPでファイルを交換するための汎用SFTPサーバー"
+        }
+      }
+    }
+  }
+}
