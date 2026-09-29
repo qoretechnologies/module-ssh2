@@ -3,7 +3,9 @@
 
 %modern
 
-%requires ../qlib/Ssh2Connections.qm
+%prepend-module-path "${SCRIPT_DIR}/../qlib"
+
+%requires Ssh2Connections
 %requires ssh2 >= 2.0
 
 %requires Util

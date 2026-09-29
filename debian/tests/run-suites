@@ -1,0 +1,22 @@
+#!/bin/sh
+# Copyright (C) 2026 David Nichols
+# SPDX-License-Identifier: MIT
+set -eu
+suite_dir=$1
+run_qore() {
+    /usr/bin/qore -l "$QORE_SSH2_TEST_MODULE_DIR/ssh2-api-$(/usr/bin/qore --latest-module-api).qmod" \
+        -l "$QORE_SSH2_TEST_QMOD_DIR/SftpPollerUtil.qmod" \
+        -l "$QORE_SSH2_TEST_QMOD_DIR/SftpPoller.qmod" \
+        -l "$QORE_SSH2_TEST_QMOD_DIR/Ssh2Connections.qmod" \
+        -l "$QORE_SSH2_TEST_QMOD_DIR/SftpClientDataProvider/SftpClientDataProvider.qmod" "$@"
+}
+# Check authentication before running suites that could otherwise skip setup.
+run_qore -e 'SSH2Client client(ENV.QORE_SSH2_TEST_URI); client.setKeys(ENV.QORE_SSH2_TEST_KEY); client.connect(); client.disconnect();'
+for suite in "$suite_dir"/*.qtest; do
+    case "$(basename "$suite")" in
+        NegativeTests.qtest) run_qore "$suite" -v ;;
+        SftpClientDataProvider.qtest)
+            run_qore "$suite" -v -k "$QORE_SSH2_TEST_KEY" "sftp://$QORE_SSH2_TEST_URI$QORE_SSH2_TEST_DIR" ;;
+        *) run_qore "$suite" -v -k "$QORE_SSH2_TEST_KEY" "$QORE_SSH2_TEST_URI" ;;
+    esac
+done

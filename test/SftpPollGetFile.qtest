@@ -3,6 +3,8 @@
 
 %modern
 
+%prepend-module-path "${SCRIPT_DIR}/../build"
+
 %requires ssh2 >= 2.0
 
 %requires Util
@@ -309,7 +311,9 @@ class SftpPollGetFileTest inherits QUnit::Test {
     #! Authentication failures are reported from the poll operation
     authFailureTest() {
         string user = "qore-ssh2-no-such-user-" + get_random_string(10);
-        SFTPClient sc(sprintf("%s@localhost", user));
+        SFTPClient sc(uri);
+        sc.setUser(user);
+        sc.setPassword("");
         # the local user's agent and key files must not be used for this user
         sc.setUseAgent(False);
 
@@ -322,7 +326,9 @@ class SftpPollGetFileTest inherits QUnit::Test {
         assertFalse(boolean(sc.connected()));
 
         # the blocking API reports the same error
-        SFTPClient sc2(sprintf("%s@localhost", user));
+        SFTPClient sc2(uri);
+        sc2.setUser(user);
+        sc2.setPassword("");
         sc2.setUseAgent(False);
         assertThrows("SSH2CLIENT-AUTH-ERROR", "No proper authentication method found",
             sub () { sc2.getFile("/etc/hostname", timeout); });

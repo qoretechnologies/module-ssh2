@@ -1,0 +1,83 @@
+Debian/Ubuntu packaging for SSH2 and SFTP
+=======================================
+
+qore-ssh2-module contains native SSH2/SFTP bindings, compiled/source
+SftpClientDataProvider, SftpPollerUtil, SftpPoller and Ssh2Connections modules,
+compiler metadata, resources and translations. The doc package contains five
+HTML references and all example tests; debhelper creates detached debug symbols.
+
+Build prerequisites and supported scope
+--------------------------------------
+
+Use an isolated native environment with the packaged Qore runtime/SDK and
+Build-Depends from debian/control. The qualification target is Ubuntu 26.04
+amd64 with Qore 3.0 development packages. Other releases/architectures need a
+matching SDK and native qualification. Cross builds are rejected because Qore,
+qpp and qcc execute during compilation/documentation. The sshutil module is
+bundled with the required Qore runtime. System libssh2/OpenSSL are required;
+no SSH or cryptographic implementation is bundled.
+
+The build uses distribution hardening flags and qcc debug information. Fixed
+QCC_JOBS=1 makes partitioning independent of jobserver load while independent
+targets remain parallel. A dh_strip wrapper preserves dependency, optional-module
+and source-location trailers. dwz is disabled for AOT objects because of LLVM
+DWARF support limitations. Runtime/libqore SONAME dependencies derive from the
+installed SDK; other libraries use dh_shlibdeps. The native package is not
+Multi-Arch: same because it requires the native interpreter.
+
+Isolated integration tests
+--------------------------
+
+Tests start an unprivileged OpenSSH server on a temporary loopback port with
+fresh host/client keys, public-key-only authentication and internal SFTP.
+libnss-wrapper gives the test user a temporary home for libc account lookups,
+including the driver's default known_hosts path. No system account or existing
+SSH files are modified. The SFTP provider test accepts an explicit URI, so file
+operations target the temporary directory. The helper removes its server/keys
+and home on exit and bounds the suite group to ten minutes. Modern OpenSSH
+per-source penalties are disabled in this isolated server to allow deliberate
+negative authentication tests without delaying later valid connections.
+
+OpenSSH and nss_wrapper are test-only dependencies, absent from the runtime
+package. Build and installed tests use the exact compiled modules. Source-mode
+qualification runs separately. A connection preflight prevents silently skipped
+integration tests. All connection traffic stays on the container's loopback;
+build/test containers have no external network access.
+
+Source and binary builds
+------------------------
+
+Use a new version for each changed upload. This snapshot precedes version 2.0.0.
+From a clean committed checkout:
+
+    version=2.0.0~git20260928.1
+    mkdir -p ../ssh2-package-work
+    git archive --format=tar --prefix="qore-ssh2-module-$version/" \
+        HEAD -- . ':!debian' | xz > \
+        "../ssh2-package-work/qore-ssh2-module_$version.orig.tar.xz"
+    tar -xf "../ssh2-package-work/qore-ssh2-module_$version.orig.tar.xz" \
+        -C ../ssh2-package-work
+    cp -a debian "../ssh2-package-work/qore-ssh2-module-$version/"
+    cd "../ssh2-package-work/qore-ssh2-module-$version"
+    dpkg-buildpackage -S -us -uc
+
+Extract the .dsc with dpkg-source -x. With dependencies preinstalled, build
+unprivileged with networking disabled:
+
+    dpkg-buildpackage -b -us -uc
+
+Architecture-only builds (-B) need no Doxygen; independent builds (-A) produce
+HTML documentation. Both DEB_BUILD_OPTIONS=nodoc and DEB_BUILD_PROFILES=nodoc
+suppress documentation; the profile also omits the doc package. Do not use
+nocheck for qualification.
+
+Qualification and publication
+-----------------------------
+
+Run all eight suites in build/installed/source modes, a fresh qcc executable
+using native named arguments and the provider factory, AOT trailer/resource
+parity and complete standard-locale checks. Check Lintian, hardening/debug
+symbols, installation without the SDK or SSH server, docs/debug coinstallation,
+dpkg -V, purge/reinstall and reproducibility at different paths/job counts.
+Retain source/package hashes, dependency versions, audit and test logs.
+Testing PPA publication is separate from approval for a final general release.

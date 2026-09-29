@@ -5,6 +5,8 @@
 
 %modern
 
+%prepend-module-path "${SCRIPT_DIR}/../qlib"
+
 %requires ssh2 >= 1.2
 %requires SftpClientDataProvider
 %requires QUnit
@@ -36,7 +38,7 @@ class SftpClientDataProviderTest inherits QUnit::Test {
             timeout = m_options.timeout * 1000;
         }
         # Use home directory as base path for test files
-        uri = sprintf("sftp://%s@localhost%s", getusername(), ENV.HOME);
+        uri = shift ARGV ?? sprintf("sftp://%s@localhost%s", getusername(), ENV.HOME);
 
         # Determine which key to use
         if (m_options.privkey) {

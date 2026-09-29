@@ -1,0 +1,23 @@
+#!/bin/sh
+# Copyright (C) 2026 David Nichols
+# SPDX-License-Identifier: MIT
+set -eu
+unset QORE_MODULE_DIR QORE_MODULE_DIR_ONLY QORE_INCLUDE_DIR LD_LIBRARY_PATH LD_PRELOAD
+cd "$AUTOPKGTEST_TMP"
+cat > ssh2-smoke.q <<'EOF'
+%modern
+%requires ssh2
+%requires DataProvider
+%requires SftpClientDataProvider
+%requires Ssh2Connections
+%requires SftpPoller
+SSH2Client client(url: "ssh://package-test@localhost:2222");
+SFTPClient sftp(url: "sftp://package-test@localhost", port: 2200);
+if (client.getHost() != "localhost" || client.getPort() != 2222
+        || sftp.getPort() != 2200 || !client.getVerifyHostKey()
+        || DataProvider::getFactory("sftpclient").getInfo().name != "sftpclient") {
+    throw "PACKAGE-TEST-ERROR", "Installed SSH/SFTP constructors or provider failed";
+}
+EOF
+/usr/bin/qcc -o ssh2-smoke ssh2-smoke.q
+./ssh2-smoke

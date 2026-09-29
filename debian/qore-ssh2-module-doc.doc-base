@@ -1,0 +1,9 @@
+Document: qore-ssh2-module
+Title: Qore SSH2 and SFTP Module Reference
+Author: Qore Technologies, s.r.o.
+Abstract: SSH sessions, SFTP transfers, polling, connection and provider APIs.
+Section: Programming
+
+Format: HTML
+Index: /usr/share/doc/qore-ssh2-module-doc/docs/ssh2/html/index.html
+Files: /usr/share/doc/qore-ssh2-module-doc/docs/*/html/*.html

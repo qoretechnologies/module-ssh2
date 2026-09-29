@@ -1,0 +1,8 @@
+Tests: runtime
+Depends: qore-ssh2-module, openssh-server, openssh-client, libnss-wrapper, python3
+# QUnit and expected invalid-connection diagnostics use stderr.
+Restrictions: allow-stderr
+
+Tests: compiler
+Depends: qore-ssh2-module, libqore-dev
+Restrictions: allow-stderr

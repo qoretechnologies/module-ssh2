@@ -1,0 +1,11 @@
+qore-ssh2-module (2.0.0~git20260928.1-0qore1~ubuntu26.04) resolute; urgency=medium
+
+  * Package the native SSH2 module, four compiled/source user modules,
+    metadata, provider resources/translations, docs and debug symbols.
+  * Add isolated SSH/SFTP integration and installed compiler tests.
+  * Use temporary keys and a private account home through nss_wrapper.
+  * Allow portable test module paths and an explicit SFTP provider test URI.
+  * Honor the selected server in polled authentication-failure tests.
+  * Support AOT metadata preservation, profiles and reproducible offline builds.
+
+ -- David Nichols <david@qore.org>  Tue, 29 Sep 2026 01:40:14 +0000

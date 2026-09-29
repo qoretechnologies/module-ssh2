@@ -1,0 +1,90 @@
+#!/bin/sh
+# Copyright (C) 2026 David Nichols
+# SPDX-License-Identifier: MIT
+set -eu
+umask 077
+work_dir=$(mktemp -d)
+server_pid=
+cleanup() {
+    status=$?
+    trap - EXIT HUP INT TERM
+    if [ -n "$server_pid" ]; then
+        kill "$server_pid" 2>/dev/null || :
+        wait "$server_pid" 2>/dev/null || :
+    fi
+    if [ "$status" -ne 0 ]; then
+        cat "$work_dir/server.log" >&2 2>/dev/null || :
+    fi
+    rm -rf "$work_dir"
+    exit "$status"
+}
+trap cleanup EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
+mkdir "$work_dir/home" "$work_dir/home/.ssh"
+# Give libc account lookups a private home without changing the system account.
+getent passwd > "$work_dir/passwd"
+getent group > "$work_dir/group"
+python3 - "$work_dir" <<'PY'
+from pathlib import Path
+import os, socket, sys
+root = Path(sys.argv[1])
+passwd = root / 'passwd'
+rows = []
+for row in passwd.read_text().splitlines():
+    fields = row.split(':')
+    if fields[2] == str(os.getuid()):
+        fields[1] = 'x'
+        fields[5] = str(root / 'home')
+    rows.append(':'.join(fields))
+passwd.write_text('\n'.join(rows) + '\n')
+with socket.socket() as sock:
+    sock.bind(('127.0.0.1', 0))
+    (root / 'port').write_text(str(sock.getsockname()[1]))
+PY
+nss_library=$(dpkg -L libnss-wrapper | sed -n '/\/libnss_wrapper\.so$/p')
+test -f "$nss_library"
+export NSS_WRAPPER_PASSWD="$work_dir/passwd"
+export NSS_WRAPPER_GROUP="$work_dir/group"
+export LD_PRELOAD="$nss_library"
+user_name=$(id -un)
+port=$(cat "$work_dir/port")
+ssh-keygen -q -t ed25519 -N '' -f "$work_dir/host_key"
+ssh-keygen -q -t rsa -b 2048 -m PEM -N '' -f "$work_dir/client_key"
+cp "$work_dir/client_key.pub" "$work_dir/home/.ssh/authorized_keys"
+cat > "$work_dir/sshd_config" <<CONFIG
+Port $port
+ListenAddress 127.0.0.1
+HostKey $work_dir/host_key
+PidFile $work_dir/sshd.pid
+AuthorizedKeysFile $work_dir/home/.ssh/authorized_keys
+StrictModes yes
+UsePAM no
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+PubkeyAuthentication yes
+AllowUsers $user_name
+PrintMotd no
+Subsystem sftp internal-sftp
+CONFIG
+# Negative authentication tests must not rate-limit later valid connections.
+if /usr/sbin/sshd -T -f "$work_dir/sshd_config" | grep -q '^persourcepenalties '; then
+    printf '%s\n' 'PerSourcePenalties no' >> "$work_dir/sshd_config"
+fi
+/usr/sbin/sshd -D -e -f "$work_dir/sshd_config" > "$work_dir/server.log" 2>&1 &
+server_pid=$!
+tries=0
+until timeout 3 ssh -F /dev/null -p "$port" -i "$work_dir/client_key" \
+        -o BatchMode=yes -o IdentitiesOnly=yes -o ConnectTimeout=1 \
+        -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile="$work_dir/probe_hosts" \
+        "$user_name@127.0.0.1" true >/dev/null 2>&1; do
+    kill -0 "$server_pid"
+    tries=$((tries + 1))
+    test "$tries" -lt 30
+    sleep 1
+done
+export QORE_SSH2_TEST_URI="$user_name@127.0.0.1:$port"
+export QORE_SSH2_TEST_DIR="$work_dir/home"
+export QORE_SSH2_TEST_KEY="$work_dir/client_key"
+timeout 600 "$@"

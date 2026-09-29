@@ -35,3 +35,15 @@ docs/Ssh2Connections/
 docs/doxyfile
 docs/*.doxygen
 docs/qlib/Doxyfile.*
+
+# Debian package build products
+/obj-*/
+/debian/.debhelper/
+/debian/debhelper-build-stamp
+/debian/files
+/debian/*.substvars
+/debian/*.debhelper
+/debian/qore-ssh2-module/
+/debian/qore-ssh2-module-doc/
+/debian/tmp/
+**/__pycache__/

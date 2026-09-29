@@ -3,8 +3,10 @@
 
 %modern
 
+%prepend-module-path "${SCRIPT_DIR}/../qlib"
+
 %requires ssh2 >= 1.2
-%requires ../qlib/SftpPoller.qm
+%requires SftpPoller
 %requires QUnit
 %requires Util
 

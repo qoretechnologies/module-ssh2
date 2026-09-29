@@ -1,0 +1,45 @@
+Source: qore-ssh2-module
+Section: interpreters
+Priority: optional
+Maintainer: David Nichols <david@qore.org>
+Build-Depends: debhelper-compat (= 13),
+               cmake (>= 3.5),
+               pkgconf,
+               libssh2-1-dev,
+               libssl-dev,
+               openssh-server <!nocheck>,
+               openssh-client <!nocheck>,
+               libnss-wrapper <!nocheck>,
+               libqore-dev (>= 3.0.0~),
+               qore (>= 3.0.0~),
+               qore-misc-tools (>= 3.0.0~) <!nocheck>,
+               python3
+Build-Depends-Indep: doxygen <!nodoc>
+Standards-Version: 4.7.4
+Rules-Requires-Root: no
+Homepage: https://qore.org
+Vcs-Git: https://github.com/qoretechnologies/module-ssh2.git
+Vcs-Browser: https://github.com/qoretechnologies/module-ssh2
+
+Package: qore-ssh2-module
+Architecture: any
+Depends: ${qore:Depends},
+         ${shlibs:Depends},
+         ${misc:Depends}
+Suggests: qore-ssh2-module-doc
+Description: SSH, SFTP, polling and file providers for Qore
+ This package provides native libssh2 bindings and source/compiled SFTP
+ providers, polling utilities and connection types. It includes compiler
+ metadata, provider resources and translations. It supports remote command
+ execution, file transfers, host-key verification and asynchronous SFTP.
+
+Package: qore-ssh2-module-doc
+Section: doc
+Architecture: all
+Multi-Arch: foreign
+Build-Profiles: <!nodoc>
+Depends: ${misc:Depends}
+Suggests: qore-ssh2-module
+Description: documentation and examples for Qore's SSH2 modules
+ This package contains HTML API references and example tests for the native
+ SSH2 module, SFTP data provider, polling utilities and connection types.

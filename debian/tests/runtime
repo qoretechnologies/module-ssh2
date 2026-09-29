@@ -1,0 +1,17 @@
+#!/bin/sh
+# Copyright (C) 2026 David Nichols
+# SPDX-License-Identifier: MIT
+set -eu
+export LC_ALL=C.UTF-8
+unset QORE_MODULE_DIR QORE_MODULE_DIR_ONLY QORE_INCLUDE_DIR LD_LIBRARY_PATH LD_PRELOAD
+export QORE_MODULE_DIR=$(/usr/bin/qore --module-path)
+export QORE_MODULE_DIR_ONLY=1
+cp test/*.qtest debian/tests/with-sshd debian/tests/run-suites "$AUTOPKGTEST_TMP/"
+cd "$AUTOPKGTEST_TMP"
+module_dir=$(printf '%s\n' "$QORE_MODULE_DIR" | tr : '\n' | while IFS= read -r path; do
+    if [ -f "$path/SftpClientDataProvider/SftpClientDataProvider.qmod" ]; then printf '%s\n' "$path"; break; fi
+done)
+test -n "$module_dir"
+export QORE_SSH2_TEST_MODULE_DIR="$module_dir"
+export QORE_SSH2_TEST_QMOD_DIR="$module_dir"
+exec ./with-sshd ./run-suites .

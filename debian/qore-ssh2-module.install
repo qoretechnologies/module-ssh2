@@ -1,0 +1,6 @@
+usr/lib/*/qore-modules/*.qmod
+usr/lib/*/qore-modules/SftpClientDataProvider/
+usr/share/qore-modules/*.qm
+usr/share/qore-modules/SftpClientDataProvider/
+usr/share/qore/metadata/ssh2/*.meta.json
+usr/share/qore/i18n/
