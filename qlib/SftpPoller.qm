@@ -351,7 +351,7 @@ public class SftpPoller {
     }
 
     #! creates the SftpPoller object from the @ref Qore::SSH2::SFTPClient "SFTPClient" argument and configuration hash argument passed
-    /** @param n_sftp the new @ref Qore::SSH2::SFTPClient "SFTPClient" object
+    /** @param sftp the new @ref Qore::SSH2::SFTPClient "SFTPClient" object
         @param nconf a hash with the following optional keys:
         - \c atomic_transfer: if @ref True and \c local_dir is set, then \c tempfile_template is used to write SFTP
           files to a temporary filename during transfer
@@ -1497,7 +1497,8 @@ public class SftpPollerDataProviderFactory inherits AbstractDataProviderFactory 
     }
 
     #! Returns static factory information without \a provider_info
-    /** @return static factory information without \a provider_info which is provided by @ref getProviderInfo()
+    /** @return static factory information without \a provider_info which is provided by
+        @ref DataProvider::AbstractDataProviderFactory::getProviderInfo()
     */
     private hash<DataProviderFactoryInfo> getInfoImpl() {
         return FactoryInfo;

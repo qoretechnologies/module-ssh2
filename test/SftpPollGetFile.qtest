@@ -33,6 +33,7 @@ class SftpPollGetFileTest inherits QUnit::Test {
         const SmallContents = "hi there ýčšěáýžšěčéář\n";
 
         const MyOpts = Opts + {
+            "uri": "uri=s",
             "privkey": "k,private-key=s",
             "timeout": "t,timeout=i",
             "dir": "d,dir=s",
@@ -43,7 +44,7 @@ class SftpPollGetFileTest inherits QUnit::Test {
         if (m_options.timeout) {
             timeout = m_options.timeout * 1000;
         }
-        uri = shift ARGV ?? sprintf("%s@localhost", getusername());
+        uri = m_options.uri ?? shift ARGV ?? sprintf("%s@localhost", getusername());
         tmp_dir = m_options.dir ?? tmp_location();
 
         if (m_options.privkey) {

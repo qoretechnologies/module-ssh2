@@ -62,3 +62,12 @@ david@qore.org
 
 or you can post in the qore forums at
         http://qore.org/forums
+
+TESTING
+-------
+The SSH and SFTP suites accept --uri for the test server, for example:
+
+    qore -b --enable-debug test/Ssh2Client.qtest --uri=ssh://tester@127.0.0.1:2222
+
+RPM qualification creates its own isolated SSH server, temporary home, and
+fresh keys; see rpm/README.rst for build and installed-package checks.

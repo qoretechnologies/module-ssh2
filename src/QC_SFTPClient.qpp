@@ -547,6 +547,7 @@ string SFTPClient::getTextFile(string path, timeout timeout = 60s, *string encod
     @param remote_path the remote pathname of the file to retrieve
     @param local_path the local filesystem pathname to save the file to
     @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds)
+    @param mode the permissions used when creating the local file, subject to the process umask
 
     @return the number of bytes transferred
 

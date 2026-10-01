@@ -71,7 +71,7 @@
     - Check the \c authenticated key in @ref Qore::SSH2::SSH2Client::info() "info()" to verify successful authentication
 
     @subsection host_key_verification_bp Host Key Verification
-    - Host key verification is <b>enabled by default</b> with the @ref SSH2_HOSTKEY_TOFU
+    - Host key verification is <b>enabled by default</b> with the @ref Qore::SSH2::Ssh2HostKeyPolicy::TrustOnFirstUse
       (Trust On First Use) policy and the local user's <tt>~/.ssh/known_hosts</tt> file; this
       protects against man-in-the-middle attacks on all but the first connection to a given host
     - For strict checking, pre-populate the known_hosts file and set
@@ -89,7 +89,7 @@
     In an embedding application where the OS/UNIX user running the process is unrelated to the
     logical user making SSH/SFTP connections, the OS user's <tt>~/.ssh/known_hosts</tt> file may be
     the wrong trust domain: it is shared across all logical users, and host keys accepted (and
-    persisted via @ref SSH2_HOSTKEY_TOFU "TOFU") for one logical user would be trusted for all of
+    persisted via @ref Qore::SSH2::Ssh2HostKeyPolicy::TrustOnFirstUse "TOFU") for one logical user would be trusted for all of
     them.
 
     Such applications should change the <b>process-global</b> defaults once at startup instead of
@@ -197,6 +197,11 @@ binary data = op.getOutput();@endcode
     @subsection ssh2v200 ssh2 Module Version 2.0.0
     Major feature release closing all client-side feature gaps in the libssh2 wrapper.
 
+    <b>Build and test support:</b>
+    - documentation includes DataProvider and ConnectionProvider cross-references and corrected parameter names
+    - SSH/SFTP test suites accept a named \c --uri option for isolated qualification servers
+    - \c QORE_SSH2_STRICT_DOCS makes documentation warnings fail the build
+
     <b>Authentication Enhancements:</b>
     - added SSH agent authentication support; tried automatically before other methods
       (@ref Qore::SSH2::SSH2Base::setUseAgent() "SSH2Base::setUseAgent()")
@@ -205,7 +210,7 @@ binary data = op.getOutput();@endcode
 
     <b>Security - Known Hosts Verification:</b>
     - <b>host key verification is now enabled by default</b> (secure by default) using the
-      @ref SSH2_HOSTKEY_TOFU policy and the local user's <tt>~/.ssh/known_hosts</tt> file
+      @ref Qore::SSH2::Ssh2HostKeyPolicy::TrustOnFirstUse policy and the local user's <tt>~/.ssh/known_hosts</tt> file
       (resolved automatically when filesystem access is permitted); this closes a
       man-in-the-middle vulnerability where the previous default silently connected to any server
       and could disclose credentials to an attacker

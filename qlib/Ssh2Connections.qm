@@ -93,8 +93,8 @@ module Ssh2Connections {
     - new AbstractConnection infrastructure
 
     @subsection ssh2connections_v1_1 Ssh2Connections v1.1
-    - the @ref Ssh2Connections::Ssh2ClientConnection::getConstructorInfo() "Ssh2ClientConnection::getConstructorInfo()"
-      and @ref Ssh2Connections::SftpConnection::getConstructorInfo() "SftpConnection::getConstructorInfo()"
+    - the \c Ssh2ClientConnection::getConstructorInfo()
+      and \c SftpConnection::getConstructorInfo()
       methods were added to allow connections to be created dynamically, potentially in another process from a network
       call (<a href="https://github.com/qorelanguage/qore/issues/2628">issue 2628</a>)
 
@@ -196,7 +196,7 @@ public class AbstractSsh2Connection inherits ConnectionProvider::AbstractConnect
         @param attributes various attributes. See below
         @param options connection options
 
-        See @ref AbstractConnection::constructor() for \c attributes and \c options reference.
+        See @ref ConnectionProvider::AbstractConnection::constructor() for \c attributes and \c options reference.
     */
     constructor(string name, string description, string url, hash<auto> attributes = {}, hash<auto> options = {})
             : AbstractConnectionWithInfo(name, description, url, attributes, options) {
@@ -305,7 +305,7 @@ public class Ssh2ClientConnection inherits AbstractSsh2Connection {
         @param attributes various attributes. See below
         @param options connection options
 
-        See @ref AbstractConnection::constructor() for \c attributes and \c options reference.
+        See @ref ConnectionProvider::AbstractConnection::constructor() for \c attributes and \c options reference.
     */
     constructor(string name, string description, string url, hash<auto> attributes = {}, hash<auto> options = {})
             : AbstractSsh2Connection(name, description, url, attributes, options) {
@@ -485,7 +485,7 @@ public class SftpConnection inherits AbstractSsh2Connection {
         @param attributes various attributes. See below
         @param options connection options
 
-        See @ref AbstractConnection::constructor() for \c attributes and \c options reference.
+        See @ref ConnectionProvider::AbstractConnection::constructor() for \c attributes and \c options reference.
     */
     constructor(string name, string description, string url, hash<auto> attributes = {}, hash<auto> options = {})
             : AbstractSsh2Connection(name, description, url, attributes, options) {

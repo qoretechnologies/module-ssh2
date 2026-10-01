@@ -323,7 +323,7 @@ binary SSH2Channel::readBinaryBlock(softint size, softint stream_id = 0, timeout
 
     @param data the data to write; must be either a string or binary
     @param stream_id the stream ID to write (0 is the default, 1 is for \c stderr)
-    @param timeout an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds); a negative value means do not time out
+    @param timeout_ms an integer giving a timeout in milliseconds or a relative date/time value (ex: \c 15s for 15 seconds); a negative value means do not time out
 
     @throw SSH2CHANNEL-WRITE-ERROR invalid stream ID; libssh2 reported an error on the channel while waiting for a response from the server
     @throw SSH2CHANNEL-ERROR the channel has been closed

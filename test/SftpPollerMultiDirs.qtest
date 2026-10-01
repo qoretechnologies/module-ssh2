@@ -47,6 +47,7 @@ class SftpPollerMultiDirsTest inherits QUnit::Test {
         const Timeout = 10s;
 
         const MyOpts = Opts + (
+            "uri": "uri=s",
             "privkey": "k,private-key=s",
             "mask": "m,mask=s",
             );
@@ -94,7 +95,7 @@ class SftpPollerMultiDirsTest inherits QUnit::Test {
         addTestCase("SftpPollerTests", \sftpPollerTests());
         addTestCase("SftpPollerRemotePathNegTest", \sftpPollerRemotePathNegTest());
 
-        string uri = shift ARGV ?? sprintf("%s@localhost", getusername());
+        string uri = m_options.uri ?? shift ARGV ?? sprintf("%s@localhost", getusername());
 
         sc = new SFTPClient(uri);
         if (m_options.privkey) {

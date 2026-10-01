@@ -26,6 +26,7 @@ class SFTPClientTest inherits QUnit::Test {
         const FileNameLen = 40;
 
         const MyOpts = Opts + {
+            "uri": "uri=s",
             "privkey": "k,private-key=s",
             "timeout": "t,timeout=i",
             "dir": "d,dir=s",
@@ -37,7 +38,7 @@ class SFTPClientTest inherits QUnit::Test {
     constructor() : Test("SFTPClientTest", "1.2", \ARGV, MyOpts) {
         if (m_options.timeout)
             timeout = m_options.timeout * 1000;
-        string uri = shift ARGV ?? sprintf("%s@localhost", getusername());
+        string uri = m_options.uri ?? shift ARGV ?? sprintf("%s@localhost", getusername());
 
         sc = new SFTPClient(uri);
         if (m_options.privkey) {

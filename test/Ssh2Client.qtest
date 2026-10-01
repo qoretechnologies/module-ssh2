@@ -210,6 +210,7 @@ class Ssh2ClientTest inherits QUnit::Test {
         timeout timeout = 10s;
 
         const MyOpts = Opts + {
+            "uri": "uri=s",
             "privkey": "k,private-key=s",
             "timeout": "t,timeout=i",
         };
@@ -226,7 +227,7 @@ class Ssh2ClientTest inherits QUnit::Test {
     constructor() : Test("Ssh2ClientTest", "1.0", \ARGV, MyOpts) {
         if (m_options.timeout)
             timeout = m_options.timeout * 1000;
-        uri = shift ARGV ?? sprintf("%s@localhost", getusername());
+        uri = m_options.uri ?? shift ARGV ?? sprintf("%s@localhost", getusername());
 
         addTestCase("Ssh2Client test", \ssh2ClientTest());
         addTestCase("Host key info test", \hostKeyInfoTest());

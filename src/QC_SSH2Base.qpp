@@ -434,7 +434,7 @@ ssh2client.setVerifyHostKey(True);
 
     When enabled, the server's host key is checked against the known_hosts file during
     connection. Host key verification is <b>enabled by default</b> with the
-    @ref SSH2_HOSTKEY_TOFU policy and the local user's <tt>~/.ssh/known_hosts</tt> file (see
+    @ref Qore::SSH2::Ssh2HostKeyPolicy::TrustOnFirstUse policy and the local user's <tt>~/.ssh/known_hosts</tt> file (see
     @ref setKnownHostsFile() and @ref setHostKeyPolicy()). If verification is enabled and no
     known_hosts file is configured, the default persistent \c SSH2_HOSTKEY_TOFU policy fails
     closed with \c SSH2-HOSTKEY-ERROR. Use
