@@ -1,166 +1,112 @@
-%define mod_ver 2.0.0
-
-%{?_datarootdir: %global mydatarootdir %_datarootdir}
-%{!?_datarootdir: %global mydatarootdir /usr/share}
-
-%define module_api %(qore --latest-module-api 2>/dev/null)
-%define module_dir %{_libdir}/qore-modules
-%global user_module_dir %{mydatarootdir}/qore-modules/
-
-%if 0%{?sles_version}
-
-%define dist .sles%{?sles_version}
-
+# Copyright (C) 2026 Qore Technologies, s.r.o.
+# SPDX-License-Identifier: MIT
+# Use the pinned source epoch for RPM headers and installed file timestamps.
+%global source_date_epoch_from_changelog 1
+%global use_source_date_epoch_as_buildtime 1
+%if v"%{rpmversion}" >= v"4.20"
+%global build_mtime_policy clamp_to_source_date_epoch
 %else
-%if 0%{?suse_version}
-
-# get *suse release major version
-%define os_maj %(echo %suse_version|rev|cut -b3-|rev)
-# get *suse release minor version without trailing zeros
-%define os_min %(echo %suse_version|rev|cut -b-2|rev|sed s/0*$//)
-
-%if %suse_version > 1010
-%define dist .opensuse%{os_maj}_%{os_min}
-%else
-%define dist .suse%{os_maj}_%{os_min}
+%global clamp_mtime_to_source_date_epoch 1
 %endif
-
-%endif
-%endif
-
-# see if we can determine the distribution type
-%if 0%{!?dist:1}
-%define rh_dist %(if [ -f /etc/redhat-release ];then cat /etc/redhat-release|sed "s/[^0-9.]*//"|cut -f1 -d.;fi)
-%if 0%{?rh_dist}
-%define dist .rhel%{rh_dist}
-%else
-%define dist .unknown
-%endif
-%endif
-
-Summary: SSH2 module for Qore
+%bcond_without tests
+%bcond_without docs
 Name: qore-ssh2-module
-Version: %{mod_ver}
-Release: 1%{dist}
-%if 0%{?suse_version}
-License: LGPL-2.0+ or GPL-2.0+ or MIT
-%else
-License: LGPLv2+ or GPLv2+ or MIT
-%endif
-Group: Development/Languages
-URL: http://www.qoretechnologies.com/qore
-Source: http://prdownloads.sourceforge.net/qore/%{name}-%{version}.tar.bz2
-#Source0: %{name}-%{version}.tar.bz2
-BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
+Version: 2.0.0
+Release: 2%{?dist}
+Summary: SSH, SFTP, polling and file providers for Qore
+License: LGPL-2.1-or-later OR MIT
+URL: https://github.com/qoretechnologies/module-ssh2
+Source0: %{name}-%{version}.tar.xz
+%global _find_debuginfo_dwz_opts %{nil}
 BuildRequires: cmake >= 3.5
+BuildRequires: make
 BuildRequires: gcc-c++
-BuildRequires: qore-devel >= 3.0
-BuildRequires: qore-stdlib >= 3.0
-BuildRequires: qore >= 3.0
-BuildRequires: libssh2-devel >= 1.1
-BuildRequires: openssl-devel
-BuildRequires: doxygen
-%if 0%{?el7}
-BuildRequires: devtoolset-7-gcc-c++
+BuildRequires: pkgconfig(libssh2) >= 1.1
+BuildRequires: pkgconfig(openssl)
+BuildRequires: qore-devel >= 3.0.0~
+BuildRequires: qore-rpm-macros >= 3.0.0~
+%if %{with tests}
+BuildRequires: python3
+BuildRequires: openssh-server
+BuildRequires: openssh-clients
+BuildRequires: nss_wrapper
+BuildRequires: qore-misc-tools >= 3.0.0~
 %endif
-Requires: /usr/bin/env
-Requires: qore-module(abi)%{?_isa} = %{module_api}
+%if %{with docs}
+BuildRequires: doxygen
+%if 0%{?suse_version}
+BuildRequires: util-linux
+%else
+BuildRequires: util-linux-core
+%endif
+%endif
+%{?qore_enable_aot_post}
 
 %description
-SSH2 module for the Qore Programming Language.
+Native SSH2 and SFTP bindings, compiled and source file providers, polling
+utilities and connection types. Includes compiler metadata and translations.
+Uses the distribution's libssh2 and OpenSSL implementations.
 
-
-%if 0%{?suse_version}
-%debug_package
+%if %{with docs}
+%package doc
+Summary: SSH2 and SFTP module reference documentation
+BuildArch: noarch
+%description doc
+Native and user-module API references for SSH, SFTP and file providers.
 %endif
 
 %prep
-%setup -q
-
+%autosetup
 %build
-%if 0%{?el7}
-# enable devtoolset7
-. /opt/rh/devtoolset-7/enable
+%{?set_build_flags}
+. %{_rpmconfigdir}/qore/module-env.sh
+qore_set_source_prefix_maps "%{qore_debug_source_dir}"
+cmake -S . -B build -G 'Unix Makefiles' \
+  -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS_RELEASE=-DNDEBUG \
+  -DCMAKE_INSTALL_PREFIX=%{_prefix} -DCMAKE_INSTALL_LIBDIR=%{_lib} \
+  -DCMAKE_SKIP_RPATH=ON -DCMAKE_IGNORE_PREFIX_PATH=/usr/local \
+  -DQore_DIR=%{_libdir}/cmake/Qore -DQORE_EXECUTABLE=/usr/bin/qore \
+  -DQORE_QPP_EXECUTABLE=/usr/bin/qpp -DQORE_QCC_EXECUTABLE=/usr/bin/qcc \
+  -DQORE_BUILD_AOT_MODULES=ON -DQORE_AOT_LINK_SOURCE_MODULES=OFF \
+  -DQORE_GENERATE_JAVA_BINDINGS=OFF -DQORE_SSH2_STRICT_DOCS=ON \
+  -DQORE_QM_METADATA_ENV:STRING="QORE_MODULE_DIR=$QORE_MODULE_DIR:$PWD/qlib;QORE_MODULE_DIR_ONLY=1;QORE_INCLUDE_DIR=;LD_LIBRARY_PATH=" \
+  -DCMAKE_DISABLE_FIND_PACKAGE_Doxygen=%{!?with_docs:ON}%{?with_docs:OFF}
+cmake --build build -- %{?_smp_mflags}
+%if %{with docs}
+cmake --build build --target docs -- %{?_smp_mflags}
 %endif
-export CXXFLAGS="%{?optflags}"
-cmake -DCMAKE_INSTALL_PREFIX=%{_prefix} -DCMAKE_BUILD_TYPE=RELWITHDEBINFO -DCMAKE_SKIP_RPATH=1 -DCMAKE_SKIP_INSTALL_RPATH=1 -DCMAKE_SKIP_BUILD_RPATH=1 -DCMAKE_PREFIX_PATH=${_prefix}/lib64/cmake/Qore .
-make %{?_smp_mflags}
-make %{?_smp_mflags} docs
-
 %install
-make DESTDIR=%{buildroot} install %{?_smp_mflags}
-
-%clean
-rm -rf $RPM_BUILD_ROOT
-
+DESTDIR=%{buildroot} cmake --install build
+%qore_install_aot_sources qlib
+find %{buildroot}%{_libdir}/qore-modules -type f -name '*.qmod' -exec chmod 755 {} +
+%if %{with docs}
+install -d %{buildroot}%{_docdir}/%{name}-doc
+cp -a build/docs %{buildroot}%{_docdir}/%{name}-doc/
+hardlink -t -O %{buildroot}%{_docdir}/%{name}-doc
+%endif
+%check
+%if %{with tests}
+. %{_rpmconfigdir}/qore/module-env.sh
+python3 -B -W error debian/tests/test_aot_metadata.py
+python3 -B -W error rpm/test_fixture.py -v
+python3 -B -W error rpm/run-tests.py --build-dir "$PWD/build"
+qore-data-provider-i18n --no-color --check-source-tree --require-standard-locales \
+  --require-complete-locales --output "$PWD/qlib"
+%endif
 %files
-%defattr(-,root,root,-)
-%{module_dir}
-%{user_module_dir}
-%doc COPYING.LGPL COPYING.MIT README RELEASE-NOTES AUTHORS
-
-%package doc
-Summary: SSH2 module for Qore
-Group: Development/Languages
-
-%description doc
-SSH2 module for the Qore Programming Language.
-
-This RPM provides API documentation, test and example programs
-
-
+%license COPYING.MIT COPYING.LGPL
+%doc README RELEASE-NOTES
+%{_libdir}/qore-modules/*
+%{_datadir}/qore-modules/*
+%dir %{_datadir}/qore/metadata/ssh2
+%{_datadir}/qore/metadata/ssh2/*.meta.json
+%{_datadir}/qore/i18n/
+%if %{with docs}
 %files doc
-%defattr(-,root,root,-)
-%doc docs/ssh2/ docs/SftpClientDataProvider/ docs/SftpPoller/ docs/SftpPollerUtil/ docs/Ssh2Connections/ test/
-
+%license COPYING.MIT COPYING.LGPL
+%doc %{_docdir}/%{name}-doc/
+%endif
 %changelog
-* Thu Aug 6 2026 David Nichols <david@qore.org> - 2.0.0
-- updated to version 2.0.0
-
-* Fri May 31 2024 David Nichols <david@qore.org> - 1.5.0
-- updated to version 1.5.0
-
-* Sat Aug 12 2023 David Nichols <david@qore.org> - 1.4.2
-- updated to version 1.4.2
-
-* Fri Jan 14 2022 David Nichols <david@qore.org> - 1.4.1
-- updated to version 1.4.1
-
-* Sun May 10 2020 David Nichols <david@qore.org> - 1.4
-- updated to version 1.4
-
-* Sun Jan 28 2018 David Nichols <david@qore.org> - 1.3
-- updated to version 1.3
-
-* Thu Feb 2 2017 David Nichols <david@qore.org> - 1.2
-- updated to version 1.2
-
-* Thu Feb 2 2017 Pavel Kveton <pavel.kveton@qoretechnologies.org> - 1.1
-- updated to version 1.1
-
-* Sat Dec 7 2013 David Nichols <david@qore.org> - 1.0
-- updated to version 1.0
-
-* Fri Aug 16 2013 David Nichols <david@qore.org> - 0.9.9
-- updated to version 0.9.9
-
-* Mon Aug 5 2013 David Nichols <david@qore.org> - 0.9.8.1
-- updated to version 0.9.8.1
-
-* Tue Mar 12 2013 David Nichols <david@qore.org> - 0.9.8
-- updated to version 0.9.8
-
-* Fri Jun 8 2012 David Nichols <david@qore.org> - 0.9.7
-- updated for qpp build
-
-* Mon Dec 19 2011 David Nichols <david@qore.org> - 0.9.7
-- updated to version 0.9.7
-
-* Mon Dec 20 2010 David Nichols <david@qore.org>
-- updated to version 0.9.6
-
-* Wed Jun 16 2010 David Nichols <david@qore.org>
-- updated to version 0.9.5
-
-* Mon Jan 11 2010 David Nichols <david_nichols@users.sourceforge.net>
-- initial spec file for ssh2 module
+* Thu Oct 01 2026 David Nichols <david@qore.org> - 2.0.0-2
+- Package native and compiled modules, metadata, locales and API references.
+- Run all eight suites against a private server with ephemeral keys and home.
