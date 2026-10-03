@@ -304,7 +304,7 @@ public hashdecl SftpPollerFileEventInfo {
     #! The relative date/time value giving the time taken to transfer the file
     date transfer_time;
 
-    #! Only included when `local_dir` is set; the target path for the file
+    #! Only included when <tt>local_dir</tt> is set; the target path for the file
     *string local_path;
 
     #! Remote status; one of @ref sftp_remote_status_constants
