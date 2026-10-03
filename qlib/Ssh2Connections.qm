@@ -99,7 +99,7 @@ module Ssh2Connections {
       call (<a href="https://github.com/qorelanguage/qore/issues/2628">issue 2628</a>)
 
     @subsection ssh2connections_v1_0 Ssh2Connections v1.0
-    - the initial version of the Ssh2Connections module
+    - initial release
 */
 
 #! the Ssh2Connections namespace contains all the definitions in the Ssh2Connections module
