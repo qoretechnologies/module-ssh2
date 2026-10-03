@@ -54,7 +54,7 @@ module Ssh2Connections {
 
     To use this module, use \c "%requires Ssh2Connections" in your code.
 
-    This module automatically uses the <a href="../../ssh2/html/index.html">ssh2</a> binary module.
+    This module automatically uses the @ref ssh2intro "ssh2" binary module.
 
     All the public symbols in the module are defined in the Ssh2Connections namespace.
 
