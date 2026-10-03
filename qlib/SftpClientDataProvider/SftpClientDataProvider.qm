@@ -210,7 +210,7 @@ module SftpClientDataProvider {
     - fixed bug in SftpClientListDataProvider where path was not normalized
 
     @subsection sftpclientdataprovider_v1_0 SftpClientDataProvider v1.0
-    - initial release of the module
+    - initial release
 */
 
 #! contains all public definitions in the SftpClientDataProvider module
