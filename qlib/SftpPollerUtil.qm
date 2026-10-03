@@ -46,17 +46,19 @@ module SftpPollerUtil {
 
 /** @mainpage SftpPollerUtil Module
 
-    @section sftppollerutuilintro Introduction to the SftpPollerUtil Module
+    @section sftppollerutilintro SftpPollerUtil Module Introduction
 
-    The SftpPollerUtil module defines types for the <a href="../../SftpPoller/html/index.html">SftpPoller</a> module.
+    @anchor sftppollerutuilintro
+
+    The SftpPollerUtil module defines types for the @ref sftppollerintro "SftpPoller" module.
 
     @section sftppollerutilrelnotes SftpPollerUtil Module Release Notes
 
-    @section sftppollerv1_4_1 Version 1.4.1
+    @section sftppollerutilv1_4_1 Version 1.4.1
     - fixed a bug registering the sftp event type
       (<a href="https://github.com/qorelanguage/qore/issues/4389">issue 4389</a>)
 
-    @section sftppollerv1_3_0 Version 1.3.0
+    @section sftppollerutilv1_3_0 Version 1.3.0
     - added support for data provider APIs
 
     @section sftppollerutilv1_0 Version 1.0

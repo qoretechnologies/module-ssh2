@@ -1,0 +1,67 @@
+/* Copyright (C) 2026 Qore Technologies, s.r.o. */
+
+/** @page ssh2best_practicesguide Best Practices
+
+    @tableofcontents
+
+    @section timeout_values Timeout Values
+    - Default connection timeout: 60 seconds
+    - Default operation timeout: 60 seconds (for SFTP operations)
+    - For high-latency networks, consider increasing timeouts
+    - For interactive applications, consider shorter timeouts with retry logic
+
+    @section connection_management Connection Management
+    - Use @ref Qore::SSH2::SSH2Base::connected() "connected()" to check connection state before operations
+    - Handle connection failures gracefully; the module will auto-disconnect on timeout errors
+    - For long-running applications, implement reconnection logic
+
+    @section error_handling Error Handling
+    - All methods that can fail throw exceptions; use try/catch blocks
+    - Common exceptions: \c SSH2-ERROR, \c SSH2CLIENT-TIMEOUT, \c SFTPCLIENT-TIMEOUT
+    - Check the \c authenticated key in @ref Qore::SSH2::SSH2Client::info() "info()" to verify successful authentication
+
+    @section host_key_verification_bp Host Key Verification
+    - Host key verification is <b>enabled by default</b> with the @ref Qore::SSH2::Ssh2HostKeyPolicy::TrustOnFirstUse
+      (Trust On First Use) policy and the local user's <tt>~/.ssh/known_hosts</tt> file; this
+      protects against man-in-the-middle attacks on all but the first connection to a given host
+    - For strict checking, pre-populate the known_hosts file and set
+      @ref Qore::SSH2::SSH2Base::setHostKeyPolicy() "setHostKeyPolicy(Ssh2HostKeyPolicy::Reject)"
+      so that any unknown host key is rejected
+    - Disabling verification with
+      @ref Qore::SSH2::SSH2Base::setVerifyHostKey() "setVerifyHostKey(False)" removes
+      man-in-the-middle protection entirely and should only be done if the risk is fully
+      understood and accepted
+    - A connection will fail with an \c SSH2-HOSTKEY-ERROR exception if the configured
+      known_hosts file exists but cannot be read or parsed, rather than silently connecting
+      without verification
+
+    @section embedding_multitenant Embedding in Multi-Tenant Applications
+    In an embedding application where the OS/UNIX user running the process is unrelated to the
+    logical user making SSH/SFTP connections, the OS user's <tt>~/.ssh/known_hosts</tt> file may be
+    the wrong trust domain: it is shared across all logical users, and host keys accepted (and
+    persisted via @ref Qore::SSH2::Ssh2HostKeyPolicy::TrustOnFirstUse "TOFU") for one logical user would be trusted for all of
+    them.
+
+    Such applications should change the <b>process-global</b> defaults once at startup instead of
+    relying on every call site:
+    - @ref Qore::SSH2::SSH2Base::setDefaultKnownHostsFile() "SSH2Base::setDefaultKnownHostsFile(\"\")"
+      disables use of any implicit known_hosts file. Host key trust should then be managed per
+      connection, e.g. via the \c known_hosts connection option. With the default persistent TOFU
+      policy, connections fail closed if no known_hosts file is configured. Applications that need
+      the legacy session-only behavior while migrating to an application-managed trust store must
+      set @ref Qore::SSH2::SSH2Base::setDefaultHostKeyPolicy()
+      "SSH2Base::setDefaultHostKeyPolicy(Ssh2HostKeyPolicy::TrustOnFirstUseSession)" explicitly.
+      Passing a path makes that path the default instead
+    - @ref Qore::SSH2::SSH2Base::setDefaultVerifyHostKey() "SSH2Base::setDefaultVerifyHostKey()"
+      and @ref Qore::SSH2::SSH2Base::setDefaultHostKeyPolicy() "SSH2Base::setDefaultHostKeyPolicy()"
+      change the global verification and policy defaults
+    - the same defaults can be set at deployment time with the \c QORE_SSH2_DEFAULT_KNOWN_HOSTS
+      (unset = built-in per-user default; empty = disabled; a path = that path),
+      \c QORE_SSH2_DEFAULT_VERIFY_HOST_KEY, and \c QORE_SSH2_DEFAULT_HOST_KEY_POLICY
+      (\c reject, \c tofu, or \c tofu-session) environment variables
+
+    Precedence (highest to lowest): a per-object setter (e.g. @ref Qore::SSH2::SSH2Base::setKnownHostsFile()
+    "setKnownHostsFile()") > a process-global \c setDefault*() call > the \c QORE_SSH2_DEFAULT_*
+    environment variable > the built-in secure default. Process-global defaults affect only
+    objects created after they are set.
+*/

@@ -1,0 +1,47 @@
+/* Copyright (C) 2026 Qore Technologies, s.r.o. */
+
+/** @page ssh2examplesguide Examples
+
+    @tableofcontents
+
+    Example of a basic sftp connection:
+
+    @code{.py}
+# create object
+SFTPClient sftp("sftp://user:pass@host.com:22");
+# connect to sftp server
+sftp.connect();@endcode
+
+    Example of logging in via ssh2 and executing a command and retrieving the output:
+
+    @code{.py}
+# set URL
+string url = "sftp://user:pass@host.com:22";
+# create object
+SSH2Client ssh2(url);
+# connect to remote sshd daemon
+ssh2.connect();
+# get a session channel
+SSH2Channel chan = sc.openSessionChannel();
+# execute a command on the channel
+chan.exec("ls -l");
+# retrieve the output and print it out
+stdout.printf("%s", chan.read());
+# close channel
+chan.sendEof();
+chan.close();
+# print out the exit status after the channel is closed
+stdout.printf("exit status: %d\n", chan.getExitStatus());@endcode
+
+    Example of retrieving a file without blocking the calling thread:
+
+    @code{.py}
+SFTPClient sftp("sftp://user:pass@host.com:22");
+# the operation performs the connection, authentication, and transfer without blocking
+AbstractPollOperation op = sftp.startPollGetFile("/path/to/file.dat");
+while (*hash<SocketPollInfo> info = op.continuePoll()) {
+    # wait for the events the operation reported, along with any other I/O being managed
+    Socket::poll((info,), 10s);
+}
+binary data = op.getOutput();@endcode
+*/

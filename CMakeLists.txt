@@ -105,6 +105,11 @@ set(module_name "ssh2")
 
 set(QORE_DOX_TMPL_SRC
   docs/mainpage.doxygen.tmpl
+    docs/guide-best_practices.dox.tmpl
+    docs/guide-codetags.dox.tmpl
+    docs/guide-examples.dox.tmpl
+    docs/guide-ssh2releasenotes.dox.tmpl
+    docs/guide-thread_safety.dox.tmpl
 )
 
 if (DEFINED ENV{DOXYGEN_EXECUTABLE})
@@ -113,6 +118,13 @@ endif()
 
 add_library(${module_name} MODULE ${CPP_SRC} ${QPP_SOURCES})
 set(MODULE_DOX_INPUT ${CMAKE_BINARY_DIR}/mainpage.dox ${_dox_src})
+list(APPEND MODULE_DOX_INPUT
+    ${CMAKE_CURRENT_BINARY_DIR}/guide-best_practices.dox
+    ${CMAKE_CURRENT_BINARY_DIR}/guide-codetags.dox
+    ${CMAKE_CURRENT_BINARY_DIR}/guide-examples.dox
+    ${CMAKE_CURRENT_BINARY_DIR}/guide-ssh2releasenotes.dox
+    ${CMAKE_CURRENT_BINARY_DIR}/guide-thread_safety.dox
+)
 qore_external_binary_module(${module_name} ${PROJECT_VERSION} ${LIBSSH2_LDFLAGS})
 
 qore_external_user_module("qlib/SftpClientDataProvider" "")
@@ -158,4 +170,9 @@ if (DOXYGEN_FOUND)
         endforeach()
         file(APPEND "${CMAKE_BINARY_DIR}/Doxyfile" "\nWARN_AS_ERROR = FAIL_ON_WARNINGS\n")
     endif()
+endif()
+
+# Resolve links between the native API and all companion user modules.
+if (DOXYGEN_FOUND)
+    qore_binary_module_two_phase_docs(${module_name} "SftpClientDataProvider;SftpPoller;SftpPollerUtil;Ssh2Connections")
 endif()
