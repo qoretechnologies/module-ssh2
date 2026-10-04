@@ -1,1 +1,2 @@
-please see doxygen-generated release notes: source in docs/mainpage.doxygen.tmpl
+See the ssh2 module release notes in the generated Doxygen documentation.
+The authoritative source is docs/guide-ssh2releasenotes.dox.tmpl.
