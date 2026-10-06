@@ -38,3 +38,7 @@ native and compiled module paths, outside the checkout::
 
 Run this unprivileged in a disposable runtime image with networking disabled
 and test dependencies installed. Normal module use requires no SSH server.
+
+Module installation paths come from the installed Qore SDK. Release 3 removes
+the unused CMAKE_INSTALL_LIBDIR setting; prefix, ABI module paths, tests and
+compiler flags retain their prior behavior.

@@ -12,7 +12,7 @@
 %bcond_without docs
 Name: qore-ssh2-module
 Version: 2.0.0
-Release: 2%{?dist}
+Release: 3%{?dist}
 Summary: SSH, SFTP, polling and file providers for Qore
 License: LGPL-2.1-or-later OR MIT
 URL: https://github.com/qoretechnologies/module-ssh2
@@ -63,7 +63,7 @@ Native and user-module API references for SSH, SFTP and file providers.
 qore_set_source_prefix_maps "%{qore_debug_source_dir}"
 cmake -S . -B build -G 'Unix Makefiles' \
   -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS_RELEASE=-DNDEBUG \
-  -DCMAKE_INSTALL_PREFIX=%{_prefix} -DCMAKE_INSTALL_LIBDIR=%{_lib} \
+  -DCMAKE_INSTALL_PREFIX=%{_prefix} \
   -DCMAKE_SKIP_RPATH=ON -DCMAKE_IGNORE_PREFIX_PATH=/usr/local \
   -DQore_DIR=%{_libdir}/cmake/Qore -DQORE_EXECUTABLE=/usr/bin/qore \
   -DQORE_QPP_EXECUTABLE=/usr/bin/qpp -DQORE_QCC_EXECUTABLE=/usr/bin/qcc \
@@ -107,6 +107,9 @@ qore-data-provider-i18n --no-color --check-source-tree --require-standard-locale
 %doc %{_docdir}/%{name}-doc/
 %endif
 %changelog
+* Tue Oct 06 2026 David Nichols <david@qore.org> - 2.0.0-3
+- Use the installed Qore SDK module directories without an unused CMake option.
+
 * Thu Oct 01 2026 David Nichols <david@qore.org> - 2.0.0-2
 - Package native and compiled modules, metadata, locales and API references.
 - Run all eight suites against a private server with ephemeral keys and home.
