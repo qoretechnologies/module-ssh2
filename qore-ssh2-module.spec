@@ -12,7 +12,7 @@
 %bcond_without docs
 Name: qore-ssh2-module
 Version: 2.0.0
-Release: 3%{?dist}
+Release: 4%{?dist}
 Summary: SSH, SFTP, polling and file providers for Qore
 License: LGPL-2.1-or-later OR MIT
 URL: https://github.com/qoretechnologies/module-ssh2
@@ -21,12 +21,16 @@ Source0: %{name}-%{version}.tar.xz
 BuildRequires: cmake >= 3.5
 BuildRequires: make
 BuildRequires: gcc-c++
+BuildRequires: binutils
+BuildRequires: python3
+%if 0%{?suse_version}
+BuildRequires: debugedit >= 5.1
+%endif
 BuildRequires: pkgconfig(libssh2) >= 1.1
 BuildRequires: pkgconfig(openssl)
 BuildRequires: qore-devel >= 3.0.0~
 BuildRequires: qore-rpm-macros >= 3.0.0~
 %if %{with tests}
-BuildRequires: python3
 BuildRequires: openssh-server
 BuildRequires: openssh-clients
 BuildRequires: nss_wrapper
@@ -79,6 +83,15 @@ cmake --build build --target docs -- %{?_smp_mflags}
 DESTDIR=%{buildroot} cmake --install build
 %qore_install_aot_sources qlib
 find %{buildroot}%{_libdir}/qore-modules -type f -name '*.qmod' -exec chmod 755 {} +
+# Retain full DWARF and source; distribution GDB ignores LLVM's optional index.
+python3 %{qore_rpm_helper} %{buildroot} objcopy --remove-section=.debug_names \
+  %{buildroot}%{_libdir}/qore-modules/SftpClientDataProvider/SftpClientDataProvider.qmod
+python3 %{qore_rpm_helper} %{buildroot} objcopy --remove-section=.debug_names \
+  %{buildroot}%{_libdir}/qore-modules/SftpPoller.qmod
+python3 %{qore_rpm_helper} %{buildroot} objcopy --remove-section=.debug_names \
+  %{buildroot}%{_libdir}/qore-modules/SftpPollerUtil.qmod
+python3 %{qore_rpm_helper} %{buildroot} objcopy --remove-section=.debug_names \
+  %{buildroot}%{_libdir}/qore-modules/Ssh2Connections.qmod
 %if %{with docs}
 install -d %{buildroot}%{_docdir}/%{name}-doc
 cp -a build/docs %{buildroot}%{_docdir}/%{name}-doc/
@@ -86,6 +99,20 @@ hardlink -t -O %{buildroot}%{_docdir}/%{name}-doc
 %endif
 %check
 %if %{with tests}
+python3 -B -W error - <<'PYTHON'
+import importlib.util
+from pathlib import Path
+import subprocess
+spec = importlib.util.spec_from_file_location('aot', '%{qore_rpm_helper}')
+aot = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(aot)
+for relative in ['SftpClientDataProvider/SftpClientDataProvider.qmod', 'SftpPoller.qmod', 'SftpPollerUtil.qmod', 'Ssh2Connections.qmod']:
+    binary = Path('%{buildroot}%{_libdir}/qore-modules') / relative
+    assert b'QAMD' in aot.read_trailers(binary), 'AOT metadata lost during RPM processing'
+    sections = subprocess.check_output(['readelf', '-SW', str(binary)], text=True)
+    assert '.gnu_debuglink' in sections, 'Missing separate AOT debug information'
+    assert '.debug_names' not in sections and '.debug_info' not in sections
+PYTHON
 . %{_rpmconfigdir}/qore/module-env.sh
 python3 -B -W error debian/tests/test_aot_metadata.py
 python3 -B -W error rpm/test_fixture.py -v
@@ -107,6 +134,9 @@ qore-data-provider-i18n --no-color --check-source-tree --require-standard-locale
 %doc %{_docdir}/%{name}-doc/
 %endif
 %changelog
+* Tue Oct 06 2026 David Nichols <david@qore.org> - 2.0.0-4
+- Preserve full AOT debugging without unsupported optional LLVM name indexes.
+
 * Tue Oct 06 2026 David Nichols <david@qore.org> - 2.0.0-3
 - Use the installed Qore SDK module directories without an unused CMake option.
 

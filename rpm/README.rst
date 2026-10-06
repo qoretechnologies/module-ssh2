@@ -42,3 +42,13 @@ and test dependencies installed. Normal module use requires no SSH server.
 Module installation paths come from the installed Qore SDK. Release 3 removes
 the unused CMAKE_INSTALL_LIBDIR setting; prefix, ABI module paths, tests and
 compiler flags retain their prior behavior.
+
+AOT debugger compatibility
+--------------------------
+
+RPMs retain full DWARF, debug source and Qore compiler metadata. They omit
+LLVM's optional precomputed name index, which distribution GDB ignores and
+debugedit cannot process. This uses the configuration approved on 2026-10-06;
+initial debugger loading may be slower. Leap requires debugedit 5.1 for the
+remaining DWARF forms. Package checks verify metadata and separate debug links;
+paired controls verify all other DWARF sections and symbols remain identical.
