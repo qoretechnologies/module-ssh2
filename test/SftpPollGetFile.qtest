@@ -113,7 +113,7 @@ class SftpPollGetFileTest inherits QUnit::Test {
             if (exists polls) {
                 ++polls;
             }
-            # the operation is its own pollable object; the descriptor must be valid whenever the
+            # the operation waits on its client object; the descriptor must be valid whenever the
             # operation asks the caller to wait for it
             assertGt(0, pi.socket.getPollableDescriptor());
             Socket::poll((pi,), timeout);

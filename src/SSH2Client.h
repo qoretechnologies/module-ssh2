@@ -31,6 +31,7 @@
 #include "ssh2-module.h"
 
 #include <qore/QoreSocket.h>
+#include <qore/AbstractPollableIoObjectBase.h>
 #ifdef _QORE_HAS_QUEUE_OBJECT
 #include <qore/QoreQueue.h>
 #endif
@@ -43,6 +44,7 @@
 #endif
 
 #include <map>
+#include <memory>
 #include <set>
 #include <string>
 #include <vector>
@@ -176,7 +178,12 @@ public:
     DLLLOCAL virtual void preDisconnect() = 0;
 };
 
-class SSH2Client : public AbstractPrivateData {
+//! the private data of SSH2Base objects: an SSH connection
+/** The class implements the C++ pollable I/O interface, so its objects can be polled with Socket::poll() and used with
+    the async I/O controller, which keeps the descriptor of the connection open while it has it registered (see
+    holdPollableDescriptor()).
+*/
+class SSH2Client : public AbstractPollableIoObjectBase {
     friend class SSH2Channel;
     friend class SSH2Listener;
     friend class BlockingHelper;
@@ -247,6 +254,14 @@ protected:
     // socket object for the connection
     QoreSocket socket;
 
+    //! keeps the descriptor of the connection open while a libssh2 session uses it
+    /** libssh2 reads and writes the descriptor number it was given itself, so a close of the socket from another
+        thread (closeIo(), called by the async I/O controller) must not release the number while the session can
+        still use it: the close only shuts the descriptor down, and the descriptor is closed when this hold is
+        released, after the session has been freed (see disconnectUnlocked()).
+    */
+    std::shared_ptr<void> session_fd_hold;
+
     /*
         * close session/connection
         * free resources
@@ -262,6 +277,20 @@ protected:
     DLLLOCAL virtual void deref(ExceptionSink*);
 
     DLLLOCAL int startupUnlocked();
+
+    //! keeps the descriptor of the connected socket open for the session that is about to use it
+    /** @return 0 for OK, -1 if the socket was closed meanwhile (an exception is raised)
+    */
+    DLLLOCAL int holdSessionDescriptorUnlocked(const char* meth, ExceptionSink* xsink);
+
+    //! closes the socket and releases the session's hold of its descriptor
+    /** must only be called once no libssh2 session uses the descriptor any more
+    */
+    DLLLOCAL void closeTransportUnlocked() {
+        socket.close();
+        // the descriptor is closed now, unless the async I/O controller still has it registered
+        session_fd_hold.reset();
+    }
     DLLLOCAL int sshConnectedUnlocked();
     DLLLOCAL bool sshSessionActiveUnlocked() const {
         return connect_in_progress || poll_op_in_progress || ssh_session;
@@ -578,11 +607,32 @@ public:
     }
 
     //! Returns the file descriptor of the underlying socket or -1 if not connected
-    /** implements the Qore::AbstractPollableIoObject interface for this class
+    /** The async I/O controller calls this on its I/O thread, so the object's lock is not taken: a blocking
+        operation can hold it while it waits for the controller
     */
-    DLLLOCAL int getPollableDescriptorLocked() const {
-        AutoLocker al(m);
+    DLLLOCAL virtual int getPollableDescriptor() const override {
         return socket.getSocket();
+    }
+
+    //! Keeps the descriptor of the connection open while the async I/O controller has it registered
+    /** While the hold exists, a disconnect or close from any thread shuts the descriptor down, which wakes the
+        operations waiting on it, and the descriptor is closed when the last hold is released, so its number cannot
+        be given to another file or socket while the controller waits on it
+
+        @return 0 if the hold was taken, -1 if \a fd is no longer the connection's descriptor
+    */
+    DLLLOCAL virtual int holdPollableDescriptor(int fd, std::shared_ptr<void>& hold) const override {
+        return socket.holdDescriptor(fd, hold);
+    }
+
+    //! Closes the connection's socket; called by the async I/O controller, also on its I/O thread
+    /** The object's lock is not taken, and no SSH message is sent: the socket is closed for its users at once and
+        its descriptor shut down, so that any operation using the connection fails; the libssh2 session is freed by
+        the next operation on the object, by SSH2Base::disconnect(), or when the object is destroyed, and the
+        descriptor is closed then
+    */
+    DLLLOCAL virtual void closeIo(ExceptionSink* xsink) override {
+        socket.close();
     }
 
     DLLLOCAL QoreHashNode *sshInfo(const TypedHashDecl* hashdecl, ExceptionSink* xsink);

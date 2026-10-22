@@ -631,7 +631,8 @@ int SSH2Client::disconnectUnlocked(bool force, int timeout_ms, AbstractDisconnec
     if (sshauthenticatedwith)
         sshauthenticatedwith = 0;
 
-    socket.close();
+    // the session no longer uses the descriptor
+    closeTransportUnlocked();
     return 0;
 }
 
@@ -639,7 +640,9 @@ int SSH2Client::disconnectUnlocked(bool force, int timeout_ms, AbstractDisconnec
  * return 1 if we think we are connected
  */
 int SSH2Client::sshConnectedUnlocked() {
-    return (ssh_session && !connect_in_progress ? 1 : 0);
+    // the socket is closed with the session still allocated when the async I/O controller closes the connection
+    // (closeIo()); the session is freed by the next connect or disconnect
+    return (ssh_session && !connect_in_progress && socket.isOpen() ? 1 : 0);
 }
 
 int SSH2Client::sshConnected() {
@@ -815,6 +818,16 @@ static void kbd_callback(const char *name, int name_len,
         responses[0].length = strlen(password);
     }
 } /* kbd_callback */
+
+int SSH2Client::holdSessionDescriptorUnlocked(const char* meth, ExceptionSink* xsink) {
+    int fd = socket.getSocket();
+    if (fd < 0 || socket.holdDescriptor(fd, session_fd_hold)) {
+        xsink && xsink->raiseException(SSH2CLIENT_CONNECT_ERROR, "the connection was closed while it was being "
+            "established in %s()", meth);
+        return -1;
+    }
+    return 0;
+}
 
 int SSH2Client::startupUnlocked() {
 #ifdef HAVE_LIBSSH2_SESSION_HANDSHAKE
@@ -1668,6 +1681,12 @@ int SSH2Client::sshConnectUnlocked(int timeout_ms, ExceptionSink *xsink = 0) {
     }
 
     if (socket.connectINET(sshhost.c_str(), sshport, timeout_ms, xsink)) {
+        return -1;
+    }
+
+    // libssh2 uses the descriptor number itself: keep it open while the session can use it
+    if (holdSessionDescriptorUnlocked("SSH2Client::connect", xsink)) {
+        disconnectUnlocked(true);
         return -1;
     }
 

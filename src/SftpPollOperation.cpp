@@ -42,9 +42,10 @@ static const char* SFTP_POLL_TIMEOUT = "SFTPCLIENT-TIMEOUT";
 // the return value of stepAgentAuth() when an exception was raised
 #define SFTP_AGENT_ERROR -1
 
-SftpPollOperationPriv::SftpPollOperationPriv(QoreObject* self, SFTPClient* client, const char* path,
-        int timeout_ms) : SocketPollOperationBase(self), client(client), path(path), timeout_ms(timeout_ms),
-        data(new BinaryNode) {
+SftpPollOperationPriv::SftpPollOperationPriv(QoreObject* self, QoreObject* client_obj, SFTPClient* client,
+        const char* path, int timeout_ms) : SocketPollOperationBase(self), client_obj(client_obj), client(client),
+        path(path), timeout_ms(timeout_ms), data(new BinaryNode) {
+    assert(client_obj);
     assert(client);
     // the client's private data is referenced for the life of this object; the DGC-visible
     // reference to the client object itself is held by the "client" member of the object
@@ -175,8 +176,13 @@ void SftpPollOperationPriv::closeIntern(ExceptionSink* xsink, bool disconnect) {
         sftp_handle = nullptr;
     }
 
-    if (disconnect && client->ssh_session) {
-        client->disconnectUnlocked(true, timeout_ms, nullptr, xsink);
+    if (disconnect) {
+        if (client->ssh_session) {
+            client->disconnectUnlocked(true, timeout_ms, nullptr, xsink);
+        } else {
+            // the connection was abandoned before a session was established on it
+            client->closeTransportUnlocked();
+        }
     }
 
     restoreBlockingIntern();
@@ -245,9 +251,12 @@ QoreHashNode* SftpPollOperationPriv::getPollInfo(ExceptionSink* xsink, int fd, i
 
     ReferenceHolder<QoreHashNode> info(new QoreHashNode(hashdeclSocketPollInfo, xsink), xsink);
     info->setKeyValue("events", events, xsink);
-    // this object is the pollable object for the operation; the reference is released with the
-    // hash returned to the caller
-    info->setKeyValue("socket", (*self)->objectRefSelf(), xsink);
+    // the client object is the pollable object while the operation waits on the connection's descriptor, which it
+    // holds open while it is waited on; only a descriptor of the connect state that is not yet the socket's is
+    // reported with this object, which is polled by number.  The reference is released with the hash returned to
+    // the caller
+    info->setKeyValue("socket", fd == client->socket.getSocket() ? client_obj->objectRefSelf()
+        : (*self)->objectRefSelf(), xsink);
     if (!extra.empty()) {
         ReferenceHolder<QoreListNode> list(new QoreListNode(hashdeclExtraPollFdInfo->getTypeInfo()), xsink);
         for (auto& i : extra) {
@@ -442,6 +451,12 @@ QoreHashNode* SftpPollOperationPriv::handleConnecting(ExceptionSink* xsink) {
     }
 
     connect_state.reset();
+
+    // libssh2 uses the descriptor number itself: keep it open while the session can use it
+    if (client->holdSessionDescriptorUnlocked(SFTP_POLL_METHOD, xsink)) {
+        closeIntern(xsink, true);
+        return nullptr;
+    }
 
     // the socket is connected; the poll-based connect leaves the descriptor in non-blocking mode,
     // which is what the session requires, but this is enforced explicitly so that the state does

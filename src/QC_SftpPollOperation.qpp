@@ -40,12 +40,14 @@
     authentication, the SFTP session, and the file transfer itself - is executed without blocking
     the calling thread.
 
-    Objects of this class are also
-    @ref Qore::AbstractPollableIoObject "AbstractPollableIoObject" objects reporting the
-    descriptor that the current stage is waiting on, which is why they appear as the \c socket
-    value of the @ref Qore::SocketPollInfo "SocketPollInfo" hashes they return; the descriptor
-    changes as the operation progresses (for example, while the remote host name is being
-    resolved asynchronously the resolver's descriptors are polled instead of the SSH socket).
+    The \c socket value of the @ref Qore::SocketPollInfo "SocketPollInfo" hashes returned is the
+    @ref Qore::SSH2::SFTPClient "SFTPClient" object of the operation, a
+    @ref Qore::AbstractPollableIoObjectBase "pollable I/O object" whose descriptor is held open
+    while it is waited on, so the operation can be driven with
+    @ref Qore::Socket::poll() "Socket::poll()" or submitted to the
+    @ref Qore::AsyncIoController "AsyncIoController" with the client as its I/O object.  Objects of
+    this class are also @ref Qore::AbstractPollableIoObject "AbstractPollableIoObject" objects
+    reporting the descriptor that the current stage is waiting on.
 
     @note
     - The @ref Qore::SSH2::SFTPClient "SFTPClient" object used by the operation must not be used
@@ -55,8 +57,9 @@
     - @ref Qore::AbstractPollOperation::continuePoll() "continuePoll()" can execute %Qore code
       (a host key store or a client identity provider, if configured) and can read key files from
       the filesystem, so it must not be called on an I/O thread
-    - the operation must be driven by the caller; it cannot be submitted to the async I/O
-      controller
+    - when the operation is submitted to the @ref Qore::AsyncIoController "AsyncIoController",
+      the client object must be its I/O object (\c sock); its steps run on callback workers,
+      governed by the sandbox of the code that submits it
     - objects of this class must be driven by one thread at a time; the state of an operation in
       progress is only consistent for the thread calling
       @ref Qore::AbstractPollOperation::continuePoll() "continuePoll()"

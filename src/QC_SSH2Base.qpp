@@ -82,8 +82,16 @@ enum Qore::SSH2::Ssh2ClientIdentityFallbackPolicy : int {
 
 //! base class for SFTPClient and SSH2Client
 /** The SSH2Base class provides common methods to the SSH2Client and SFTPClient classes
+
+    Objects of this class are @ref Qore::AbstractPollableIoObjectBase "pollable I/O objects": they can be used as
+    the \c socket of a @ref Qore::SocketPollInfo "SocketPollInfo" hash with @ref Qore::Socket::poll() "Socket::poll()"
+    and as the I/O object of an operation submitted to the @ref Qore::AsyncIoController "AsyncIoController", which
+    keeps the descriptor of the connection open while it waits on it, so a disconnect from another thread meanwhile
+    cannot let another file or socket reuse the descriptor number
+
+    @since ssh2 2.0 implements @ref Qore::AbstractPollableIoObjectBase "AbstractPollableIoObjectBase"
  */
-qclass SSH2Base [arg=SSH2Client* myself; ns=Qore::SSH2; dom=NETWORK; vparent=AbstractPollableIoObject];
+qclass SSH2Base [arg=SSH2Client* myself; ns=Qore::SSH2; dom=NETWORK; vparent=AbstractPollableIoObjectBase];
 
 //! Throws an exception; the constructor cannot be called manually
 /** Throws an exception if called directly; this class cannot be instantiated directly
@@ -186,9 +194,10 @@ bool SSH2Base::connected() [flags=CONSTANT] {
 
     @return the file descriptor of the underlying socket connection or -1 if the object is not connected
 
-    This method implements the @ref Qore::AbstractPollableIoObject "AbstractPollableIoObject" interface, so
-    that objects of this class can be used in @ref Qore::SocketPollInfo "SocketPollInfo" hashes with
-    @ref Qore::Socket::poll() "Socket::poll()"; this is how non-blocking operations such as
+    This method implements the @ref Qore::AbstractPollableIoObjectBase "AbstractPollableIoObjectBase" interface,
+    so that objects of this class can be used in @ref Qore::SocketPollInfo "SocketPollInfo" hashes with
+    @ref Qore::Socket::poll() "Socket::poll()" and with the @ref Qore::AsyncIoController "AsyncIoController";
+    this is how non-blocking operations such as
     @ref Qore::SSH2::SFTPClient::startPollGetFile() "SFTPClient::startPollGetFile()" are driven
 
     @note the descriptor returned is owned by this object and must not be closed by the caller; it is only
@@ -197,7 +206,7 @@ bool SSH2Base::connected() [flags=CONSTANT] {
     @since ssh2 2.0
  */
 int SSH2Base::getPollableDescriptor() [flags=CONSTANT] {
-    return myself->getPollableDescriptorLocked();
+    return myself->getPollableDescriptor();
 }
 
 //! Removes any warning @ref Qore::Thread::Queue "Queue" object from the Socket

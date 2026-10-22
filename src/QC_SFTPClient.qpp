@@ -482,8 +482,10 @@ binary b = op.getOutput();
     - @ref Qore::AbstractPollOperation::continuePoll() "continuePoll()" can execute %Qore code
       (a host key store or a client identity provider, if configured) and can read key files from
       the filesystem, so it must not be called on an I/O thread
-    - the operation must be driven by the caller; it cannot be submitted to the async I/O
-      controller
+    - the operation can be driven by the caller with @ref Qore::Socket::poll() "Socket::poll()",
+      or submitted to the @ref Qore::AsyncIoController "AsyncIoController" with this object as its
+      I/O object (\c sock); the @ref Qore::SocketPollInfo "SocketPollInfo" hashes report this
+      object as the object to wait on, whose descriptor is held open while it is waited on
 
     @see
     - SFTPClient::getFile()
@@ -498,7 +500,7 @@ AbstractPollOperation<*binary> SFTPClient::startPollGetFile(string path) [dom=NE
 
     // the operation object owns the reservation from this point on
     ReferenceHolder<QoreObject> obj(new QoreObject(QC_SFTPPOLLOPERATION, getProgram()), xsink);
-    SftpPollOperationPriv* poll_priv = new SftpPollOperationPriv(*obj, myself, path->c_str(),
+    SftpPollOperationPriv* poll_priv = new SftpPollOperationPriv(*obj, self, myself, path->c_str(),
         DEFAULT_TIMEOUT_MS);
     (*obj)->setPrivate(CID_SFTPPOLLOPERATION, poll_priv);
 

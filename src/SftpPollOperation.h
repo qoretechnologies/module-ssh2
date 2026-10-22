@@ -81,6 +81,10 @@ enum class SftpPollState {
     (see SSH2Client::buildAuthPlanUnlocked() and SSH2Client::verifyHostKeyUnlocked()), so the two
     paths cannot disagree about security decisions.
 
+    The poll info hashes report the client object as the object to wait on, so the connection's descriptor is held
+    open while the caller (with Socket::poll()) or the async I/O controller waits on it, whichever thread
+    disconnects the client meanwhile.
+
     The client's session is switched to non-blocking mode for the life of the operation and
     restored when the operation completes, is aborted, or is destroyed.  The socket's file
     descriptor is set to non-blocking I/O, which is the state the blocking API leaves it in as
@@ -90,11 +94,14 @@ class SftpPollOperationPriv : public SocketPollOperationBase {
 public:
     //! Creates the operation; the client must not be in use by any other operation
     /** @param self the object wrapping this private data
+        @param client_obj the client object, which the "client" member of \a self references for the life of the
+        operation
         @param client the client to use; a reference is managed by this object
         @param path the remote file path to retrieve
         @param timeout_ms the timeout used for cleanup operations and callback contexts
     */
-    DLLLOCAL SftpPollOperationPriv(QoreObject* self, SFTPClient* client, const char* path, int timeout_ms);
+    DLLLOCAL SftpPollOperationPriv(QoreObject* self, QoreObject* client_obj, SFTPClient* client, const char* path,
+        int timeout_ms);
 
     DLLLOCAL virtual ~SftpPollOperationPriv();
 
@@ -131,6 +138,13 @@ public:
     DLLLOCAL QoreStringNode* getGoal() const;
 
 private:
+    //! the client object; the "client" member of the object wrapping this private data references it
+    /** It is the pollable object of the poll info hashes that the operation returns while it waits on the
+        connection's descriptor, so that the descriptor is held open while the caller or the async I/O controller
+        waits on it (see SSH2Client::holdPollableDescriptor())
+    */
+    QoreObject* client_obj;
+
     //! the client; a reference to the private data is held for the life of this object
     SFTPClient* client;
 

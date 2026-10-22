@@ -1,0 +1,234 @@
+#!/usr/bin/env qore
+# -*- mode: qore; indent-tabs-mode: nil -*-
+
+%modern
+
+%prepend-module-path "${SCRIPT_DIR}/../build"
+
+%requires ssh2 >= 2.0
+
+%requires Util
+%requires QUnit
+
+%exec-class Ssh2AsyncIoTest
+
+#! The bound on every blocking wait in this test: a hang guard only, never a timing assertion
+const HangGuard = 60s;
+
+#! A poll operation that waits for its I/O object to become readable until it is canceled
+class WaitingOperation inherits AbstractPollOperation<auto> {
+    private {
+        AbstractPollableIoObjectBase io;
+    }
+
+    constructor(AbstractPollableIoObjectBase io) {
+        self.io = io;
+    }
+
+    string getGoal() {
+        return "waiting";
+    }
+
+    string getState() {
+        return "waiting";
+    }
+
+    bool goalReached() {
+        return False;
+    }
+
+    *hash<SocketPollInfo> continuePoll() {
+        return <SocketPollInfo>{
+            "events": SOCK_POLLIN,
+            "socket": io,
+        };
+    }
+
+    abort() {
+    }
+}
+
+#! Tests SSH2 objects with the async I/O controller
+/** SSH2Base and SftpPollOperation implemented only the %Qore-level AbstractPollableIoObject interface, so SSH2
+    objects could not be used with the async I/O controller at all, and Socket::poll() waited on their descriptors by
+    number, with no hold: a disconnect from another thread while the controller had the number registered let another
+    file or socket reuse the number while it was still registered, and the controller then changed or removed the
+    registration of whatever object had the number by then.  The client now holds its descriptor with
+    QoreSocket::holdDescriptor() while the controller has it registered; that the controller keeps such a hold until it
+    has removed the registration is tested in Qore (examples/test/module-cpp-api/module-pollable).
+*/
+class Ssh2AsyncIoTest inherits QUnit::Test {
+    private {
+        #! the URI used to connect to the test server
+        string uri;
+
+        #! the private key to use, if any
+        *string privkey;
+
+        #! the directory where test files are created
+        string tmp_dir;
+
+        const MyOpts = Opts + {
+            "uri": "uri=s",
+            "privkey": "k,private-key=s",
+            "dir": "d,dir=s",
+        };
+    }
+
+    constructor() : Test("Ssh2AsyncIoTest", "1.0", \ARGV, MyOpts) {
+        uri = m_options.uri ?? shift ARGV ?? sprintf("%s@localhost", getusername());
+        tmp_dir = m_options.dir ?? tmp_location();
+
+        if (m_options.privkey) {
+            privkey = m_options.privkey;
+        } else {
+            if (PlatformOS == "Windows") {
+                exit(0);
+            }
+            string sshdir = ENV.HOME + DirSep + ".ssh";
+            if (is_file(sshdir + "/id_rsa")) {
+                privkey = sshdir + "/id_rsa";
+            } else if (is_file(sshdir + "/id_dsa")) {
+                privkey = sshdir + "/id_dsa";
+            }
+        }
+
+        # one I/O thread, so that the client and its socket are closed by the same thread, and a close made with
+        # AsyncIoController::cancelAndClose() has completed when it returns
+        AsyncIoController::setMaxIoThreads(1);
+
+        addTestCase("SSH2 objects are C++ pollable I/O objects", \pollableTest());
+        addTestCase("cancelAndClose() closes the connection, and the client can connect again",
+            \cancelAndCloseTest());
+        addTestCase("an SFTP poll operation waits on its client", \pollOperationSocketTest());
+        addTestCase("an SFTP poll operation submitted to the controller retrieves the file",
+            \controllerPollOperationTest());
+
+        set_return_value(main());
+    }
+
+    #! Returns the identity of the open descriptor, or NOTHING if the descriptor is not open
+    private *string getDescriptorIdentity(int fd) {
+        *hash<StatInfo> info = hstat(sprintf("/dev/fd/%d", fd));
+        return info ? sprintf("%d:%d", info.dev, info.inode) : NOTHING;
+    }
+
+    #! Returns a new SFTP client for the test server
+    private SFTPClient getSftpClient() {
+        SFTPClient sc(uri);
+        if (privkey) {
+            sc.setKeys(privkey);
+        }
+        return sc;
+    }
+
+    #! Returns a new SSH client for the test server
+    private SSH2Client getSshClient() {
+        SSH2Client sc(uri);
+        if (privkey) {
+            sc.setKeys(privkey);
+        }
+        return sc;
+    }
+
+    #! Creates a local file with the given contents and returns its path
+    /** the test server runs on the same host, so files created locally are visible over SFTP
+    */
+    private string makeFile(data contents) {
+        string fn = sprintf("%s%sssh2-asyncio-%s", tmp_dir, DirSep, get_random_string(20));
+        File f();
+        f.open2(fn, O_CREAT | O_TRUNC | O_WRONLY, 0600);
+        f.write(contents);
+        f.close();
+        return fn;
+    }
+
+    pollableTest() {
+        SFTPClient sftp = getSftpClient();
+        SSH2Client ssh = getSshClient();
+        assertTrue(sftp instanceof AbstractPollableIoObjectBase, "an SFTPClient is a C++ pollable I/O object");
+        assertTrue(ssh instanceof AbstractPollableIoObjectBase, "an SSH2Client is a C++ pollable I/O object");
+        assertEq(-1, sftp.getPollableDescriptor(), "an unconnected client has no descriptor");
+        sftp.connect();
+        on_exit sftp.disconnect();
+        assertGe(0, sftp.getPollableDescriptor(), "a connected client reports its descriptor");
+    }
+
+    cancelAndCloseTest() {
+        if (!is_dir("/dev/fd")) {
+            testSkip("the platform has no /dev/fd to check the descriptor with");
+        }
+        SSH2Client sc = getSshClient();
+        sc.connect();
+        int fd = sc.getPollableDescriptor();
+        string identity = getDescriptorIdentity(fd);
+
+        WaitingOperation op(sc);
+        Queue<hash<SocketPollResultInfo>> rq = AsyncIoController::submit(<SocketPollOperationInfo>{
+            "sock": sc,
+            "spop": op,
+            "owner": "ssh2-asyncio-" + get_random_string(8),
+            "to": -1,
+        });
+        assertTrue(AsyncIoController::cancelAndClose(sc), "the operation waiting on the client is canceled");
+        hash<SocketPollResultInfo> result = rq.get(HangGuard);
+        assertTrue(result.canceled, "the operation's result reports the cancellation");
+        assertEq(-1, sc.getPollableDescriptor(), "the controller closed the connection");
+        assertFalse(boolean(sc.connected()), "a client whose connection was closed is not connected");
+        # libssh2 uses the descriptor number itself, so the number must not be given to another file or socket
+        # while the session exists
+        assertEq(identity, getDescriptorIdentity(fd), "the session keeps the closed connection's descriptor open");
+
+        # the disconnect frees the session, which releases the descriptor
+        sc.disconnect();
+        assertNeq(identity, getDescriptorIdentity(fd), "the descriptor is closed once the session is freed");
+
+        sc.connect();
+        on_exit sc.disconnect();
+        assertTrue(boolean(sc.connected()), "the client connects again");
+        SSH2Channel chan = sc.openSessionChannel();
+        on_exit delete chan;
+        chan.exec("echo reconnected");
+        assertEq("reconnected", trim(chan.readBlock(11, 0, HangGuard)), "the new connection works");
+    }
+
+    pollOperationSocketTest() {
+        string contents = "poll-operation-socket";
+        string fn = makeFile(contents);
+        on_exit unlink(fn);
+
+        # a new client: the operation makes the connection, so it must wait for the server's answers to the SSH
+        # key exchange
+        SFTPClient sc = getSftpClient();
+        AbstractPollOperation op = sc.startPollGetFile(fn);
+        int waits = 0;
+        while (*hash<SocketPollInfo> info = op.continuePoll()) {
+            ++waits;
+            assertTrue(info.socket == sc, "the operation waits on its client object");
+            assertEq(sc.getPollableDescriptor(), info.socket.getPollableDescriptor());
+            Socket::poll((info,), HangGuard);
+        }
+        assertGt(0, waits, "the operation waited for the server");
+        assertEq(binary(contents), op.getOutput(), "the file's data is returned");
+    }
+
+    controllerPollOperationTest() {
+        string contents = "controller-poll-operation";
+        string fn = makeFile(contents);
+        on_exit unlink(fn);
+
+        SFTPClient sc = getSftpClient();
+        AbstractPollOperation op = sc.startPollGetFile(fn);
+        hash<SocketPollResultInfo> result = AsyncIoController::exec(<SocketPollOperationInfo>{
+            "sock": sc,
+            "spop": op,
+            "owner": "ssh2-asyncio-" + get_random_string(8),
+            "to": HangGuard,
+        });
+        assertNothing(result.ex, "the operation completed without an error");
+        assertTrue(op.goalReached(), "the file was retrieved");
+        assertEq(binary(contents), op.getOutput(), "the file's data is returned");
+        # the client can be used again once the operation has completed
+        assertEq(binary(contents), sc.getFile(fn));
+    }
+}

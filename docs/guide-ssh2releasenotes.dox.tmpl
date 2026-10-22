@@ -64,9 +64,15 @@
     - authentication policy and ordering and host key verification are shared with the blocking
       connect path, so blocking and non-blocking connections make identical security decisions
     - @ref Qore::SSH2::SSH2Base "SSH2Base" objects are now
-      @ref Qore::AbstractPollableIoObject "AbstractPollableIoObject" objects; the descriptor of the
-      underlying connection is available with
+      @ref Qore::AbstractPollableIoObjectBase "pollable I/O objects" that can be polled with
+      @ref Qore::Socket::poll() "Socket::poll()" and used with the
+      @ref Qore::AsyncIoController "AsyncIoController", which keeps the descriptor of the connection
+      open while it waits on it, so a disconnect from another thread meanwhile cannot let another
+      file or socket reuse the descriptor number; the descriptor is available with
       @ref Qore::SSH2::SSH2Base::getPollableDescriptor() "SSH2Base::getPollableDescriptor()"
+    - the poll info hashes of an @ref Qore::SSH2::SftpPollOperation "SftpPollOperation" report its
+      @ref Qore::SSH2::SFTPClient "SFTPClient" object as the object to wait on, so the operation can
+      also be submitted to the @ref Qore::AsyncIoController "AsyncIoController"
     - a client running a poll operation is reserved for that operation; other operations on the
       same object fail with an \c SSH2-POLL-IN-PROGRESS exception until it completes, is aborted,
       or is destroyed
