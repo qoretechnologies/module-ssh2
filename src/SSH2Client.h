@@ -510,8 +510,10 @@ protected:
 
     DLLLOCAL virtual int disconnectUnlocked(bool force, int timeout_ms = DEFAULT_TIMEOUT_MS, AbstractDisconnectionHelper* adh = 0, ExceptionSink* xsink = 0);
 
-    DLLLOCAL LIBSSH2_CHANNEL *scpGetRaw(ExceptionSink *xsink, const char *path, int timeout_ms = -1, QoreHashNode *statinfo = 0);
-    DLLLOCAL LIBSSH2_CHANNEL *scpPutRaw(ExceptionSink *xsink, const char *path, size_t size, int mode = 0644, long mtime = 0, long atime = 0, int timeout_ms = -1);
+    //! opens an SCP channel to retrieve a file; returns the registered channel or nullptr if an exception was raised
+    DLLLOCAL SSH2Channel* scpGetChannel(ExceptionSink *xsink, const char *path, int timeout_ms = -1, QoreHashNode *statinfo = 0);
+    //! opens an SCP channel to send a file; returns the registered channel or nullptr if an exception was raised
+    DLLLOCAL SSH2Channel* scpPutChannel(ExceptionSink *xsink, const char *path, size_t size, int mode = 0644, long mtime = 0, long atime = 0, int timeout_ms = -1);
 
     // to ensure thread-safe operations
     mutable QoreThreadLock m;

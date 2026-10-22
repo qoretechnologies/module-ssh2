@@ -144,6 +144,12 @@
       in no libssh2 release yet, while distributions have backported the CVE fix alone into 1.11.1;
       patched and unpatched builds report the same \c LIBSSH2_VERSION_NUM, so an affected library
       cannot be recognized from its version
+    - fixed crashes from channels and listeners outliving their state: a channel destroyed after its client
+      disconnected was used again by the client's next connect or disconnect, and a channel or listener used after
+      its client object had been destroyed used freed memory; channels and listeners now keep their client's state
+      alive, a destroyed client object still disconnects, and its channels then report that they are closed
+    - an SCP channel is registered with its client while the client is locked, so a concurrent disconnect closes it,
+      and a failed SCP transfer to or from a stream no longer registers an unusable channel
     - removed stale TODO in mkdir implementation
     - documented known memory leak in sftp_shutdown timeout (libssh2 limitation)
     - updated copyright years to 2026

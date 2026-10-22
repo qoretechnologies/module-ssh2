@@ -201,6 +201,17 @@ SFTPClient::constructor(string url, softint port = 0) [flags=NAMED_ARGS] {
     self->setPrivate(CID_SFTPCLIENT, new SFTPClient(qurl, (int)port));
 }
 
+//! Destroys the object, disconnecting the session if it is connected
+/** The channels opened with the object are closed; a channel object that is used afterwards raises an
+    \c SSH2-CHANNEL-ERROR exception
+*/
+SFTPClient::destructor() {
+    // channels and listeners reference the private data, which therefore can outlive the object; the session ends
+    // with the object, as it always has
+    myself->disconnect(true, DEFAULT_TIMEOUT_MS);
+    static_cast<AbstractPrivateData*>(myself)->deref(xsink);
+}
+
 //! Throws an exception; currently SFTPClient objects cannot be copied
 /** @throw SFTPCLIENT-COPY-ERROR copying SFTPClient objects is not currently implemented
  */

@@ -49,9 +49,11 @@ protected:
     DLLLOCAL void cancelUnlocked();
 
 public:
-    DLLLOCAL SSH2Listener(LIBSSH2_LISTENER* n_listener, SSH2Client* n_parent, int n_bound_port)
-        : listener(n_listener), parent(n_parent), bound_port(n_bound_port) {
-    }
+    //! creates the listener object; the caller registers it with the parent, with the parent's lock held
+    /** The listener references the parent's private data for its whole life, so that a listener that outlives the
+        client object it was created with never uses freed memory
+    */
+    DLLLOCAL SSH2Listener(LIBSSH2_LISTENER* n_listener, SSH2Client* n_parent, int n_bound_port);
 
     DLLLOCAL ~SSH2Listener();
 

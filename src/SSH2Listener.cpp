@@ -33,11 +33,18 @@
 static const char* SSH2LISTENER_TIMEOUT = "SSH2LISTENER-TIMEOUT";
 static const char* SSH2LISTENER_ERROR = "SSH2LISTENER-ERROR";
 
+SSH2Listener::SSH2Listener(LIBSSH2_LISTENER* n_listener, SSH2Client* n_parent, int n_bound_port)
+        : listener(n_listener), parent(n_parent), bound_port(n_bound_port) {
+    parent->ref();
+}
+
 SSH2Listener::~SSH2Listener() {
     if (listener) {
         destructor();
     }
     assert(!listener);
+    ExceptionSink xsink;
+    parent->deref(&xsink);
 }
 
 void SSH2Listener::destructor() {

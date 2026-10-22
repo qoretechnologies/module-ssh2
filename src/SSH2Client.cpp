@@ -596,10 +596,12 @@ int SSH2Client::disconnectUnlocked(bool force, int timeout_ms, AbstractDisconnec
     listener_set.clear();
 #endif
 
-    // close all open channels
+    // close all open channels; a closed channel is no longer registered, since it can be destroyed at any time
+    // afterwards without the lock (its destructor only deregisters an open channel)
     for (channel_set_t::iterator i = channel_set.begin(), e = channel_set.end(); i != e; ++i) {
         (*i)->closeUnlocked();
     }
+    channel_set.clear();
 
     if (!ssh_session) {
         if (!force) {
@@ -2301,7 +2303,7 @@ QoreObject *SSH2Client::openDirectStreamLocalChannel(ExceptionSink *xsink, const
 }
 #endif
 
-LIBSSH2_CHANNEL* SSH2Client::scpGetRaw(ExceptionSink *xsink, const char *path, int timeout_ms, QoreHashNode *statinfo) {
+SSH2Channel* SSH2Client::scpGetChannel(ExceptionSink *xsink, const char *path, int timeout_ms, QoreHashNode *statinfo) {
     static const char *SSH2CLIENT_SCPGET_ERROR = "SSH2CLIENT-SCPGET-ERROR";
 
     AutoLocker al(m);
@@ -2359,15 +2361,21 @@ LIBSSH2_CHANNEL* SSH2Client::scpGetRaw(ExceptionSink *xsink, const char *path, i
     }
 #endif
 
-    return channel;
+    // the channel is registered with the lock held, so a concurrent disconnect closes it with the session
+    return registerChannelUnlockedRaw(channel);
 }
 
 QoreObject *SSH2Client::scpGet(ExceptionSink *xsink, const char *path, int timeout_ms, QoreHashNode *statinfo) {
-    return registerChannelUnlocked(scpGetRaw(xsink, path, timeout_ms, statinfo));
+    SSH2Channel* c = scpGetChannel(xsink, path, timeout_ms, statinfo);
+    return c ? new QoreObject(QC_SSH2CHANNEL, getProgram(), c) : nullptr;
 }
 
 void SSH2Client::scpGet(ExceptionSink *xsink, const char *path, OutputStream *os, int timeout_ms) {
-    std::unique_ptr<SSH2Channel> c(registerChannelUnlockedRaw(scpGetRaw(xsink, path, timeout_ms, 0)));
+    std::unique_ptr<SSH2Channel> c(scpGetChannel(xsink, path, timeout_ms, 0));
+    if (!c) {
+        assert(*xsink);
+        return;
+    }
     if (!c->sendEof(xsink, timeout_ms)) {
         qore_offset_t rc;
         char buffer[4096];
@@ -2384,7 +2392,7 @@ void SSH2Client::scpGet(ExceptionSink *xsink, const char *path, OutputStream *os
     c->waitClosed(xsink, timeout_ms);
 }
 
-LIBSSH2_CHANNEL *SSH2Client::scpPutRaw(ExceptionSink *xsink, const char *path, size_t size, int mode, long mtime, long atime, int timeout_ms) {
+SSH2Channel* SSH2Client::scpPutChannel(ExceptionSink *xsink, const char *path, size_t size, int mode, long mtime, long atime, int timeout_ms) {
     static const char *SSH2CLIENT_SCPPUT_ERROR = "SSH2CLIENT-SCPPUT-ERROR";
 
     AutoLocker al(m);
@@ -2415,17 +2423,23 @@ LIBSSH2_CHANNEL *SSH2Client::scpPutRaw(ExceptionSink *xsink, const char *path, s
         }
         break;
     }
-    return channel;
+    // the channel is registered with the lock held, so a concurrent disconnect closes it with the session
+    return registerChannelUnlockedRaw(channel);
 }
 
 QoreObject *SSH2Client::scpPut(ExceptionSink *xsink, const char *path, size_t size, int mode, long mtime, long atime, int timeout_ms) {
-   return registerChannelUnlocked(scpPutRaw(xsink, path, size, mode, mtime, atime, timeout_ms));
+    SSH2Channel* c = scpPutChannel(xsink, path, size, mode, mtime, atime, timeout_ms);
+    return c ? new QoreObject(QC_SSH2CHANNEL, getProgram(), c) : nullptr;
 }
 
 void SSH2Client::scpPut(ExceptionSink *xsink, const char *path, InputStream *is, size_t size, int mode, long mtime, long atime, int timeout_ms) {
     static const char *SSH2CLIENT_SCPPUT_ERROR = "SSH2CLIENT-SCPPUT-ERROR";
 
-    std::unique_ptr<SSH2Channel> c(registerChannelUnlockedRaw(scpPutRaw(xsink, path, size, mode, mtime, atime, timeout_ms)));
+    std::unique_ptr<SSH2Channel> c(scpPutChannel(xsink, path, size, mode, mtime, atime, timeout_ms));
+    if (!c) {
+        assert(*xsink);
+        return;
+    }
 
     char buffer[4096];
     while (size > 0) {

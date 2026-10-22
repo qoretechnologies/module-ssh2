@@ -60,18 +60,13 @@ protected:
     }
 
 public:
-    // channel is already registered with parent when it's created
-    DLLLOCAL SSH2Channel(LIBSSH2_CHANNEL *n_channel, SSH2Client *n_parent) : channel(n_channel), parent(n_parent), enc(QCS_DEFAULT) {
-    }
+    //! creates the channel object; the caller registers it with the parent, with the parent's lock held
+    /** The channel references the parent's private data for its whole life, so that a channel that outlives the
+        client object it was opened with never uses freed memory
+    */
+    DLLLOCAL SSH2Channel(LIBSSH2_CHANNEL *n_channel, SSH2Client *n_parent);
 
-    DLLLOCAL ~SSH2Channel() {
-        if (channel) {
-            destructor();
-        }
-
-        // channel must be closed before object is destroyed
-        assert(!channel);
-    }
+    DLLLOCAL ~SSH2Channel();
 
     DLLLOCAL void destructor();
 

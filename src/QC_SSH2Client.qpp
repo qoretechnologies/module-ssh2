@@ -143,6 +143,17 @@ SSH2Client::constructor(string url, softint port = 0) [flags=NAMED_ARGS] {
     self->setPrivate(CID_SSH2CLIENT, mySSH2Client);
 }
 
+//! Destroys the object, disconnecting the session if it is connected
+/** The channels opened with the object are closed; a channel object that is used afterwards raises an
+    \c SSH2-CHANNEL-ERROR exception
+*/
+SSH2Client::destructor() {
+    // channels and listeners reference the private data, which therefore can outlive the object; the session ends
+    // with the object, as it always has
+    c->disconnect(true, DEFAULT_TIMEOUT_MS);
+    static_cast<AbstractPrivateData*>(c)->deref(xsink);
+}
+
 //! throws an exception; currently SSH2Client objects cannot be copied
 /** @throw SSH2CLIENT-COPY-ERROR copying SSH2Client objects is not currently implemented
  */

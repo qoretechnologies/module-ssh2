@@ -246,6 +246,9 @@ class Ssh2ClientTest inherits QUnit::Test {
         addTestCase("Channel exit signal test", \channelExitSignalTest());
         addTestCase("Algorithm query test", \algorithmQueryTest());
         addTestCase("Trace level test", \traceLevelTest());
+        addTestCase("Channel closed by a disconnect is destroyed before its client test",
+            \channelDestroyedAfterDisconnectTest());
+        addTestCase("Channel outliving its client test", \channelOutlivesClientTest());
         # Note: Parameter validation and edge case tests are in test/NegativeTests.qtest
 
         set_return_value(main());
@@ -341,6 +344,42 @@ class Ssh2ClientTest inherits QUnit::Test {
             stdout.printf("=======================================\n");
             stdout.printf("exit status: %d\n", chan.getExitStatus());
         }
+    }
+
+    #! a disconnect closes the client's channels; one destroyed afterwards must not be used again by the client
+    /** the disconnect closed the channels but kept them registered, so the next disconnect of the client used the
+        destroyed channel
+    */
+    channelDestroyedAfterDisconnectTest() {
+        SSH2Client sc(uri);
+        setPrivateKey(sc);
+        sc.connect();
+        SSH2Channel chan = sc.openSessionChannel();
+        sc.disconnect();
+        assertThrows("SSH2-CHANNEL-ERROR", "already been closed", \chan.exec(), "true");
+        delete chan;
+
+        # the client connects and disconnects again with a new channel
+        sc.connect();
+        SSH2Channel chan2 = sc.openSessionChannel();
+        chan2.exec("echo again");
+        assertEq("again", trim(chan2.readBlock(5, 0, 30s)));
+        sc.disconnect();
+        assertThrows("SSH2-CHANNEL-ERROR", "already been closed", \chan2.exec(), "true");
+    }
+
+    #! a channel used after its client object was destroyed reports that it is closed
+    /** the channel kept a pointer to the client's freed private data
+    */
+    channelOutlivesClientTest() {
+        SSH2Client sc(uri);
+        setPrivateKey(sc);
+        sc.connect();
+        SSH2Channel chan = sc.openSessionChannel();
+        # destroying the client disconnects it and closes its channels
+        delete sc;
+        assertThrows("SSH2-CHANNEL-ERROR", "already been closed", \chan.exec(), "true");
+        assertThrows("SSH2-CHANNEL-ERROR", "already been closed", \chan.close());
     }
 
     hostKeyInfoTest() {

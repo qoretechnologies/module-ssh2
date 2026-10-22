@@ -28,6 +28,25 @@
 
 const char* SSH2CHANNEL_TIMEOUT = "SSH2CHANNEL-TIMEOUT";
 
+SSH2Channel::SSH2Channel(LIBSSH2_CHANNEL *n_channel, SSH2Client *n_parent) : channel(n_channel), parent(n_parent),
+        enc(QCS_DEFAULT) {
+    assert(channel);
+    parent->ref();
+}
+
+SSH2Channel::~SSH2Channel() {
+    if (channel) {
+        destructor();
+    }
+
+    // channel must be closed before object is destroyed
+    assert(!channel);
+
+    // the client is released after the channel, whose libssh2 channel belongs to the client's session
+    ExceptionSink xsink;
+    parent->deref(&xsink);
+}
+
 void SSH2Channel::destructor() {
     // close channel and deregister from parent
     AutoLocker al(parent->m);
