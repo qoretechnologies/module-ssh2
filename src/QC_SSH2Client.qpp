@@ -210,6 +210,13 @@ SSH2Channel SSH2Client::openSessionChannel(timeout timeout = 60s) [flags=NAMED_A
     @throw SSH2CLIENT-NOT-CONNECTED client is not connected
     @throw SSH2CLIENT-TIMEOUT timeout opening channel
     @throw SSH2-ERROR error opening channel
+    @throw NETWORK-ACCESS-DENIED the caller's network sandbox does not allow a connection to \a host and \a port
+
+    @note The SSH server makes the connection, so it can reach destinations that the calling code could not connect
+    to; as with a connection through a proxy, a network sandbox of the calling code must allow the destination as
+    well as the SSH server: \a host is resolved locally and every address it resolves to must be allowed
+
+    @since ssh2 2.0 the destination is checked against the network sandbox of the calling code
  */
 SSH2Channel SSH2Client::openDirectTcpipChannel(string host, softint port, string source_host = "127.0.0.1", softint source_port = 22, timeout timeout = 60s) [flags=NAMED_ARGS] {
     static const char *SSH2CLIENT_OPENDIRECTTCPIPCHANNEL_ERR = "SSH2CLIENT-OPENDIRECTTCPIPCHANNEL-ERROR";
@@ -239,7 +246,13 @@ SSH2Channel SSH2Client::openDirectTcpipChannel(string host, softint port, string
     @throw SSH2CLIENT-NOT-CONNECTED client is not connected
     @throw SSH2CLIENT-TIMEOUT timeout opening channel
     @throw SSH2-ERROR error opening channel
+    @throw NETWORK-ACCESS-DENIED the caller's network sandbox does not allow a UNIX socket connection to the path
     @throw MISSING-FEATURE-ERROR this method is not available; the ssh2 module was compiled with a version of libssh2 that does not support this operation
+
+    @note The SSH server connects to the socket; as with a connection through a proxy, a network sandbox of the
+    calling code must allow a UNIX socket connection to the path
+
+    @since ssh2 2.0 the socket path is checked against the network sandbox of the calling code
 
     @since ssh2 2.0
 */

@@ -153,6 +153,16 @@
     - the module reads the environment (the \c QORE_SSH2_DEFAULT_* variables and \c SSH_AUTH_SOCK, which names
       the SSH agent) under %Qore's environment lock, so it cannot read memory that another thread's
       \c setenv() frees; the SSH agent used is the one that \c SSH_AUTH_SOCK names when the connection is made
+    - <b>security:</b> sandboxed code no longer authenticates with the SSH agent of the user running the process
+      unless it could connect to the agent's socket itself; with \c PO_NO_FILESYSTEM, or a filesystem or network
+      sandbox that denies the socket, the agent is not used
+    - <b>security:</b> the destination of a tunnel opened with
+      @ref Qore::SSH2::SSH2Client::openDirectTcpipChannel() "SSH2Client::openDirectTcpipChannel()" or
+      @ref Qore::SSH2::SSH2Client::openDirectStreamLocalChannel() "SSH2Client::openDirectStreamLocalChannel()" is
+      checked against the network sandbox of the calling code, as the destination of a connection through a proxy
+      is: the SSH server makes the connection, so it could reach destinations the sandbox denies
+    - filesystem and network sandbox checks honor a policy barrier established with
+      @ref Qore::SandboxManager::callWithSystemPolicy() "SandboxManager::callWithSystemPolicy()"
     - removed stale TODO in mkdir implementation
     - documented known memory leak in sftp_shutdown timeout (libssh2 limitation)
     - updated copyright years to 2026

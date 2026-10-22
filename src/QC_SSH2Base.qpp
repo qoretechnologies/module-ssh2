@@ -893,6 +893,11 @@ nothing SSH2Base::setKeysFromData(binary private_key_data, *binary public_key_da
     When enabled (the default), the client will attempt to authenticate using keys
     from the running SSH agent before trying other authentication methods.
 
+    The agent is the one whose socket the \c SSH_AUTH_SOCK environment variable names when the connection is made.
+    It holds the identities of the user running the process, so it is used only if the calling code could connect to
+    its socket itself: when the code runs with @ref Qore::PO_NO_FILESYSTEM "PO_NO_FILESYSTEM", or a filesystem or
+    network sandbox denies it access to the socket, there is no agent for it and the other methods are tried
+
     @param enable set to @ref Qore::True "True" to enable SSH agent authentication, @ref Qore::False "False" to disable it
 
     @throw SSH2-CONNECTED this method cannot be called when a connection is established

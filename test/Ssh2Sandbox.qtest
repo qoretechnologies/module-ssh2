@@ -1,0 +1,219 @@
+#!/usr/bin/env qore
+# -*- mode: qore; indent-tabs-mode: nil -*-
+
+%modern
+
+%requires ssh2 >= 2.0
+
+%requires Util
+%requires QUnit
+
+%exec-class Ssh2SandboxTest
+
+#! sets the keys of a client within a policy barrier, as trusted code acting for sandboxed code can
+/** an object of this class is passed to the sandboxed programs of the tests; its methods run in this (unsandboxed)
+    program
+*/
+class TrustedKeySetter {
+    setKeys(SSH2Client sc, string key) {
+        SandboxManager::callWithSystemPolicy(sub () {
+            sc.setKeys(key);
+        });
+    }
+}
+
+#! Tests that SSH2 objects enforce the sandbox of the code that uses them
+class Ssh2SandboxTest inherits QUnit::Test {
+    private {
+        #! the URI used to connect to the test server
+        string uri;
+
+        const MyOpts = Opts + {
+            "uri": "uri=s",
+            "privkey": "k,private-key=s",
+        };
+
+        #! the code run in the sandboxed programs
+        const SandboxedCode = "
+string sub connect_client(string uri) {
+    SSH2Client sc(uri);
+    sc.connect();
+    on_exit sc.disconnect();
+    return sc.getAuthenticatedWith();
+}
+
+string sub poll_get_file(string uri, string path) {
+    SFTPClient sc(uri);
+    AbstractPollOperation op = sc.startPollGetFile(path);
+    hash<SocketPollResultInfo> result = AsyncIoController::exec(<SocketPollOperationInfo>{
+        \"sock\": sc,
+        \"spop\": op,
+        \"owner\": \"ssh2-sandbox-test\",
+        \"to\": 60s,
+    });
+    return result.ex ? result.ex.err : binary_to_string(op.getOutput());
+}
+
+nothing sub open_tunnel(string uri, string host, int port) {
+    SSH2Client sc(uri);
+    sc.connect();
+    on_exit sc.disconnect();
+    SSH2Channel chan = sc.openDirectTcpipChannel(host, port);
+    delete chan;
+}
+
+string sub set_keys_with_barrier(string uri, string key, auto setter) {
+    SSH2Client sc(uri);
+    setter.setKeys(sc, key);
+    return sc.getKeyPriv();
+}
+
+nothing sub set_keys(string uri, string key) {
+    SSH2Client sc(uri);
+    sc.setKeys(key);
+}
+";
+    }
+
+    constructor() : Test("Ssh2SandboxTest", "1.0", \ARGV, MyOpts) {
+        uri = m_options.uri ?? shift ARGV ?? sprintf("%s@localhost", getusername());
+
+        addTestCase("a connection that the network sandbox denies fails", \connectDeniedTest());
+        addTestCase("a poll operation submitted to the controller connects under the submitter's sandbox",
+            \pollOperationSandboxTest());
+        addTestCase("the destination of a tunnel is checked against the network sandbox", \tunnelDestinationTest());
+        addTestCase("the SSH agent is not used when the sandbox denies its socket", \agentSocketSandboxTest());
+        addTestCase("a policy barrier established by trusted code is honored", \policyBarrierTest());
+
+        set_return_value(main());
+    }
+
+    #! returns the private key file to use
+    private *string getPrivateKeyPath() {
+        if (m_options.privkey) {
+            return m_options.privkey;
+        }
+        string sshdir = ENV.HOME + "/.ssh";
+        if (is_file(sshdir + "/id_rsa")) {
+            return sshdir + "/id_rsa";
+        }
+        return NOTHING;
+    }
+
+    #! returns a program with the given sandbox that runs SandboxedCode
+    private Program getProgram(SandboxManager sm) {
+        Program p(PO_NEW_STYLE | PO_STRICT_ARGS | PO_REQUIRE_TYPES);
+        p.loadModule("ssh2");
+        p.parse(SandboxedCode, "ssh2_sandbox_test");
+        p.setSandboxManager(sm);
+        return p;
+    }
+
+    #! returns a sandbox that allows filesystem access, and network access only to "localhost"
+    private SandboxManager getLocalhostSandbox() {
+        SandboxManager sm();
+        sm.setFilesystemDefaultPolicy(allow: True);
+        sm.setNetworkDefaultPolicy(allow: False);
+        sm.addNetworkAllowedHost("localhost");
+        return sm;
+    }
+
+    connectDeniedTest() {
+        SandboxManager sm();
+        sm.setFilesystemDefaultPolicy(allow: True);
+        sm.setNetworkDefaultPolicy(allow: False);
+        Program p = getProgram(sm);
+        assertThrows("NETWORK-ACCESS-DENIED", \p.callFunction(), ("connect_client", uri));
+    }
+
+    pollOperationSandboxTest() {
+        string contents = "ssh2 sandbox";
+        string fn = sprintf("%s%sssh2-sandbox-%s", tmp_location(), DirSep, get_random_string(20));
+        File f();
+        f.open2(fn, O_CREAT | O_TRUNC | O_WRONLY, 0600);
+        f.write(contents);
+        f.close();
+        on_exit unlink(fn);
+
+        # the operation connects in a step that runs on a callback worker of the async I/O controller
+        SandboxManager sm();
+        sm.setFilesystemDefaultPolicy(allow: True);
+        sm.setNetworkDefaultPolicy(allow: False);
+        Program denied = getProgram(sm);
+        assertEq("NETWORK-ACCESS-DENIED", denied.callFunction("poll_get_file", uri, fn),
+            "the connection made on the controller's worker is governed by the submitter's sandbox");
+
+        Program allowed = getProgram(getLocalhostSandbox());
+        assertEq(contents, allowed.callFunction("poll_get_file", uri, fn), "an allowed connection retrieves the file");
+    }
+
+    tunnelDestinationTest() {
+        Program p = getProgram(getLocalhostSandbox());
+        # the SSH server is allowed, and so is a tunnel to it; the server can refuse tunnels itself (Alpine's sshd
+        # does by default), which is not a sandbox decision
+        *hash<ExceptionInfo> err;
+        try {
+            p.callFunction("open_tunnel", uri, "localhost", 22);
+        } catch (hash<ExceptionInfo> ex) {
+            err = ex;
+        }
+        assertNeq("NETWORK-ACCESS-DENIED", err.err, "the sandbox allows a tunnel to an allowed destination");
+        # the server could connect to an address on its host that the sandbox denies
+        assertThrows("NETWORK-ACCESS-DENIED", \p.callFunction(), ("open_tunnel", uri, "127.0.0.2", 22));
+    }
+
+    agentSocketSandboxTest() {
+        *string key = getPrivateKeyPath();
+        if (!key) {
+            testSkip("no private key file available for the SSH agent test");
+        }
+        if (system("command -v ssh-agent >/dev/null 2>&1 && command -v ssh-add >/dev/null 2>&1")) {
+            testSkip("ssh-agent and ssh-add are not available");
+        }
+        string sock = sprintf("%s%sssh2-agent-%s.sock", tmp_location(), DirSep, get_random_string(10));
+        string out = backquote(sprintf("ssh-agent -s -a %s", sock));
+        *string pid = (out =~ x/SSH_AGENT_PID=([0-9]+)/)[0];
+        assertTrue(exists pid, "the SSH agent started: " + out);
+        on_exit system(sprintf("kill %d", pid.toInt()));
+        assertEq(0, system(sprintf("SSH_AUTH_SOCK=%s ssh-add -q %s 2>/dev/null", sock, key)), "the key was added");
+
+        *string old_sock = getenv("SSH_AUTH_SOCK");
+        setenv("SSH_AUTH_SOCK", sock);
+        on_exit {
+            if (exists old_sock) {
+                setenv("SSH_AUTH_SOCK", old_sock);
+            } else {
+                unsetenv("SSH_AUTH_SOCK");
+            }
+        }
+
+        SandboxManager allowed_sm();
+        allowed_sm.setFilesystemDefaultPolicy(allow: True);
+        allowed_sm.setNetworkDefaultPolicy(allow: True);
+        Program allowed = getProgram(allowed_sm);
+        assertEq("agent", allowed.callFunction("connect_client", uri), "an allowed agent is used");
+
+        SandboxManager denied_sm();
+        denied_sm.setFilesystemDefaultPolicy(allow: True);
+        denied_sm.addFilesystemDeniedPath(sock);
+        denied_sm.setNetworkDefaultPolicy(allow: True);
+        Program denied = getProgram(denied_sm);
+        assertEq("publickey", denied.callFunction("connect_client", uri),
+            "the process user's agent is not used for code that may not connect to its socket");
+    }
+
+    policyBarrierTest() {
+        *string key = getPrivateKeyPath();
+        if (!key) {
+            testSkip("no private key file available for the policy barrier test");
+        }
+        SandboxManager sm();
+        # the key is outside the sandbox root
+        sm.setFilesystemSandboxRoot("/var");
+        sm.setNetworkDefaultPolicy(allow: True);
+        Program p = getProgram(sm);
+        assertThrows("FILESYSTEM-ACCESS-DENIED", \p.callFunction(), ("set_keys", uri, key));
+        assertEq(key, p.callFunction("set_keys_with_barrier", uri, key, new TrustedKeySetter()),
+            "trusted code reads the key file for the sandboxed code within its policy barrier");
+    }
+}

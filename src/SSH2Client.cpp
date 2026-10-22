@@ -42,6 +42,13 @@
 
 #include <assert.h>
 #include <unistd.h>
+#ifndef _Q_WINDOWS
+#include <netdb.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+#else
+#include <ws2tcpip.h>
+#endif
 
 static const char *SSH2CLIENT_TIMEOUT = "SSH2CLIENT-TIMEOUT";
 static const char *SSH2CLIENT_NOT_CONNECTED = "SSH2CLIENT-NOT-CONNECTED";
@@ -122,7 +129,9 @@ static int ssh2_check_fs_access(const char* path, int mode, const char* operatio
         }
         return -1;
     }
-    QoreSandboxManagerHelper smh;
+    // a policy check: a policy barrier established by trusted code is honored (see
+    // SandboxManager::callWithSystemPolicy())
+    QoreSandboxManagerHelper smh(QoreSandboxManagerHelper::Policy);
     if (smh) {
         ExceptionSink local_xsink;
         ExceptionSink* check_xsink = xsink ? xsink : &local_xsink;
@@ -143,6 +152,68 @@ static bool ssh2_fs_access_allowed_quiet(const char* path, int mode, const char*
         xsink.clear();
     }
     return !rc;
+}
+
+#ifndef _Q_WINDOWS
+//! checks that the caller's sandbox allows a connection to the given UNIX socket path
+/** @param path the socket path
+    @param check_fs if true, the path is also checked as a local file
+
+    @return 0 if allowed, -1 if denied or if the path cannot be checked (an exception is raised)
+*/
+static int ssh2_check_unix_socket_access(const char* path, bool check_fs, ExceptionSink* xsink) {
+    QoreSandboxManagerHelper smh(QoreSandboxManagerHelper::Policy);
+    if (!smh) {
+        return 0;
+    }
+    struct sockaddr_un addr = {};
+    if (strlen(path) >= sizeof(addr.sun_path)) {
+        xsink->raiseException("NETWORK-ACCESS-DENIED", "cannot check UNIX socket path '%s' against the sandbox: "
+            "the path is longer than %d bytes", path, static_cast<int>(sizeof(addr.sun_path) - 1));
+        return -1;
+    }
+    addr.sun_family = AF_UNIX;
+    strncpy(addr.sun_path, path, sizeof(addr.sun_path) - 1);
+    if (!smh->checkNetworkAccess(path, reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr), QSEC_NET_UNIX,
+            xsink)) {
+        return -1;
+    }
+    if (check_fs && !smh->checkFilesystemAccess(path, QSEC_READ | QSEC_WRITE, xsink)) {
+        return -1;
+    }
+    return 0;
+}
+#endif
+
+//! checks that the caller's sandbox allows a connection to the destination of a TCP tunnel
+/** The SSH server makes the connection, so it can reach destinations that the caller could not connect to; as with
+    a connection through a proxy, the sandbox must allow the destination as well as the server.  The server resolves
+    the host name itself, so every address that the name resolves to must be allowed.
+
+    @return 0 if allowed, -1 if denied or if the destination cannot be checked (an exception is raised)
+*/
+static int ssh2_check_tunnel_destination(const char* host, int port, ExceptionSink* xsink) {
+    QoreSandboxManagerHelper smh(QoreSandboxManagerHelper::Policy);
+    if (!smh) {
+        return 0;
+    }
+    QoreStringMaker service("%d", port);
+    QoreAddrInfo ai;
+    if (ai.getInfo(xsink, host, service.c_str(), Q_AF_UNSPEC, 0, Q_SOCK_STREAM)) {
+        return -1;
+    }
+    struct addrinfo* list = ai.getAddrInfo();
+    if (!list) {
+        xsink->raiseException("NETWORK-ACCESS-DENIED", "cannot check the destination '%s' of the SSH tunnel against "
+            "the sandbox: the host name has no addresses", host);
+        return -1;
+    }
+    for (struct addrinfo* p = list; p; p = p->ai_next) {
+        if (!smh->checkNetworkAccess(host, p->ai_addr, p->ai_addrlen, QSEC_NET_TCP, xsink)) {
+            return -1;
+        }
+    }
+    return 0;
 }
 
 // ensure the parent directory of the given file path exists, creating it with mode 0700 if it
@@ -849,6 +920,21 @@ int Ssh2AgentHelper::init() {
     if (!auth_sock || auth_sock.str().empty()) {
         // there is no agent to connect to
         return -1;
+    }
+    // the agent is a local UNIX socket that holds the process user's identities: it is used only if the caller
+    // could connect to it itself; otherwise there is no agent for the caller
+    if (!ssh2_fs_access_allowed_quiet(auth_sock.c_str(), QSEC_READ | QSEC_WRITE, "connecting to the SSH agent")) {
+        printd(5, "Ssh2AgentHelper::init() the sandbox denies the SSH agent socket '%s'\n", auth_sock.c_str());
+        return -1;
+    }
+    {
+        ExceptionSink xsink;
+        if (ssh2_check_unix_socket_access(auth_sock.c_str(), false, &xsink)) {
+            xsink.clear();
+            printd(5, "Ssh2AgentHelper::init() the network sandbox denies the SSH agent socket '%s'\n",
+                auth_sock.c_str());
+            return -1;
+        }
     }
 #endif
     agent = libssh2_agent_init(session);
@@ -2230,6 +2316,11 @@ QoreObject *SSH2Client::openSessionChannel(ExceptionSink *xsink, int timeout_ms)
 QoreObject *SSH2Client::openDirectTcpipChannel(ExceptionSink *xsink, const char *host, int port, const char *shost, int sport, int timeout_ms) {
     static const char *SSH2CLIENT_OPENDIRECTTCPIPCHANNEL_ERROR = "SSH2CLIENT-OPENDIRECTTCPIPCHANNEL-ERROR";
 
+    // checked before the lock is taken, as the host name may be resolved
+    if (ssh2_check_tunnel_destination(host, port, xsink)) {
+        return nullptr;
+    }
+
     AutoLocker al(m);
 
     if (!sshConnectedUnlocked()) {
@@ -2296,6 +2387,14 @@ QoreObject* SSH2Client::forwardListen(ExceptionSink* xsink, const char* host, in
 #ifdef HAVE_LIBSSH2_CHANNEL_DIRECT_STREAMLOCAL
 QoreObject *SSH2Client::openDirectStreamLocalChannel(ExceptionSink *xsink, const char *socket_path, const char *shost, int sport, int timeout_ms) {
     static const char *SSH2CLIENT_OPENDIRECTSTREAMLOCALCHANNEL_ERROR = "SSH2CLIENT-OPENDIRECTSTREAMLOCALCHANNEL-ERROR";
+
+#ifndef _Q_WINDOWS
+    // the server connects to the socket, which is on the server's host: the network sandbox must allow a UNIX socket
+    // connection to the path, as for a connection through a proxy
+    if (ssh2_check_unix_socket_access(socket_path, false, xsink)) {
+        return nullptr;
+    }
+#endif
 
     AutoLocker al(m);
 

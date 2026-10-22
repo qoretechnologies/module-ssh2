@@ -1000,7 +1000,7 @@ int64 SFTPClient::sftpRetrieveFile(const char* remote_file, const char* local_fi
 
     // check filesystem sandbox access for writing the local file
     {
-        QoreSandboxManagerHelper smh;
+        QoreSandboxManagerHelper smh(QoreSandboxManagerHelper::Policy);
         if (smh && !smh->checkFilesystemAccess(local_file, QSEC_WRITE, xsink)) {
             return -1;
         }
@@ -1212,7 +1212,7 @@ size_t SFTPClient::sftpPutFile(const char* outb, size_t towrite, const char* fna
 int64 SFTPClient::sftpTransferFile(const char* local_path, const char* remote_path, int mode, int timeout_ms, ExceptionSink* xsink) {
     // check filesystem sandbox access for reading the local file
     {
-        QoreSandboxManagerHelper smh;
+        QoreSandboxManagerHelper smh(QoreSandboxManagerHelper::Policy);
         if (smh && !smh->checkFilesystemAccess(local_path, QSEC_READ, xsink)) {
             return -1;
         }
