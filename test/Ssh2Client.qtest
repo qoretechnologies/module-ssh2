@@ -780,8 +780,13 @@ class Ssh2ClientTest inherits QUnit::Test {
             }
         ", "known_hosts_sandbox_test");
 
+        # the sandbox root is a new directory, so that the known_hosts files in the temporary directory are outside of
+        # it on every platform (on macOS, the temporary directory is below /var)
+        string root = sprintf("%s/ssh2_test_sandbox_root_%s", tmp_location(), get_random_string(10));
+        mkdir(root, 0700);
+        on_exit rmdir(root);
         SandboxManager denied_sm();
-        denied_sm.setFilesystemSandboxRoot("/var");
+        denied_sm.setFilesystemSandboxRoot(root);
         denied_sm.setNetworkDefaultPolicy(allow: True);
         p.setSandboxManager(denied_sm);
         assertThrows("FILESYSTEM-ACCESS-DENIED", sub () {

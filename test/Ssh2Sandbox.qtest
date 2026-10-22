@@ -42,8 +42,11 @@ string sub connect_client(string uri) {
     return sc.getAuthenticatedWith();
 }
 
-string sub poll_get_file(string uri, string path) {
+string sub poll_get_file(string uri, string path, *string key) {
     SFTPClient sc(uri);
+    if (key) {
+        sc.setKeys(key);
+    }
     AbstractPollOperation op = sc.startPollGetFile(path);
     hash<SocketPollResultInfo> result = AsyncIoController::exec(<SocketPollOperationInfo>{
         \"sock\": sc,
@@ -54,8 +57,11 @@ string sub poll_get_file(string uri, string path) {
     return result.ex ? result.ex.err : binary_to_string(op.getOutput());
 }
 
-nothing sub open_tunnel(string uri, string host, int port) {
+nothing sub open_tunnel(string uri, string host, int port, *string key) {
     SSH2Client sc(uri);
+    if (key) {
+        sc.setKeys(key);
+    }
     sc.connect();
     on_exit sc.disconnect();
     SSH2Channel chan = sc.openDirectTcpipChannel(host, port);
@@ -66,6 +72,14 @@ string sub set_keys_with_barrier(string uri, string key, auto setter) {
     SSH2Client sc(uri);
     setter.setKeys(sc, key);
     return sc.getKeyPriv();
+}
+
+string sub connect_client_with_key(string uri, string key) {
+    SSH2Client sc(uri);
+    sc.setKeys(key);
+    sc.connect();
+    on_exit sc.disconnect();
+    return sc.getAuthenticatedWith();
 }
 
 nothing sub set_keys(string uri, string key) {
@@ -109,12 +123,23 @@ nothing sub set_keys(string uri, string key) {
         return p;
     }
 
-    #! returns a sandbox that allows filesystem access, and network access only to "localhost"
+    #! returns a sandbox that allows filesystem access, and network access only to "localhost" and the test server
+    /** The test server can be given as an address (as the qualification servers are, \c user@127.0.0.1:port)
+    */
     private SandboxManager getLocalhostSandbox() {
         SandboxManager sm();
         sm.setFilesystemDefaultPolicy(allow: True);
         sm.setNetworkDefaultPolicy(allow: False);
         sm.addNetworkAllowedHost("localhost");
+        string host = parse_url("ssh://" + uri).host;
+        if (host != "localhost") {
+            sm.addNetworkAllowedHost(host);
+            if (host =~ /^[0-9.]+$/) {
+                sm.addNetworkAllowedIPRange(host + "/32");
+            } else if (host =~ /:/) {
+                sm.addNetworkAllowedIPRange(host + "/128");
+            }
+        }
         return sm;
     }
 
@@ -144,7 +169,8 @@ nothing sub set_keys(string uri, string key) {
             "the connection made on the controller's worker is governed by the submitter's sandbox");
 
         Program allowed = getProgram(getLocalhostSandbox());
-        assertEq(contents, allowed.callFunction("poll_get_file", uri, fn), "an allowed connection retrieves the file");
+        assertEq(contents, allowed.callFunction("poll_get_file", uri, fn, getPrivateKeyPath()),
+            "an allowed connection retrieves the file");
     }
 
     tunnelDestinationTest() {
@@ -153,13 +179,14 @@ nothing sub set_keys(string uri, string key) {
         # does by default), which is not a sandbox decision
         *hash<ExceptionInfo> err;
         try {
-            p.callFunction("open_tunnel", uri, "localhost", 22);
+            p.callFunction("open_tunnel", uri, "localhost", 22, getPrivateKeyPath());
         } catch (hash<ExceptionInfo> ex) {
             err = ex;
         }
         assertNeq("NETWORK-ACCESS-DENIED", err.err, "the sandbox allows a tunnel to an allowed destination");
         # the server could connect to an address on its host that the sandbox denies
-        assertThrows("NETWORK-ACCESS-DENIED", \p.callFunction(), ("open_tunnel", uri, "127.0.0.2", 22));
+        assertThrows("NETWORK-ACCESS-DENIED", \p.callFunction(), ("open_tunnel", uri, "127.0.0.2", 22,
+            getPrivateKeyPath()));
     }
 
     agentSocketSandboxTest() {
@@ -191,14 +218,15 @@ nothing sub set_keys(string uri, string key) {
         allowed_sm.setFilesystemDefaultPolicy(allow: True);
         allowed_sm.setNetworkDefaultPolicy(allow: True);
         Program allowed = getProgram(allowed_sm);
-        assertEq("agent", allowed.callFunction("connect_client", uri), "an allowed agent is used");
+        # the client also has the key, which it uses if it has no agent; an agent is tried first
+        assertEq("agent", allowed.callFunction("connect_client_with_key", uri, key), "an allowed agent is used");
 
         SandboxManager denied_sm();
         denied_sm.setFilesystemDefaultPolicy(allow: True);
         denied_sm.addFilesystemDeniedPath(sock);
         denied_sm.setNetworkDefaultPolicy(allow: True);
         Program denied = getProgram(denied_sm);
-        assertEq("publickey", denied.callFunction("connect_client", uri),
+        assertEq("publickey", denied.callFunction("connect_client_with_key", uri, key),
             "the process user's agent is not used for code that may not connect to its socket");
     }
 
