@@ -61,6 +61,8 @@ struct Ssh2HostKeyDefaults {
 }
 static QoreThreadLock ssh2_defaults_lock;
 static Ssh2HostKeyDefaults ssh2_defaults;
+//! the registration of the fork handler of ssh2_defaults_lock, whose holders only copy the defaults (a leaf lock)
+static QoreForkHandlerRegistration* ssh2_defaults_fork_reg = nullptr;
 QoreEnumDecl* enumSsh2HostKeyPolicy = nullptr;
 QoreEnumDecl* enumSsh2ClientAuthOrder = nullptr;
 QoreEnumDecl* enumSsh2ClientIdentityFallbackPolicy = nullptr;
@@ -244,6 +246,16 @@ static void ssh2_module_init(QoreModuleInitContext& ctx, ExceptionSink& xsink) {
     // defaults; this is the baseline that programmatic SSH2Base::setDefault*() calls override
     ssh2_init_host_key_defaults();
 
+    // a child process created with fork() while another thread held the lock would wait for it forever
+    assert(!ssh2_defaults_fork_reg);
+    ssh2_defaults_fork_reg = qore_register_fork_handler(QFR_MODULE_LEAF, "ssh2_defaults",
+        qore_fork_prepare_thread_lock, qore_fork_parent_thread_lock, qore_fork_child_thread_lock,
+        &ssh2_defaults_lock);
+    if (!ssh2_defaults_fork_reg) {
+        xsink.outOfMemory();
+        return;
+    }
+
     // setup ssh2 error map
     ssh2_emap.insert(emap_t::value_type(LIBSSH2_ERROR_SOCKET_NONE, "LIBSSH2_ERROR_SOCKET_NONE"));
 #ifdef LIBSSH2_ERROR_BANNER_RECV
@@ -410,4 +422,6 @@ static void ssh2_module_ns_init(QoreNamespace* rns, QoreNamespace* qns, Exceptio
 
 static void ssh2_module_delete() {
    QORE_TRACE("ssh2_module_delete()");
+   qore_unregister_fork_handler(ssh2_defaults_fork_reg);
+   ssh2_defaults_fork_reg = nullptr;
 }

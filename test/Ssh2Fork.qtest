@@ -1,0 +1,45 @@
+#!/usr/bin/env qore
+# -*- mode: qore; indent-tabs-mode: nil -*-
+# Copyright (C) 2026 Qore Technologies, s.r.o.
+
+# A child process created with fork() while another thread holds the lock of the process-wide host key defaults can
+# read and change the defaults: the module registers a fork handler for the lock.  Without it, the child got the lock
+# held by a thread that does not exist in it and waited forever for it at its first connection.
+
+%modern
+
+%prepend-module-path "${SCRIPT_DIR}/../build"
+
+%requires ssh2 >= 2.0
+%requires QUnit
+
+%exec-class Ssh2ForkTest
+
+class Ssh2ForkTest inherits QUnit::Test {
+    constructor() : QUnit::Test("ssh2 fork", "1.0") {
+        addTestCase("fork() while another thread holds the lock of the host key defaults", \testFork());
+        set_return_value(main());
+    }
+
+    testFork() {
+        if (!Option::HAVE_FORK) {
+            testSkip("fork() is not available");
+        }
+        if (!Option::HAVE_LIBRARY_DEBUGGING) {
+            testSkip("the test needs a debug build of Qore");
+        }
+        bool verify = SSH2Base::getDefaultVerifyHostKey();
+        # another thread holds the lock while fork() is called; the child reads and changes the defaults
+        hash<auto> r = call_function("dbg_fork_while_handler_held", "ssh2_defaults", int sub () {
+            if (SSH2Base::getDefaultVerifyHostKey() != verify) {
+                return 1;
+            }
+            SSH2Base::setDefaultVerifyHostKey(!verify);
+            return SSH2Base::getDefaultVerifyHostKey() == !verify ? 0 : 2;
+        });
+        assertTrue(r.waited, "fork() waited for the thread holding the lock");
+        assertEq(0, r.status, "the child read and changed the defaults");
+        # the parent's defaults are its own
+        assertEq(verify, SSH2Base::getDefaultVerifyHostKey());
+    }
+}

@@ -78,6 +78,9 @@
       retransmission timer (\c extra_fds and \c poll_timeout_ms), and while the connection attempts to the
       server's addresses race, for the other attempts and the connection attempt delay, so a lost DNS query no
       longer stalls it; such an operation is driven with the @ref Qore::AsyncIoController "AsyncIoController"
+    - a child process created with \c fork() while another thread read or changed the process-wide host key
+      defaults (@ref Qore::SSH2::SSH2Base::setDefaultVerifyHostKey() "SSH2Base::setDefaultVerifyHostKey()" and
+      related methods) no longer waits forever at its first connection
     - a client running a poll operation is reserved for that operation; other operations on the
       same object fail with an \c SSH2-POLL-IN-PROGRESS exception until it completes, is aborted,
       or is destroyed
