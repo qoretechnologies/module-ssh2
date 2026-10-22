@@ -274,7 +274,7 @@ protected:
     // access is permitted; used to enable secure host key verification by default
     DLLLOCAL void setKnownHostsIntern();
 
-    DLLLOCAL virtual void deref(ExceptionSink*);
+    DLLLOCAL virtual void deref(ExceptionSink*) override;
 
     DLLLOCAL int startupUnlocked();
 

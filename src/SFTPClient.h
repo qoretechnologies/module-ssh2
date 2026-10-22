@@ -108,7 +108,7 @@ public:
     */
     DLLLOCAL void err(int session_err, unsigned long sftp_err, const char* fmt, ...);
 
-    DLLLOCAL virtual void preDisconnect() {
+    DLLLOCAL virtual void preDisconnect() override {
         if (sftp_handle)
             closeIntern();
     }
@@ -120,7 +120,7 @@ class SFTPClient : public SSH2Client {
 
 protected:
     DLLLOCAL virtual ~SFTPClient();
-    DLLLOCAL virtual void deref(ExceptionSink*);
+    DLLLOCAL virtual void deref(ExceptionSink*) override;
 
     DLLLOCAL bool sftpConnectedUnlocked(ExceptionSink* xsink);
 
@@ -150,7 +150,8 @@ protected:
     DLLLOCAL bool sftpSymlinkResolvesUnlocked(const std::string& link_path, const std::string& target,
             QSftpHelper& qh);
 
-    DLLLOCAL virtual int disconnectUnlocked(bool force, int timeout_ms = DEFAULT_TIMEOUT_MS, AbstractDisconnectionHelper* adh = nullptr, ExceptionSink* xsink = nullptr);
+    DLLLOCAL virtual int disconnectUnlocked(bool force, int timeout_ms = DEFAULT_TIMEOUT_MS,
+        AbstractDisconnectionHelper* adh = nullptr, ExceptionSink* xsink = nullptr) override;
     DLLLOCAL bool sftpIsAliveUnlocked(int timeout_ms, ExceptionSink* xsink);
 
 public:
@@ -162,7 +163,7 @@ public:
     DLLLOCAL SFTPClient(const char*, const uint32_t);
     DLLLOCAL SFTPClient(QoreURL& url, const uint32_t = 0);
 
-    DLLLOCAL virtual int connect(int timeout_ms, ExceptionSink* xsink) {
+    DLLLOCAL virtual int connect(int timeout_ms, ExceptionSink* xsink) override {
         return sftpConnect(timeout_ms, xsink);
     }
 
