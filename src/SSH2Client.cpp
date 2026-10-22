@@ -842,11 +842,34 @@ int SSH2Client::startupUnlocked() {
 int Ssh2AgentHelper::init() {
 #ifdef HAVE_LIBSSH2_AGENT_API
     assert(!agent);
+#ifndef _Q_WINDOWS
+    // the agent's socket is named by SSH_AUTH_SOCK, which libssh2 reads with getenv(); it is read here under the
+    // process environment lock instead, as other threads can change the environment meanwhile
+    QoreEnvironmentValue auth_sock("SSH_AUTH_SOCK");
+    if (!auth_sock || auth_sock.str().empty()) {
+        // there is no agent to connect to
+        return -1;
+    }
+#endif
     agent = libssh2_agent_init(session);
     if (!agent) {
         return -1;
     }
-    if (libssh2_agent_connect(agent)) {
+    int rc;
+#ifdef _Q_WINDOWS
+    rc = libssh2_agent_connect(agent);
+#elif defined(HAVE_LIBSSH2_AGENT_SET_IDENTITY_PATH)
+    // with the path set, libssh2 does not read the environment
+    libssh2_agent_set_identity_path(agent, auth_sock.c_str());
+    rc = libssh2_agent_connect(agent);
+#else
+    {
+        // libssh2 reads SSH_AUTH_SOCK itself; the connection to the local agent socket is short
+        QoreEnvironmentReadLock env_lock;
+        rc = libssh2_agent_connect(agent);
+    }
+#endif
+    if (rc) {
         reset();
         return -1;
     }

@@ -150,6 +150,9 @@
       alive, a destroyed client object still disconnects, and its channels then report that they are closed
     - an SCP channel is registered with its client while the client is locked, so a concurrent disconnect closes it,
       and a failed SCP transfer to or from a stream no longer registers an unusable channel
+    - the module reads the environment (the \c QORE_SSH2_DEFAULT_* variables and \c SSH_AUTH_SOCK, which names
+      the SSH agent) under %Qore's environment lock, so it cannot read memory that another thread's
+      \c setenv() frees; the SSH agent used is the one that \c SSH_AUTH_SOCK names when the connection is made
     - removed stale TODO in mkdir implementation
     - documented known memory leak in sftp_shutdown timeout (libssh2 limitation)
     - updated copyright years to 2026

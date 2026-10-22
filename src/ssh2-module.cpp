@@ -81,13 +81,19 @@ static bool ssh2_parse_env_bool(const char* val, bool def) {
 }
 
 void ssh2_init_host_key_defaults() {
+    // the variables are read under the process environment lock, as other threads can change the environment while
+    // the module is loaded; each value is a copy that stays valid however the environment changes
+    QoreEnvironmentValue verify_env("QORE_SSH2_DEFAULT_VERIFY_HOST_KEY");
+    QoreEnvironmentValue policy_env("QORE_SSH2_DEFAULT_HOST_KEY_POLICY");
+    QoreEnvironmentValue known_hosts_env("QORE_SSH2_DEFAULT_KNOWN_HOSTS");
+
     AutoLocker al(ssh2_defaults_lock);
 
-    if (const char* v = getenv("QORE_SSH2_DEFAULT_VERIFY_HOST_KEY")) {
+    if (const char* v = verify_env.c_str()) {
         ssh2_defaults.verify = ssh2_parse_env_bool(v, ssh2_defaults.verify);
     }
 
-    if (const char* v = getenv("QORE_SSH2_DEFAULT_HOST_KEY_POLICY")) {
+    if (const char* v = policy_env.c_str()) {
         if (!strcasecmp(v, "reject") || !strcasecmp(v, "0")) {
             ssh2_defaults.policy = SSH2_HOSTKEY_REJECT;
         } else if (!strcasecmp(v, "tofu") || !strcasecmp(v, "1")) {
@@ -100,7 +106,7 @@ void ssh2_init_host_key_defaults() {
 
     // QORE_SSH2_DEFAULT_KNOWN_HOSTS: unset -> AUTO (built-in per-user); set but empty -> DISABLED
     // (no implicit known_hosts file); set to a path -> EXPLICIT (use that path)
-    if (const char* v = getenv("QORE_SSH2_DEFAULT_KNOWN_HOSTS")) {
+    if (const char* v = known_hosts_env.c_str()) {
         if (v[0]) {
             ssh2_defaults.kh_mode = SSH2_KH_DEFAULT_EXPLICIT;
             ssh2_defaults.kh_path = v;

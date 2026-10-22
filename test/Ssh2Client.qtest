@@ -249,6 +249,7 @@ class Ssh2ClientTest inherits QUnit::Test {
         addTestCase("Channel closed by a disconnect is destroyed before its client test",
             \channelDestroyedAfterDisconnectTest());
         addTestCase("Channel outliving its client test", \channelOutlivesClientTest());
+        addTestCase("SSH agent named by SSH_AUTH_SOCK test", \agentAuthSocketTest());
         # Note: Parameter validation and edge case tests are in test/NegativeTests.qtest
 
         set_return_value(main());
@@ -344,6 +345,74 @@ class Ssh2ClientTest inherits QUnit::Test {
             stdout.printf("=======================================\n");
             stdout.printf("exit status: %d\n", chan.getExitStatus());
         }
+    }
+
+    #! starts an SSH agent holding the given key; returns its socket path and PID
+    private hash<auto> startAgent(string key) {
+        if (system("command -v ssh-agent >/dev/null 2>&1 && command -v ssh-add >/dev/null 2>&1")) {
+            testSkip("ssh-agent and ssh-add are not available");
+        }
+        string sock = sprintf("%s%sssh2-agent-%s.sock", tmp_location(), DirSep, get_random_string(10));
+        string out = backquote(sprintf("ssh-agent -s -a %s", sock));
+        *string pid = (out =~ x/SSH_AGENT_PID=([0-9]+)/)[0];
+        assertTrue(exists pid, "the SSH agent started: " + out);
+        hash<auto> rv = {"sock": sock, "pid": pid.toInt()};
+        if (system(sprintf("SSH_AUTH_SOCK=%s ssh-add -q %s 2>/dev/null", sock, getPrivateKeyPath()))) {
+            stopAgent(rv);
+            fail("the key could not be added to the SSH agent");
+        }
+        return rv;
+    }
+
+    #! stops an SSH agent started with startAgent()
+    private stopAgent(hash<auto> agent) {
+        system(sprintf("kill %d", agent.pid));
+    }
+
+    #! sets an environment variable and returns a closure that restores its previous value
+    private code setenvScoped(string var, *string value) {
+        *string old = getenv(var);
+        if (exists value) {
+            setenv(var, value);
+        } else {
+            unsetenv(var);
+        }
+        return sub () {
+            if (exists old) {
+                setenv(var, old);
+            } else {
+                unsetenv(var);
+            }
+        };
+    }
+
+    #! the SSH agent is the one that SSH_AUTH_SOCK names when the client connects
+    agentAuthSocketTest() {
+        *string key = getPrivateKeyPath();
+        if (!key) {
+            testSkip("no private key file available for the SSH agent test");
+        }
+        hash<auto> agent = startAgent(key);
+        on_exit stopAgent(agent);
+
+        # the variable is set after the module was loaded; it is read when the agent is used
+        code restore = setenvScoped("SSH_AUTH_SOCK", agent.sock);
+        on_exit restore();
+        {
+            # without explicit keys, the agent is tried first
+            SSH2Client sc(uri);
+            sc.connect();
+            on_exit sc.disconnect();
+            assertEq("agent", sc.getAuthenticatedWith(), "the agent that SSH_AUTH_SOCK names authenticated");
+        }
+
+        # without the variable there is no agent, and the key file is used
+        unsetenv("SSH_AUTH_SOCK");
+        SSH2Client sc(uri);
+        setPrivateKey(sc);
+        sc.connect();
+        on_exit sc.disconnect();
+        assertEq("publickey", sc.getAuthenticatedWith(), "without SSH_AUTH_SOCK no agent is used");
     }
 
     #! a disconnect closes the client's channels; one destroyed afterwards must not be used again by the client
