@@ -49,6 +49,15 @@
     this class are also @ref Qore::AbstractPollableIoObject "AbstractPollableIoObject" objects
     reporting the descriptor that the current stage is waiting on.
 
+    While the host name of the server is resolved, the connection has no descriptor yet: the
+    @ref Qore::SocketPollInfo "SocketPollInfo" hash then reports no events for the client, the
+    resolver's descriptors in \c extra_fds and the resolver's retransmission timer in
+    \c poll_timeout_ms (while the connection attempts to the server's addresses race, the other
+    attempts' descriptors and the connection attempt delay); the
+    @ref Qore::AsyncIoController "AsyncIoController" waits for them.
+    @ref Qore::Socket::poll() "Socket::poll()" refuses an element whose object has no descriptor, so
+    an operation whose host name is resolved asynchronously must be driven with the controller.
+
     @note
     - The @ref Qore::SSH2::SFTPClient "SFTPClient" object used by the operation must not be used
       for any other operation while the poll operation is in progress; other operations on the
@@ -108,7 +117,8 @@ string SftpPollOperation::getGoal() [flags=CONSTANT] {
     @code{.py} int fd = op.getPollableDescriptor(); @endcode
 
     @return the descriptor that the current stage of the operation is waiting on, or -1 if the
-    operation has not yet reported anything to wait for
+    operation has not yet reported anything to wait for or while the connection has no descriptor (as
+    while the host name is resolved)
 
     @note the descriptor changes as the operation progresses and is owned by the operation; it
     must not be closed by the caller

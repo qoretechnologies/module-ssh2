@@ -73,6 +73,11 @@
     - the poll info hashes of an @ref Qore::SSH2::SftpPollOperation "SftpPollOperation" report its
       @ref Qore::SSH2::SFTPClient "SFTPClient" object as the object to wait on, so the operation can
       also be submitted to the @ref Qore::AsyncIoController "AsyncIoController"
+    - while the host name of the server is resolved asynchronously, an
+      @ref Qore::SSH2::SftpPollOperation "SftpPollOperation" waits for the resolver's descriptors and its
+      retransmission timer (\c extra_fds and \c poll_timeout_ms), and while the connection attempts to the
+      server's addresses race, for the other attempts and the connection attempt delay, so a lost DNS query no
+      longer stalls it; such an operation is driven with the @ref Qore::AsyncIoController "AsyncIoController"
     - a client running a poll operation is reserved for that operation; other operations on the
       same object fail with an \c SSH2-POLL-IN-PROGRESS exception until it completes, is aborted,
       or is destroyed

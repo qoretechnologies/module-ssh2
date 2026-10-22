@@ -12,6 +12,105 @@
 
 %exec-class SftpPollGetFileTest
 
+#! A DNS server for the tests on 127.0.0.1: it answers A queries with 127.0.0.1 and AAAA queries with no address
+/** The tests make the resolver ask it with the debug hook dbg_cares_set_servers(), so that host names are resolved
+    over the network, asynchronously.  It can drop the first queries it receives, so that only the resolver's
+    retransmission timer sends them again, and hold its answers until the test releases them.
+*/
+class TestDnsServer {
+    public {
+        #! the port of the server
+        int port;
+
+        #! the queries received, as hashes with \c qtype and \c dropped
+        Queue queries();
+    }
+
+    private {
+        Socket sock();
+        int drop;
+        bool held;
+        Queue release_q();
+        Counter running(1);
+    }
+
+    #! Starts the server
+    /** @param drop the number of queries to drop
+        @param hold hold the answers until release() is called
+    */
+    constructor(int drop = 0, bool hold = False) {
+        self.drop = drop;
+        held = hold;
+        sock.bindINET("127.0.0.1", "0", False, AF_INET, SOCK_DGRAM);
+        port = sock.getSocketInfo().port;
+        background serve();
+    }
+
+    #! Answers the held queries and every query from now on
+    release() {
+        release_q.push(True);
+    }
+
+    #! Stops the server: a datagram that is not a query ends it; held answers are sent first
+    stop() {
+        release_q.push(True);
+        Socket s();
+        s.bindINET("127.0.0.1", "0", False, AF_INET, SOCK_DGRAM);
+        TestDnsServer::drive(s.startPollSendTo("127.0.0.1", port, binary("stop")));
+        running.waitForZero();
+    }
+
+    #! Drives a poll operation of a UDP socket to completion
+    static drive(AbstractPollOperation op) {
+        while (!op.goalReached()) {
+            *hash<SocketPollInfo> pi = op.continuePoll();
+            if (pi) {
+                Socket::poll((pi,), 60s);
+            }
+        }
+    }
+
+    private serve() {
+        on_exit running.dec();
+        while (True) {
+            AbstractPollOperation op = sock.startPollRecvFrom();
+            TestDnsServer::drive(op);
+            hash<auto> d = op.getOutput();
+            binary query = d.data;
+            if (query.size() < 17) {
+                # the stop datagram
+                break;
+            }
+            # skip the name of the question
+            int pos = 12;
+            while (int len = get_byte(query, pos)) {
+                pos += len + 1;
+            }
+            ++pos;
+            int qtype = get_word_16(query, pos);
+            pos += 4;
+            if (drop) {
+                --drop;
+                queries.push({"qtype": qtype, "dropped": True});
+                continue;
+            }
+            queries.push({"qtype": qtype, "dropped": False});
+            if (held) {
+                release_q.get();
+                held = False;
+            }
+            # the answer: the query's ID and question, and for an A query the address 127.0.0.1
+            bool a = qtype == 1;
+            binary answer = query.substr(0, 2) + parse_hex_string(sprintf("81800001%s00000000", a ? "0001" : "0000"))
+                + query.substr(12, pos - 12);
+            if (a) {
+                answer += parse_hex_string("c00c000100010000003c00047f000001");
+            }
+            TestDnsServer::drive(sock.startPollSendTo(d.address, d.port, answer));
+        }
+    }
+}
+
 #! Tests non-blocking SFTP file retrieval with SFTPClient::startPollGetFile()
 class SftpPollGetFileTest inherits QUnit::Test {
     private {
@@ -69,6 +168,9 @@ class SftpPollGetFileTest inherits QUnit::Test {
         addTestCase("abort mid-flight", \abortTest());
         addTestCase("authentication failure", \authFailureTest());
         addTestCase("client reuse and exclusivity", \reuseTest());
+        addTestCase("a host name resolved asynchronously is waited for with the resolver's descriptors",
+            \asyncResolutionTest());
+        addTestCase("a lost DNS query is sent again at the resolver's timer", \lostQueryTest());
 
         set_return_value(main());
     }
@@ -114,11 +216,117 @@ class SftpPollGetFileTest inherits QUnit::Test {
                 ++polls;
             }
             # the operation waits on its client object; the descriptor must be valid whenever the
-            # operation asks the caller to wait for it
-            assertGt(0, pi.socket.getPollableDescriptor());
+            # operation asks the caller to wait for events of it
+            if (pi.events) {
+                assertGt(0, pi.socket.getPollableDescriptor());
+            }
             Socket::poll((pi,), timeout);
         }
         return op.getOutput();
+    }
+
+    #! the host name that the test DNS server resolves (RFC 6761); the system's resolver does not know it
+    const TestHost = "ssh2-poll-resolve.test";
+
+    #! Returns a client for the test server under TestHost, with its own known_hosts file
+    /** The host name is only resolved with the test DNS server; the user and port are the test URI's
+    */
+    private SFTPClient getResolvedClient(string known_hosts) {
+        hash<UrlInfo> url = parse_url(uri =~ /:\/\// ? uri : "sftp://" + uri);
+        string ruri = sprintf("%s@%s:%d", url.username ?? getusername(), TestHost, url.port ?? 22);
+        SFTPClient sc(ruri);
+        if (privkey) {
+            sc.setKeys(privkey);
+        }
+        sc.setKnownHostsFile(known_hosts);
+        sc.setHostKeyPolicy(Ssh2HostKeyPolicy::TrustOnFirstUse);
+        return sc;
+    }
+
+    #! Makes the resolver ask the given DNS server, and returns a closure that restores the system's servers
+    private code<nothing()> setDnsServer(TestDnsServer dns) {
+        call_function("dbg_cares_set_servers", "127.0.0.1:" + dns.port);
+        return sub () {
+            call_function("dbg_cares_set_servers", "");
+            dns.stop();
+        };
+    }
+
+    #! Runs the operation with the async I/O controller and returns its output
+    private auto runWithController(SFTPClient sc, AbstractPollOperation op) {
+        hash<SocketPollResultInfo> result = AsyncIoController::exec(<SocketPollOperationInfo>{
+            "sock": sc,
+            "spop": op,
+            "owner": "ssh2-poll-resolve-test",
+            # a hang guard only: the operation ends when it is done
+            "to": 10m,
+        });
+        if (result.ex) {
+            throw result.ex.err, result.ex.desc;
+        }
+        return op.getOutput();
+    }
+
+    #! While the host name is resolved, the operation reports no events of its client and waits for the resolver
+    /** The DNS server holds its answers until the operation has reported what it waits for; the operation is then
+        completed by the async I/O controller
+    */
+    asyncResolutionTest() {
+        if (!Option::HAVE_LIBRARY_DEBUGGING) {
+            testSkip("the debug hook that sets the DNS server is only in debug builds of Qore");
+        }
+        string fn = makeFile(SmallContents);
+        on_exit unlink(fn);
+        string known_hosts = sprintf("%s%sssh2-poll-known-hosts-%s", tmp_dir, DirSep, get_random_string(10));
+        on_exit if (is_file(known_hosts)) { unlink(known_hosts); }
+
+        TestDnsServer dns(0, True);
+        code<nothing()> restore = setDnsServer(dns);
+        on_exit restore();
+
+        SFTPClient sc = getResolvedClient(known_hosts);
+        AbstractPollOperation op = sc.startPollGetFile(fn);
+        *hash<SocketPollInfo> pi = op.continuePoll();
+        # the resolver has asked the DNS server, which holds its answer
+        # (a hang guard only)
+        assertFalse(dns.queries.get(1m).dropped);
+        assertTrue(exists pi, "the operation waits while the host name is resolved");
+        assertEq(0, pi.events, "no events of the client, which has no descriptor yet, are waited for");
+        assertTrue(pi.socket == sc, "the client is the object waited on");
+        assertEq(-1, sc.getPollableDescriptor());
+        assertGt(0, pi.extra_fds.size(), "the resolver's descriptors are waited for");
+        assertGt(0, pi.poll_timeout_ms, "the resolver's timer is reported");
+
+        dns.release();
+        assertEq(binary(SmallContents), runWithController(sc, op));
+        assertTrue(op.goalReached());
+    }
+
+    #! A DNS query that the server drops is sent again by the resolver's timer, which the operation reports
+    lostQueryTest() {
+        if (!Option::HAVE_LIBRARY_DEBUGGING) {
+            testSkip("the debug hook that sets the DNS server is only in debug builds of Qore");
+        }
+        string fn = makeFile(SmallContents);
+        on_exit unlink(fn);
+        string known_hosts = sprintf("%s%sssh2-poll-known-hosts-%s", tmp_dir, DirSep, get_random_string(10));
+        on_exit if (is_file(known_hosts)) { unlink(known_hosts); }
+
+        # the first queries (of the A and the AAAA lookup) are dropped
+        TestDnsServer dns(2);
+        code<nothing()> restore = setDnsServer(dns);
+        on_exit restore();
+
+        SFTPClient sc = getResolvedClient(known_hosts);
+        AbstractPollOperation op = sc.startPollGetFile(fn);
+        assertEq(binary(SmallContents), runWithController(sc, op), "the operation completes");
+        # the dropped queries and the queries sent again
+        list<hash<auto>> queries;
+        while (dns.queries.size()) {
+            queries += dns.queries.get();
+        }
+        assertEq(2, (select queries, $1.dropped).size(), "two queries were dropped");
+        assertGt(0, (select queries, !$1.dropped).size(), "the resolver sent the dropped queries again");
     }
 
     #! The polled read must return exactly what the blocking read returns

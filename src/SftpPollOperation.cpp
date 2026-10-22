@@ -215,7 +215,9 @@ void SftpPollOperationPriv::sessionError(ExceptionSink* xsink, const char* fmt, 
 }
 
 QoreHashNode* SftpPollOperationPriv::getPollInfo(ExceptionSink* xsink, int fd, int events,
-        const std::vector<ExtraWaitFd>* extra_fds) {
+        const std::vector<ExtraWaitFd>* extra_fds, int poll_timeout_ms) {
+    // every other descriptor of the stage (the resolver's sockets while the host name is resolved, the other
+    // connection attempts while they race) is an extra descriptor
     std::vector<std::pair<int, int>> extra;
     if (extra_fds) {
         for (auto& i : *extra_fds) {
@@ -229,34 +231,30 @@ QoreHashNode* SftpPollOperationPriv::getPollInfo(ExceptionSink* xsink, int fd, i
             if (!ev) {
                 ev = SOCK_POLLIN;
             }
-            if (fd < 0) {
-                // there is no primary descriptor yet (asynchronous name resolution); wait on the
-                // first extra descriptor instead
-                fd = i.fd;
-                events = ev;
-                continue;
-            }
             extra.push_back(std::make_pair(i.fd, ev));
         }
     }
 
     if (fd < 0) {
-        xsink->raiseException("SSH2-POLL-ERROR", "there is no descriptor to wait on in state %y in %s()",
-            getStateImpl(), SFTP_POLL_METHOD);
-        closeIntern(xsink, true);
-        return nullptr;
+        // the socket has no descriptor yet, as while the host name is resolved asynchronously: no events of the
+        // client object are waited for (an object without a descriptor that is waited for counts as closed), only
+        // the extra descriptors and the timeout continue the stage (see AbstractPollState)
+        events = 0;
+        if (extra.empty() && poll_timeout_ms < 0) {
+            xsink->raiseException("SSH2-POLL-ERROR", "there is nothing to wait on in state %y in %s()",
+                getStateImpl(), SFTP_POLL_METHOD);
+            closeIntern(xsink, true);
+            return nullptr;
+        }
     }
 
     poll_fd = fd;
 
     ReferenceHolder<QoreHashNode> info(new QoreHashNode(hashdeclSocketPollInfo, xsink), xsink);
     info->setKeyValue("events", events, xsink);
-    // the client object is the pollable object while the operation waits on the connection's descriptor, which it
-    // holds open while it is waited on; only a descriptor of the connect state that is not yet the socket's is
-    // reported with this object, which is polled by number.  The reference is released with the hash returned to
-    // the caller
-    info->setKeyValue("socket", fd == client->socket.getSocket() ? client_obj->objectRefSelf()
-        : (*self)->objectRefSelf(), xsink);
+    // the client object is the pollable object: it holds its descriptor open while it is waited on.  The reference
+    // is released with the hash returned to the caller
+    info->setKeyValue("socket", client_obj->objectRefSelf(), xsink);
     if (!extra.empty()) {
         ReferenceHolder<QoreListNode> list(new QoreListNode(hashdeclExtraPollFdInfo->getTypeInfo()), xsink);
         for (auto& i : extra) {
@@ -266,6 +264,11 @@ QoreHashNode* SftpPollOperationPriv::getPollInfo(ExceptionSink* xsink, int fd, i
             list->push(h.release(), xsink);
         }
         info->setKeyValue("extra_fds", list.release(), xsink);
+    }
+    // the time after which the stage must be continued even if no descriptor is ready, such as the resolver's
+    // retransmission timer or the connection attempt delay of a connection
+    if (poll_timeout_ms >= 0) {
+        info->setKeyValue("poll_timeout_ms", poll_timeout_ms, xsink);
     }
     if (*xsink) {
         closeIntern(xsink, true);
@@ -443,11 +446,12 @@ QoreHashNode* SftpPollOperationPriv::handleConnecting(ExceptionSink* xsink) {
         return nullptr;
     }
     if (rc) {
-        // the connection is still in progress; wait for the reported events.  While the host name
-        // is being resolved asynchronously there is no socket descriptor yet, and the resolver's
-        // descriptors are reported as extra descriptors to wait on
+        // the connection is still in progress; wait for the reported events of the socket, for the descriptors of
+        // the resolver and the other connection attempts, and at most for the state's timer.  While the host name
+        // is resolved asynchronously the socket has no descriptor yet, and only the resolver's descriptors and its
+        // retransmission timer continue the connection
         std::vector<ExtraWaitFd> extra = connect_state->getExtraWaitFds();
-        return getPollInfo(xsink, client->socket.getSocket(), rc, &extra);
+        return getPollInfo(xsink, client->socket.getSocket(), rc, &extra, connect_state->getPollTimeoutMs());
     }
 
     connect_state.reset();

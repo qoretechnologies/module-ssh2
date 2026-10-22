@@ -258,9 +258,15 @@ private:
     //! Returns a poll info hash for the direction libssh2 is currently blocked on
     DLLLOCAL QoreHashNode* getSessionPollInfo(ExceptionSink* xsink);
 
-    //! Returns a poll info hash for the given events on the given descriptor
+    //! Returns a poll info hash for the given events on the client's descriptor
+    /** @param fd the client's descriptor, or -1 if it has none yet: then no events of the client are waited for
+        @param events the events of the client's descriptor
+        @param extra_fds the other descriptors to wait for
+        @param poll_timeout_ms the time in milliseconds after which the operation must be continued in any case, or
+        -1 for none
+    */
     DLLLOCAL QoreHashNode* getPollInfo(ExceptionSink* xsink, int fd, int events,
-        const std::vector<ExtraWaitFd>* extra_fds = nullptr);
+        const std::vector<ExtraWaitFd>* extra_fds = nullptr, int poll_timeout_ms = -1);
 
     //! Raises an exception describing the last libssh2 session error
     DLLLOCAL void sessionError(ExceptionSink* xsink, const char* fmt, ...);
