@@ -35,7 +35,17 @@ class SFTPClientTest inherits QUnit::Test {
         const ColumnOffset = 25;
     }
 
+    private {
+        #! the known_hosts file of the test: no test writes the keys of the test server to the user's known_hosts
+        string known_hosts = sprintf("%s%sssh2-test-known-hosts-%s", tmp_location(), DirSep, get_random_string(10));
+    }
+
     constructor() : Test("SFTPClientTest", "1.2", \ARGV, MyOpts) {
+        # objects use the known_hosts file of the test unless a case sets one of its own
+        SSH2Base::setDefaultKnownHostsFile(known_hosts);
+        on_exit if (is_file(known_hosts)) {
+            unlink(known_hosts);
+        }
         if (m_options.timeout)
             timeout = m_options.timeout * 1000;
         string uri = m_options.uri ?? shift ARGV ?? sprintf("%s@localhost", getusername());
