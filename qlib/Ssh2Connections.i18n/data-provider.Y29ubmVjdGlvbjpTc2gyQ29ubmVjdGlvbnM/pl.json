@@ -1,0 +1,141 @@
+{
+  "schema_version": 1,
+  "locales": {
+    "pl": {
+      "messages": {
+        "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U2Z0cENvbm5lY3Rpb24.desc": {
+          "source": "A connection to a server with SFTP",
+          "message": "Połączenie z serwerem z obsługą SFTP"
+        },
+        "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U2Z0cENvbm5lY3Rpb24.display_name": {
+          "source": "SFTP Connection",
+          "message": "Połączenie SFTP"
+        },
+        "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U2Z0cENvbm5lY3Rpb24.short_desc": {
+          "source": "A connection to a server with SFTP",
+          "message": "Połączenie z serwerem z obsługą SFTP"
+        },
+        "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.desc": {
+          "source": "A connection to a server with SSH",
+          "message": "Połączenie z serwerem z obsługą SSH"
+        },
+        "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.display_name": {
+          "source": "SSH Connection",
+          "message": "Połączenie SSH"
+        },
+        "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.a25vd25faG9zdHM.desc": {
+          "source": "A path to an OpenSSH known_hosts file for host key verification; environment variables can be prefixed with '$' in the path; if set to an empty string, no known_hosts file is configured; if not set, the ssh2 module default applies (normally the local user's ~/.ssh/known_hosts file, unless the embedding application has changed or disabled the module default)",
+          "message": "Ścieżka do pliku known_hosts OpenSSH do weryfikacji kluczy hosta; zmienne środowiskowe mogą być poprzedzone znakiem '$' w ścieżce; jeśli ustawiona na pusty ciąg, plik known_hosts nie jest skonfigurowany; jeśli nie ustawiona, stosowany jest domyślny ustawienie modułu ssh2 (zazwyczaj plik ~/.ssh/known_hosts lokalnego użytkownika, chyba że aplikacja hostująca zmieniła lub wyłączona domyślne ustawienie modułu)"
+        },
+        "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.a25vd25faG9zdHM.display_name": {
+          "source": "Known Hosts File",
+          "message": "Plik z znanymi hostami"
+        },
+        "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.a25vd25faG9zdHM.short_desc": {
+          "source": "A path to an OpenSSH known_hosts file for host key verification",
+          "message": "Ścieżka do pliku known_hosts OpenSSH do weryfikacji kluczy hosta"
+        },
+        "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.a2V5ZmlsZQ.desc": {
+          "source": "A path to an SSH private key file in PEM format to use for key-based authentication",
+          "message": "Ścieżka do pliku klucza prywatnego SSH w formacie PEM do użycia przy uwierzytelnianiu opartym na kluczu"
+        },
+        "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.a2V5ZmlsZQ.display_name": {
+          "source": "SSH Private Key",
+          "message": "Klucz prywatny SSH"
+        },
+        "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.a2V5ZmlsZQ.short_desc": {
+          "source": "A path to an SSH private key file in PEM format",
+          "message": "Ścieżka do pliku klucza prywatnego SSH w formacie PEM"
+        },
+        "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.a2VlcGFsaXZlX2ludGVydmFs.desc": {
+          "source": "Keepalive interval in seconds; 0 disables keepalive; default: 60",
+          "message": "Interwał keepalive w sekundach; 0 wyłącza keepalive; domyślnie: 60"
+        },
+        "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.a2VlcGFsaXZlX2ludGVydmFs.display_name": {
+          "source": "Keepalive Interval",
+          "message": "Interwał keepalive"
+        },
+        "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.a2VlcGFsaXZlX2ludGVydmFs.short_desc": {
+          "source": "Keepalive interval in seconds",
+          "message": "Interwał keepalive w sekundach"
+        },
+        "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.aG9zdF9rZXlfcG9saWN5.allowed_values.c3RyaW5nOnJlamVjdA.desc": {
+          "source": "Reject unknown host keys",
+          "message": "Odrzuć nieznane klucze hosta"
+        },
+        "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.aG9zdF9rZXlfcG9saWN5.allowed_values.c3RyaW5nOnJlamVjdA.display_name": {
+          "source": "Reject",
+          "message": "Odrzuć"
+        },
+        "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.aG9zdF9rZXlfcG9saWN5.allowed_values.c3RyaW5nOnJlamVjdA.short_desc": {
+          "source": "Reject unknown host keys",
+          "message": "Odrzuć nieznane klucze hosta"
+        },
+        "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.aG9zdF9rZXlfcG9saWN5.allowed_values.c3RyaW5nOnRvZnU.desc": {
+          "source": "Trust unknown host keys on first use and persist them to the configured known_hosts file",
+          "message": "Zaufaj nieznanym kluczom hosta przy pierwszym użyciu i zapisz je do skonfigurowanego pliku known_hosts"
+        },
+        "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.aG9zdF9rZXlfcG9saWN5.allowed_values.c3RyaW5nOnRvZnU.display_name": {
+          "source": "Trust On First Use",
+          "message": "Zaufaj przy pierwszym użyciu"
+        },
+        "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.aG9zdF9rZXlfcG9saWN5.allowed_values.c3RyaW5nOnRvZnU.short_desc": {
+          "source": "Trust unknown host keys on first use and persist them",
+          "message": "Zaufaj nieznanych kluczy hosta przy pierwszym użyciu i zachowaj je"
+        },
+        "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.aG9zdF9rZXlfcG9saWN5.allowed_values.c3RyaW5nOnRvZnUtc2Vzc2lvbg.desc": {
+          "source": "Trust unknown host keys for the current connection only if no known_hosts file is configured",
+          "message": "Zaufaj nieznanych kluczy hosta tylko dla bieżącego połączenia, jeśli nie skonfigurowano pliku known_hosts"
+        },
+        "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.aG9zdF9rZXlfcG9saWN5.allowed_values.c3RyaW5nOnRvZnUtc2Vzc2lvbg.display_name": {
+          "source": "Session Trust On First Use",
+          "message": "Zaufanie sesyjne przy pierwszym użyciu"
+        },
+        "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.aG9zdF9rZXlfcG9saWN5.allowed_values.c3RyaW5nOnRvZnUtc2Vzc2lvbg.short_desc": {
+          "source": "Trust unknown host keys for the current connection only when needed",
+          "message": "Zaufaj nieznanych kluczy hosta tylko dla bieżącego połączenia, gdy to konieczne"
+        },
+        "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.aG9zdF9rZXlfcG9saWN5.desc": {
+          "source": "Policy for unknown host keys when host-key verification is enabled: `reject` rejects unknown keys, `tofu` persists first-use keys to the configured known_hosts file, and `tofu-session` trusts unknown keys for the current connection only if no known_hosts file is configured",
+          "message": "Zasada dla nieznanych kluczy hosta, gdy weryfikacja klucza hosta jest włączona: `reject` odrzuca nieznane klucze, `tofu` zapisuje klucze używane po raz pierwszy do skonfigurowanego pliku known_hosts, a `tofu-session` zezwala na zaufanie nieznanych kluczy hosta tylko dla bieżącego połączenia, jeśli nie skonfigurowano pliku known_hosts"
+        },
+        "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.aG9zdF9rZXlfcG9saWN5.display_name": {
+          "source": "Host Key Policy",
+          "message": "Zasada klucza hosta"
+        },
+        "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.aG9zdF9rZXlfcG9saWN5.short_desc": {
+          "source": "Policy for unknown host keys",
+          "message": "Zasada dla nieznanych kluczy hosta"
+        },
+        "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.dXNlX2FnZW50.desc": {
+          "source": "Enable SSH agent authentication; when enabled, the client will attempt to authenticate using keys from the running SSH agent before other methods",
+          "message": "Włącz uwierzytelnianie agenta SSH; gdy włączone, klient spróbuje uwierzytelnić się przy użyciu kluczy z działającego agenta SSH przed innymi metodami"
+        },
+        "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.dXNlX2FnZW50.display_name": {
+          "source": "Use SSH Agent",
+          "message": "Użyj agenta SSH"
+        },
+        "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.dXNlX2FnZW50.short_desc": {
+          "source": "Enable SSH agent authentication",
+          "message": "Włącz uwierzytelnianie za pomocą agenta SSH"
+        },
+        "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.dmVyaWZ5X2hvc3Rfa2V5.desc": {
+          "source": "Enable host key verification against the known_hosts file; enabled by default; the effective default follows the ssh2 module's process-global default, which an embedding application may change via SSH2Base::setDefaultVerifyHostKey() or the QORE_SSH2_DEFAULT_VERIFY_HOST_KEY environment variable",
+          "message": "Włącz sprawdzanie klucza hosta względem pliku known_hosts; domyślnie włączone; domyślna wartość stosowana jest zgodnie z globalnym ustawieniem modułu ssh2, które aplikacja hostująca może zmienić za pomocą SSH2Base::setDefaultVerifyHostKey() lub zmiennej środowiskowej QORE_SSH2_DEFAULT_VERIFY_HOST_KEY"
+        },
+        "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.dmVyaWZ5X2hvc3Rfa2V5.display_name": {
+          "source": "Verify Host Key",
+          "message": "Weryfikuj klucz hosta"
+        },
+        "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.dmVyaWZ5X2hvc3Rfa2V5.short_desc": {
+          "source": "Enable host key verification against the known_hosts file",
+          "message": "Włącz weryfikację klucza hosta względem pliku known_hosts"
+        },
+        "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.short_desc": {
+          "source": "A connection to a server with SSH",
+          "message": "Połączenie z serwerem z obsługą SSH"
+        }
+      }
+    }
+  }
+}

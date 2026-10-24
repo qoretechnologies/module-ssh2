@@ -66,6 +66,8 @@ module Ssh2Connections {
     @section ssh2connections_relnotes Ssh2Connections Module Release History
 
     @subsection ssh2connections_v2_0 Ssh2Connections v2.0
+    - added source-owned connection option catalogs in all twelve standard locales; unchanged inherited
+      presentation keeps its original producer identity, including HTTP/REST options and allowed values
     - added the \c host_key_policy connection option with readable values \c reject, \c tofu, and
       \c tofu-session
     - the \c verify_host_key connection option now defaults to @ref Qore::True "True" (secure by
@@ -231,7 +233,8 @@ public class AbstractSsh2Connection inherits ConnectionProvider::AbstractConnect
 public class Ssh2ClientConnection inherits AbstractSsh2Connection {
     public {
         #! Connection entry info
-        const ConnectionScheme = <ConnectionSchemeInfo>{
+        const ConnectionScheme = ConnectionProvider::connection_scheme_presentation("Ssh2Connections",
+            "Ssh2ClientConnection", "en", <ConnectionSchemeInfo>{
             "display_name": "SSH Connection",
             "short_desc": "A connection to a server with SSH",
             "desc": "A connection to a server with SSH",
@@ -295,7 +298,7 @@ public class Ssh2ClientConnection inherits AbstractSsh2Connection {
             "schemes": {
                 "ssh2": True,
             },
-        };
+        });
     }
 
     #! creates the Ssh2ClientConnection object
@@ -393,71 +396,17 @@ public class Ssh2ClientConnection inherits AbstractSsh2Connection {
 public class SftpConnection inherits AbstractSsh2Connection {
     public {
         #! Connection entry info
-        const ConnectionScheme = <ConnectionSchemeInfo>{
+        const ConnectionScheme = ConnectionProvider::connection_scheme_presentation("Ssh2Connections",
+            "SftpConnection", "en", <ConnectionSchemeInfo>{
             "display_name": "SFTP Connection",
             "short_desc": "A connection to a server with SFTP",
             "desc": "A connection to a server with SFTP",
             "cls": Class::forName("SftpConnection"),
-            "options": {
-                "keyfile": <ConnectionOptionInfo>{
-                    "display_name": "SSH Private Key",
-                    "short_desc": "A path to an SSH private key file in PEM format",
-                    "type": "string",
-                    "desc": "A path to an SSH private key file in PEM format to use for key-based authentication",
-                },
-                "known_hosts": <ConnectionOptionInfo>{
-                    "display_name": "Known Hosts File",
-                    "short_desc": "A path to an OpenSSH known_hosts file for host key verification",
-                    "type": "string",
-                    "desc": "A path to an OpenSSH known_hosts file for host key verification; "
-                        "environment variables can be prefixed with '$' in the path; if set to an "
-                        "empty string, no known_hosts file is configured; if not set, "
-                        "the ssh2 module default applies (normally the local user's "
-                        "~/.ssh/known_hosts file, unless the embedding application has changed or "
-                        "disabled the module default)",
-                },
-                "host_key_policy": <ConnectionOptionInfo>{
-                    "display_name": "Host Key Policy",
-                    "short_desc": "Policy for unknown host keys",
-                    "type": "string",
-                    "desc": "Policy for unknown host keys when host-key verification is enabled: "
-                        "`reject` rejects unknown keys, `tofu` persists first-use keys to the "
-                        "configured known_hosts file, and `tofu-session` trusts unknown keys for "
-                        "the current connection only if no known_hosts file is configured",
-                    "allowed_values": HostKeyPolicyAllowedValues,
-                    "default_value": Ssh2HostKeyPolicyOption::TrustOnFirstUse,
-                },
-                "verify_host_key": <ConnectionOptionInfo>{
-                    "display_name": "Verify Host Key",
-                    "short_desc": "Enable host key verification against the known_hosts file",
-                    "type": "bool",
-                    "desc": "Enable host key verification against the known_hosts file; enabled by "
-                        "default; the effective default follows the ssh2 module's process-global "
-                        "default, which an embedding application may change via "
-                        "SSH2Base::setDefaultVerifyHostKey() or the "
-                        "QORE_SSH2_DEFAULT_VERIFY_HOST_KEY environment variable",
-                    "default_value": True,
-                },
-                "use_agent": <ConnectionOptionInfo>{
-                    "display_name": "Use SSH Agent",
-                    "short_desc": "Enable SSH agent authentication",
-                    "type": "bool",
-                    "desc": "Enable SSH agent authentication; when enabled, the client will attempt to "
-                        "authenticate using keys from the running SSH agent before other methods",
-                    "default_value": True,
-                },
-                "keepalive_interval": <ConnectionOptionInfo>{
-                    "display_name": "Keepalive Interval",
-                    "short_desc": "Keepalive interval in seconds",
-                    "type": "int",
-                    "desc": "Keepalive interval in seconds; 0 disables keepalive; default: 60",
-                    "default_value": 60,
-                },
-            },
+            "options": Ssh2ClientConnection::ConnectionScheme.options,
             "schemes": {
                 "sftp": True,
             },
-        };
+        });
 
         #! Data provider subtypes supported
         const DataProviderSubtypeMap = {

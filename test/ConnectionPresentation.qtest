@@ -1,0 +1,23 @@
+#!/usr/bin/env qore
+# Copyright 2026 Qore Technologies, s.r.o.
+# SPDX-License-Identifier: MIT
+%modern
+%prepend-module-path "${SCRIPT_DIR}/../qlib"
+%requires QUnit
+%requires Ssh2Connections
+%exec-class ConnectionPresentationTest
+class ConnectionPresentationTest inherits QUnit::Test {
+    constructor() : Test("Shared connection presentation", "1.0", \ARGV) {
+        addTestCase("shared options and choices retain one producer identity", \shared());
+        set_return_value(main());
+    }
+    private shared() {
+        hash<auto> first = Ssh2ClientConnection::ConnectionScheme;
+        hash<auto> second = SftpConnection::ConnectionScheme;
+        foreach string key in (keys first.options) {
+            assertEq(first.options{key}.presentation_sources, second.options{key}.presentation_sources, key);
+        }
+        assertTrue(exists first.options.host_key_policy.presentation_sources.display_name);
+        assertNeq(first.presentation_sources.display_name.message_id, second.presentation_sources.display_name.message_id);
+    }
+}

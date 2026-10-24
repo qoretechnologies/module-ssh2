@@ -1,0 +1,141 @@
+{
+  "schema_version": 1,
+  "locales": {
+    "zh-Hant": {
+      "messages": {
+        "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U2Z0cENvbm5lY3Rpb24.desc": {
+          "source": "A connection to a server with SFTP",
+          "message": "連接到支援 SFTP 的伺服器的連接"
+        },
+        "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U2Z0cENvbm5lY3Rpb24.display_name": {
+          "source": "SFTP Connection",
+          "message": "SFTP 連接"
+        },
+        "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U2Z0cENvbm5lY3Rpb24.short_desc": {
+          "source": "A connection to a server with SFTP",
+          "message": "連接到支援 SFTP 的伺服器的連接"
+        },
+        "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.desc": {
+          "source": "A connection to a server with SSH",
+          "message": "連接到支援 SSH 的伺服器的連接"
+        },
+        "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.display_name": {
+          "source": "SSH Connection",
+          "message": "SSH 連接"
+        },
+        "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.a25vd25faG9zdHM.desc": {
+          "source": "A path to an OpenSSH known_hosts file for host key verification; environment variables can be prefixed with '$' in the path; if set to an empty string, no known_hosts file is configured; if not set, the ssh2 module default applies (normally the local user's ~/.ssh/known_hosts file, unless the embedding application has changed or disabled the module default)",
+          "message": "用於主機金鑰驗證的 OpenSSH known_hosts 檔案路徑；路徑中可使用 '$' 前綴環境變數；若設定為空字串，則不配置 known_hosts 檔案；若未設定，則使用 ssh2 模組的預設值（通常為本機使用者的 ~/.ssh/known_hosts 檔案，除非嵌入式應用程式已變更或停用模組預設值）"
+        },
+        "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.a25vd25faG9zdHM.display_name": {
+          "source": "Known Hosts File",
+          "message": "已知主機檔案"
+        },
+        "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.a25vd25faG9zdHM.short_desc": {
+          "source": "A path to an OpenSSH known_hosts file for host key verification",
+          "message": "用於主機金鑰驗證的 OpenSSH known_hosts 檔案路徑"
+        },
+        "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.a2V5ZmlsZQ.desc": {
+          "source": "A path to an SSH private key file in PEM format to use for key-based authentication",
+          "message": "用於金鑰驗證的 PEM 格式 SSH 私鑰檔案路徑"
+        },
+        "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.a2V5ZmlsZQ.display_name": {
+          "source": "SSH Private Key",
+          "message": "SSH 私鑰"
+        },
+        "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.a2V5ZmlsZQ.short_desc": {
+          "source": "A path to an SSH private key file in PEM format",
+          "message": "PEM 格式的 SSH 私鑰檔案路徑"
+        },
+        "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.a2VlcGFsaXZlX2ludGVydmFs.desc": {
+          "source": "Keepalive interval in seconds; 0 disables keepalive; default: 60",
+          "message": "以秒為單位的保持連線間隔；0 表示停用保持連線；預設值：60"
+        },
+        "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.a2VlcGFsaXZlX2ludGVydmFs.display_name": {
+          "source": "Keepalive Interval",
+          "message": "Keepalive 間隔"
+        },
+        "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.a2VlcGFsaXZlX2ludGVydmFs.short_desc": {
+          "source": "Keepalive interval in seconds",
+          "message": "以秒為單位的保持連線間隔"
+        },
+        "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.aG9zdF9rZXlfcG9saWN5.allowed_values.c3RyaW5nOnJlamVjdA.desc": {
+          "source": "Reject unknown host keys",
+          "message": "拒絕未知主機金鑰"
+        },
+        "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.aG9zdF9rZXlfcG9saWN5.allowed_values.c3RyaW5nOnJlamVjdA.display_name": {
+          "source": "Reject",
+          "message": "拒絕"
+        },
+        "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.aG9zdF9rZXlfcG9saWN5.allowed_values.c3RyaW5nOnJlamVjdA.short_desc": {
+          "source": "Reject unknown host keys",
+          "message": "拒絕未知主機金鑰"
+        },
+        "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.aG9zdF9rZXlfcG9saWN5.allowed_values.c3RyaW5nOnRvZnU.desc": {
+          "source": "Trust unknown host keys on first use and persist them to the configured known_hosts file",
+          "message": "首次使用時信任未知主機金鑰並儲存至設定的 known_hosts 檔案"
+        },
+        "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.aG9zdF9rZXlfcG9saWN5.allowed_values.c3RyaW5nOnRvZnU.display_name": {
+          "source": "Trust On First Use",
+          "message": "首次使用時信任"
+        },
+        "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.aG9zdF9rZXlfcG9saWN5.allowed_values.c3RyaW5nOnRvZnU.short_desc": {
+          "source": "Trust unknown host keys on first use and persist them",
+          "message": "首次使用時信任未知主機金鑰並儲存至設定的 known_hosts 檔案"
+        },
+        "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.aG9zdF9rZXlfcG9saWN5.allowed_values.c3RyaW5nOnRvZnUtc2Vzc2lvbg.desc": {
+          "source": "Trust unknown host keys for the current connection only if no known_hosts file is configured",
+          "message": "僅在未設定 known_hosts 檔案時，才信任本次連線的未知主機金鑰"
+        },
+        "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.aG9zdF9rZXlfcG9saWN5.allowed_values.c3RyaW5nOnRvZnUtc2Vzc2lvbg.display_name": {
+          "source": "Session Trust On First Use",
+          "message": "會話信任首次使用"
+        },
+        "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.aG9zdF9rZXlfcG9saWN5.allowed_values.c3RyaW5nOnRvZnUtc2Vzc2lvbg.short_desc": {
+          "source": "Trust unknown host keys for the current connection only when needed",
+          "message": "僅在必要時，才信任本次連線的未知主機金鑰"
+        },
+        "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.aG9zdF9rZXlfcG9saWN5.desc": {
+          "source": "Policy for unknown host keys when host-key verification is enabled: `reject` rejects unknown keys, `tofu` persists first-use keys to the configured known_hosts file, and `tofu-session` trusts unknown keys for the current connection only if no known_hosts file is configured",
+          "message": "主機金鑰驗證啟用時，對未知主機金鑰的處理策略：`reject` 拒絕未知金鑰，`tofu` 將首次使用的金鑰持久化至設定的 known_hosts 檔案，`tofu-session` 僅在未設定 known_hosts 檔案時，才信任本次連線的未知金鑰"
+        },
+        "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.aG9zdF9rZXlfcG9saWN5.display_name": {
+          "source": "Host Key Policy",
+          "message": "主機金鑰策略"
+        },
+        "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.aG9zdF9rZXlfcG9saWN5.short_desc": {
+          "source": "Policy for unknown host keys",
+          "message": "未知主機金鑰的處理策略"
+        },
+        "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.dXNlX2FnZW50.desc": {
+          "source": "Enable SSH agent authentication; when enabled, the client will attempt to authenticate using keys from the running SSH agent before other methods",
+          "message": "啟用 SSH 代理驗證；啟用後，客戶端將優先嘗試使用執行中的 SSH 代理中的金鑰進行驗證，再嘗試其他方法"
+        },
+        "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.dXNlX2FnZW50.display_name": {
+          "source": "Use SSH Agent",
+          "message": "使用 SSH 代理"
+        },
+        "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.dXNlX2FnZW50.short_desc": {
+          "source": "Enable SSH agent authentication",
+          "message": "啟用 SSH 憑證代理驗證"
+        },
+        "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.dmVyaWZ5X2hvc3Rfa2V5.desc": {
+          "source": "Enable host key verification against the known_hosts file; enabled by default; the effective default follows the ssh2 module's process-global default, which an embedding application may change via SSH2Base::setDefaultVerifyHostKey() or the QORE_SSH2_DEFAULT_VERIFY_HOST_KEY environment variable",
+          "message": "啟用對 known_hosts 檔案的主機金鑰驗證；預設啟用；實際預設值遵循 ssh2 模組的全域預設值，嵌入式應用程式可透過 SSH2Base::setDefaultVerifyHostKey() 或 QORE_SSH2_DEFAULT_VERIFY_HOST_KEY 環境變數變更"
+        },
+        "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.dmVyaWZ5X2hvc3Rfa2V5.display_name": {
+          "source": "Verify Host Key",
+          "message": "驗證主機金鑰"
+        },
+        "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.dmVyaWZ5X2hvc3Rfa2V5.short_desc": {
+          "source": "Enable host key verification against the known_hosts file",
+          "message": "啟用對 known_hosts 檔案的主機金鑰驗證"
+        },
+        "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.short_desc": {
+          "source": "A connection to a server with SSH",
+          "message": "連接到支援 SSH 的伺服器的連接"
+        }
+      }
+    }
+  }
+}
