@@ -12,13 +12,20 @@
 
 #! sets the keys of a client within a policy barrier, as trusted code acting for sandboxed code can
 /** an object of this class is passed to the sandboxed programs of the tests; its methods run in this (unsandboxed)
-    program
+    program.  The barrier masks the policy of the sandboxed caller, but not the sandbox in which a client or a
+    closure was created (see Qore's design/sandbox-provenance.md): it gives access only for a client and code that
+    trusted code created before the sandboxed code ran.
 */
 class TrustedKeySetter {
-    setKeys(SSH2Client sc, string key) {
-        SandboxManager::callWithSystemPolicy(sub () {
+    private {
+        #! created by trusted code before any sandboxed code runs, so it has no sandbox of its own
+        code set_keys = sub (SSH2Client sc, string key) {
             sc.setKeys(key);
-        });
+        };
+    }
+
+    setKeys(SSH2Client sc, string key) {
+        SandboxManager::callWithSystemPolicy(set_keys, (sc, key));
     }
 }
 
@@ -68,10 +75,14 @@ nothing sub open_tunnel(string uri, string host, int port, *string key) {
     delete chan;
 }
 
-string sub set_keys_with_barrier(string uri, string key, auto setter) {
-    SSH2Client sc(uri);
+string sub set_keys_with_barrier(auto sc, string key, auto setter) {
     setter.setKeys(sc, key);
     return sc.getKeyPriv();
+}
+
+nothing sub set_keys_on_own_client_with_barrier(string uri, string key, auto setter) {
+    SSH2Client sc(uri);
+    setter.setKeys(sc, key);
 }
 
 string sub connect_client_with_key(string uri, string key) {
@@ -251,7 +262,14 @@ nothing sub set_keys(string uri, string key) {
         sm.setNetworkDefaultPolicy(allow: True);
         Program p = getProgram(sm);
         assertThrows("FILESYSTEM-ACCESS-DENIED", \p.callFunction(), ("set_keys", uri, key));
-        assertEq(key, p.callFunction("set_keys_with_barrier", uri, key, new TrustedKeySetter()),
+        TrustedKeySetter setter();
+        # a client created by trusted code before the sandboxed code runs
+        SSH2Client trusted_client(uri);
+        assertEq(key, p.callFunction("set_keys_with_barrier", trusted_client, key, setter),
             "trusted code reads the key file for the sandboxed code within its policy barrier");
+        # the barrier does not remove the sandbox of the code that created the client
+        assertThrows("FILESYSTEM-ACCESS-DENIED", \p.callFunction(),
+            ("set_keys_on_own_client_with_barrier", uri, key, setter),
+            "a client created by the sandboxed code keeps its sandbox inside the barrier");
     }
 }

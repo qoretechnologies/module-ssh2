@@ -170,7 +170,8 @@
       checked against the network sandbox of the calling code, as the destination of a connection through a proxy
       is: the SSH server makes the connection, so it could reach destinations the sandbox denies
     - filesystem and network sandbox checks honor a policy barrier established with
-      @ref Qore::SandboxManager::callWithSystemPolicy() "SandboxManager::callWithSystemPolicy()"
+      @ref Qore::SandboxManager::callWithSystemPolicy() "SandboxManager::callWithSystemPolicy()"; as with every
+      object, a client created by sandboxed code keeps that code's sandbox inside the barrier
     - removed stale TODO in mkdir implementation
     - documented known memory leak in sftp_shutdown timeout (libssh2 limitation)
     - updated copyright years to 2026
