@@ -153,6 +153,17 @@ class SftpPollerMultiDirsTest inherits QUnit::Test {
             "path": ("A/B/C", "B/", "A/B", ".")
             );
 
+        # the directories are created in a directory of their own, so that runs at the same time do not share them
+        # and the "." path finds only the test's own files
+        string base = sprintf("sftp-poller-multidirs-%s", get_random_string(10));
+        sc.mkdir(base);
+        string home = sc.path();
+        sc.chdir(base);
+        on_exit {
+            sc.chdir(home);
+            sc.rmdir(base);
+        }
+
         # setup directory
         string path1 = "A";
         string path2 = "A/B";
@@ -204,6 +215,17 @@ class SftpPollerMultiDirsTest inherits QUnit::Test {
             "writable": True,
             "path": ("A/B/C", "B/", "A/B", ".")
             );
+
+        # the directories are created in a directory of their own, so that runs at the same time do not share them
+        # and the "." path finds only the test's own files
+        string base = sprintf("sftp-poller-multidirs-%s", get_random_string(10));
+        sc.mkdir(base);
+        string home = sc.path();
+        sc.chdir(base);
+        on_exit {
+            sc.chdir(home);
+            sc.rmdir(base);
+        }
 
         # setup directory
         string path1 = "A";
