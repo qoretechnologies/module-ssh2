@@ -241,7 +241,7 @@ QoreHashNode* SftpPollOperationPriv::getPollInfo(ExceptionSink* xsink, int fd, i
         // the extra descriptors and the timeout continue the stage (see AbstractPollState)
         events = 0;
         if (extra.empty() && poll_timeout_ms < 0) {
-            xsink->raiseException("SSH2-POLL-ERROR", "there is nothing to wait on in state %y in %s()",
+            xsink->raiseException("SSH2-POLL-ERROR", "there is nothing to wait on in state %s in %s()",
                 getStateImpl(), SFTP_POLL_METHOD);
             closeIntern(xsink, true);
             return nullptr;
