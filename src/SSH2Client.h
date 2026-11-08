@@ -613,7 +613,7 @@ public:
         operation can hold it while it waits for the controller
     */
     DLLLOCAL virtual int getPollableDescriptor() const override {
-        return socket.getSocket();
+        return socket.getDescriptorForLibrary();
     }
 
     //! Keeps the descriptor of the connection open while the async I/O controller has it registered
