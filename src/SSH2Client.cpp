@@ -899,14 +899,18 @@ int SSH2Client::holdSessionDescriptorUnlocked(const char* meth, ExceptionSink* x
             "established in %s()", meth);
         return -1;
     }
+    session_fd = fd;
     return 0;
 }
 
 int SSH2Client::startupUnlocked() {
+    // the descriptor that the session's hold keeps open, not one read again: a reconnect in another thread could
+    // have given the socket another descriptor meanwhile
+    assert(session_fd >= 0);
 #ifdef HAVE_LIBSSH2_SESSION_HANDSHAKE
-    return libssh2_session_handshake(ssh_session, socket.getDescriptorForLibrary());
+    return libssh2_session_handshake(ssh_session, session_fd);
 #else
-    return libssh2_session_startup(ssh_session, socket.getDescriptorForLibrary());
+    return libssh2_session_startup(ssh_session, session_fd);
 #endif
 }
 

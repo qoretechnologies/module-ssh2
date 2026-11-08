@@ -262,6 +262,9 @@ protected:
     */
     std::shared_ptr<void> session_fd_hold;
 
+    //! the descriptor that session_fd_hold holds, which the session is given; -1 if there is none
+    int session_fd = -1;
+
     /*
         * close session/connection
         * free resources
@@ -290,6 +293,7 @@ protected:
         socket.close();
         // the descriptor is closed now, unless the async I/O controller still has it registered
         session_fd_hold.reset();
+        session_fd = -1;
     }
     DLLLOCAL int sshConnectedUnlocked();
     DLLLOCAL bool sshSessionActiveUnlocked() const {
