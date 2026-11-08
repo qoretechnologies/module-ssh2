@@ -347,7 +347,7 @@ QoreHashNode* SftpPollOperationPriv::getSessionPollInfo(ExceptionSink* xsink) {
         events = SOCK_POLLIN;
     }
 
-    return getPollInfo(xsink, client->socket.getSocket(), events);
+    return getPollInfo(xsink, client->socket.getDescriptorForLibrary(), events);
 }
 
 QoreHashNode* SftpPollOperationPriv::continuePoll(ExceptionSink* xsink) {
@@ -377,7 +377,7 @@ QoreHashNode* SftpPollOperationPriv::continuePollIntern(ExceptionSink* xsink) {
                     reused_session = true;
                     state = client->sftp_session ? SftpPollState::STAT : SftpPollState::SFTP_INIT;
                     // the socket must be non-blocking for the session to report EAGAIN
-                    if (setFdNonBlocking(client->socket.getSocket(), true) < 0) {
+                    if (setFdNonBlocking(client->socket.getDescriptorForLibrary(), true) < 0) {
                         xsink->raiseErrnoException("SSH2-POLL-ERROR", errno,
                             "cannot set the socket to non-blocking mode in %s()", SFTP_POLL_METHOD);
                         closeIntern(xsink, false);
@@ -451,7 +451,7 @@ QoreHashNode* SftpPollOperationPriv::handleConnecting(ExceptionSink* xsink) {
         // is resolved asynchronously the socket has no descriptor yet, and only the resolver's descriptors and its
         // retransmission timer continue the connection
         std::vector<ExtraWaitFd> extra = connect_state->getExtraWaitFds();
-        return getPollInfo(xsink, client->socket.getSocket(), rc, &extra, connect_state->getPollTimeoutMs());
+        return getPollInfo(xsink, client->socket.getDescriptorForLibrary(), rc, &extra, connect_state->getPollTimeoutMs());
     }
 
     connect_state.reset();
@@ -465,7 +465,7 @@ QoreHashNode* SftpPollOperationPriv::handleConnecting(ExceptionSink* xsink) {
     // the socket is connected; the poll-based connect leaves the descriptor in non-blocking mode,
     // which is what the session requires, but this is enforced explicitly so that the state does
     // not depend on the connect implementation
-    if (setFdNonBlocking(client->socket.getSocket(), true) < 0) {
+    if (setFdNonBlocking(client->socket.getDescriptorForLibrary(), true) < 0) {
         xsink->raiseErrnoException("SSH2-POLL-ERROR", errno,
             "cannot set the socket to non-blocking mode in %s()", SFTP_POLL_METHOD);
         closeIntern(xsink, true);

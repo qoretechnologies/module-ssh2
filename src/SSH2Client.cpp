@@ -893,7 +893,7 @@ static void kbd_callback(const char *name, int name_len,
 } /* kbd_callback */
 
 int SSH2Client::holdSessionDescriptorUnlocked(const char* meth, ExceptionSink* xsink) {
-    int fd = socket.getSocket();
+    int fd = socket.getDescriptorForLibrary();
     if (fd < 0 || socket.holdDescriptor(fd, session_fd_hold)) {
         xsink && xsink->raiseException(SSH2CLIENT_CONNECT_ERROR, "the connection was closed while it was being "
             "established in %s()", meth);
@@ -904,9 +904,9 @@ int SSH2Client::holdSessionDescriptorUnlocked(const char* meth, ExceptionSink* x
 
 int SSH2Client::startupUnlocked() {
 #ifdef HAVE_LIBSSH2_SESSION_HANDSHAKE
-    return libssh2_session_handshake(ssh_session, socket.getSocket());
+    return libssh2_session_handshake(ssh_session, socket.getDescriptorForLibrary());
 #else
-    return libssh2_session_startup(ssh_session, socket.getSocket());
+    return libssh2_session_startup(ssh_session, socket.getDescriptorForLibrary());
 #endif
 }
 
