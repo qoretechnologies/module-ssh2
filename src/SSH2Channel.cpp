@@ -299,11 +299,11 @@ QoreStringNode *SSH2Channel::read(qore_size_t size, int stream_id, int timeout_m
         if (!rc || rc == LIBSSH2_ERROR_EAGAIN) {
             rc = parent->waitSocketUnlocked(timeout_ms);
             if (!rc) {
-                xsink->raiseException(SSH2CHANNEL_TIMEOUT, "read timeout after %dms, read %lu byte%s of %lu requested", timeout_ms, b_read, b_read == 1 ? "" : "s", size);
+                xsink->raiseException(SSH2CHANNEL_TIMEOUT, "read timeout after %dms, read %zu byte%s of %zu requested", timeout_ms, b_read, b_read == 1 ? "" : "s", size);
                 return 0;
             }
             if (rc < 0) {
-                xsink->raiseException(SSH2CHANNEL_TIMEOUT, strerror(errno));
+                xsink->raiseException(SSH2CHANNEL_TIMEOUT, "%s", strerror(errno));
                 return 0;
             }
         }
@@ -387,11 +387,11 @@ BinaryNode *SSH2Channel::readBinary(qore_size_t size, int stream_id, int timeout
         if (!rc || rc == LIBSSH2_ERROR_EAGAIN) {
             rc = parent->waitSocketUnlocked(timeout_ms);
             if (!rc) {
-                xsink->raiseException(SSH2CHANNEL_TIMEOUT, "read timeout after %dms reading %lld byte%s of %lld requested", timeout_ms, b_read, b_read == 1 ? "" : "s", size);
+                xsink->raiseException(SSH2CHANNEL_TIMEOUT, "read timeout after %dms reading %zu byte%s of %zu requested", timeout_ms, b_read, b_read == 1 ? "" : "s", size);
                 return 0;
             }
             if (rc < 0) {
-                xsink->raiseException(SSH2CHANNEL_TIMEOUT, strerror(errno));
+                xsink->raiseException(SSH2CHANNEL_TIMEOUT, "%s", strerror(errno));
                 return 0;
             }
         }
@@ -431,7 +431,7 @@ qore_size_t SSH2Channel::read(ExceptionSink *xsink, void *buffer, qore_size_t si
                 return 0;
             }
             if (rc < 0) {
-                xsink->raiseException(SSH2CHANNEL_TIMEOUT, strerror(errno));
+                xsink->raiseException(SSH2CHANNEL_TIMEOUT, "%s", strerror(errno));
                 return 0;
             }
         }
@@ -459,11 +459,11 @@ qore_size_t SSH2Channel::write(ExceptionSink *xsink, const void *buf, qore_size_
 
             rc = parent->waitSocketUnlocked(timeout_ms);
             if (!rc) {
-                xsink->raiseException(SSH2CHANNEL_TIMEOUT, "write timeout after %dms writing %lu byte%s of %lu", timeout_ms, b_sent, b_sent == 1 ? "" : "s", buflen);
+                xsink->raiseException(SSH2CHANNEL_TIMEOUT, "write timeout after %dms writing %zu byte%s of %zu", timeout_ms, b_sent, b_sent == 1 ? "" : "s", buflen);
                 return -1;
             }
             if (rc < 0) {
-                xsink->raiseException("SSH2CHANNEL-WRITE-ERROR", strerror(errno));
+                xsink->raiseException("SSH2CHANNEL-WRITE-ERROR", "%s", strerror(errno));
                 return -1;
             }
         }

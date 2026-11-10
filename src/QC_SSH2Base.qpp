@@ -262,7 +262,7 @@ sftpclient.setWarningQueue(5000, 5000, queue, "socket-1");
 nothing SSH2Base::setWarningQueue(int warning_ms, int warning_bs, Queue[Queue] queue, any queue_arg, timeout min_interval = 1s) [flags=NAMED_ARGS] {
 #ifdef _QORE_HAS_SOCKET_PERF_API
    if (queue->getMax() != -1) {
-      xsink->raiseException("QUEUE-ERROR", "the Queue object passed as a maximum size of %d entr%s, which could cause internal I/O to freeze in the Socket object if used; use a Queue object with no maximum size for I/O monitoring", queue->getMax(), queue->getMax() == 1 ? "y" : "ies");
+      xsink->raiseException("QUEUE-ERROR", "the Queue object passed as a maximum size of %td entr%s, which could cause internal I/O to freeze in the Socket object if used; use a Queue object with no maximum size for I/O monitoring", queue->getMax(), queue->getMax() == 1 ? "y" : "ies");
       return 0;
    }
    // pass reference from QoreObject::getReferencedPrivateData() to function

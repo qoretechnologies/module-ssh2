@@ -107,19 +107,19 @@ nothing SSH2Channel::requestPty(string terminal = "vanilla", string modes = "", 
    static const char *SSH2CHANNEL_REQUESTPTY_ERR = "SSH2CHANNEL-REQUESTPTY-ERROR";
 
    if (width < 0) {
-      xsink->raiseException(SSH2CHANNEL_REQUESTPTY_ERR, "terminal width given as the optional third argument to SSH2Channel::requestPty() must be non-negative; value given: %d", width);
+      xsink->raiseException(SSH2CHANNEL_REQUESTPTY_ERR, "terminal width given as the optional third argument to SSH2Channel::requestPty() must be non-negative; value given: " QLLD, width);
       return 0;
    }
    if (height < 0) {
-      xsink->raiseException(SSH2CHANNEL_REQUESTPTY_ERR, "terminal height given as the optional fourth argument to SSH2Channel::requestPty() must be non-negative; value given: %d", height);
+      xsink->raiseException(SSH2CHANNEL_REQUESTPTY_ERR, "terminal height given as the optional fourth argument to SSH2Channel::requestPty() must be non-negative; value given: " QLLD, height);
       return 0;
    }
    if (width_px < 0) {
-      xsink->raiseException(SSH2CHANNEL_REQUESTPTY_ERR, "terminal pixel width given as the optional fifth argument to SSH2Channel::requestPty() must be non-negative; value given: %d", width_px);
+      xsink->raiseException(SSH2CHANNEL_REQUESTPTY_ERR, "terminal pixel width given as the optional fifth argument to SSH2Channel::requestPty() must be non-negative; value given: " QLLD, width_px);
       return 0;
    }
    if (height_px < 0) {
-      xsink->raiseException(SSH2CHANNEL_REQUESTPTY_ERR, "terminal pixel height given as the optional sixth argument to SSH2Channel::requestPty() must be non-negative; value given: %d", height_px);
+      xsink->raiseException(SSH2CHANNEL_REQUESTPTY_ERR, "terminal pixel height given as the optional sixth argument to SSH2Channel::requestPty() must be non-negative; value given: " QLLD, height_px);
       return 0;
    }
 
@@ -514,11 +514,11 @@ nothing SSH2Channel::requestPtySize(softint width, softint height, softint width
     static const char* SSH2CHANNEL_REQUESTPTYSIZE_ERR = "SSH2CHANNEL-REQUESTPTYSIZE-ERROR";
 
     if (width < 0) {
-        xsink->raiseException(SSH2CHANNEL_REQUESTPTYSIZE_ERR, "terminal width must be non-negative; value given: %d", width);
+        xsink->raiseException(SSH2CHANNEL_REQUESTPTYSIZE_ERR, "terminal width must be non-negative; value given: " QLLD, width);
         return QoreValue();
     }
     if (height < 0) {
-        xsink->raiseException(SSH2CHANNEL_REQUESTPTYSIZE_ERR, "terminal height must be non-negative; value given: %d", height);
+        xsink->raiseException(SSH2CHANNEL_REQUESTPTYSIZE_ERR, "terminal height must be non-negative; value given: " QLLD, height);
         return QoreValue();
     }
 

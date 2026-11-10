@@ -1497,7 +1497,7 @@ int SSH2Client::prepareSessionUnlocked(ExceptionSink* xsink) {
     ssh_session = libssh2_session_init();
     if (!ssh_session) {
         disconnectUnlocked(true); // clean up connection
-        xsink && xsink->raiseException(SSH2_ERROR, "error in libssh2_session_init(): ", strerror(errno));
+        xsink && xsink->raiseException(SSH2_ERROR, "error in libssh2_session_init(): %s", strerror(errno));
         return -1;
     }
 
