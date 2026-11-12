@@ -182,6 +182,10 @@ extern "C" DLLEXPORT void ssh2_qore_module_desc(QoreModuleInfo& mod_info) {
     mod_info.init = ssh2_module_init;
     mod_info.ns_init = ssh2_module_ns_init;
     mod_info.del = ssh2_module_delete;
+#ifdef QORE_HAS_MODULE_NS_PURGE
+    // the namespace is purged when the module is deleted, before the types are freed (see QoreModuleInfo::ns)
+    mod_info.ns = &ssh2ns;
+#endif
     mod_info.license = QL_MIT;
     mod_info.license_str = "MIT";
     mod_info.dependencies.push_back("sshutil");
