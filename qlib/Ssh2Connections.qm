@@ -23,7 +23,7 @@
 */
 
 # minimum required Qore version
-%requires qore >= 2.3
+%requires qore >= 3.0
 
 %modern
 
@@ -40,6 +40,9 @@ module Ssh2Connections {
         ConnectionSchemeCache::registerScheme("ssh", Ssh2ClientConnection::ConnectionScheme);
         ConnectionSchemeCache::registerScheme("sftp", SftpConnection::ConnectionScheme);
     };
+    # PROCESS_CONTROL: its init registers connection scheme (process-wide registrations)
+    # (a Program restricted like a Qorus interface can load the module only when it declares them; Qore #5803)
+    domains = "PROCESS_CONTROL";
 }
 
 /** @mainpage Ssh2Connections Module
