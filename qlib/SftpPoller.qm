@@ -23,7 +23,7 @@
 */
 
 # make sure we have the required qore version
-%requires qore >= 2.3
+%requires qore >= 3.0
 %requires(reexport) SftpPollerUtil
 %requires(reexport) ssh2
 
@@ -82,6 +82,9 @@ module SftpPoller {
             ),
         });
     };
+    # PROCESS_CONTROL: its init registers data provider factory (process-wide registrations)
+    # (a Program restricted like a Qorus interface can load the module only when it declares them; Qore #5803)
+    domains = "PROCESS_CONTROL";
 }
 
 /** @mainpage SftpPoller Module
@@ -136,7 +139,7 @@ hash opts = (
 
     The @ref SftpPoller::SftpPoller "SftpPoller" class includes support for running in sandboxed Program objects with the following parse options set:
     - \c PO_NO_THREAD_CONTROL: in this case the \c "start_thread" option is required in @ref SftpPoller::SftpPoller::constructor() "SftpPoller::constructor()"
-    - \c PO_NO_PROCESS_CONTROL: in this case the \c "sleep" option is required in @ref SftpPoller::SftpPoller::constructor() "SftpPoller::constructor()"
+    - \c PO_NO_PROCESS_CONTROL: in this case the \c "sleep" option is required in @ref SftpPoller::SftpPoller::constructor() "SftpPoller::constructor()" when the module is loaded by its path; the installed module declares the \c PROCESS_CONTROL functional domain (it registers data provider types and waits between polls), so a Program restricted like a Qorus interface does not need the option
 
     @section sftppollerrelnotes SftpPoller Module Release Notes
 
@@ -144,6 +147,7 @@ hash opts = (
     - added data provider and app action support
     - corrected the source-owned provider presentation catalog so it contains the SFTP poller action without
       duplicating actions contributed by the SFTP client module
+    - requires Qore 3.0 (module domains)
 
     @section sftppollerv1_4_1 Version 1.4.1
     - fixed a bug registering the sftp event type
@@ -386,7 +390,7 @@ public class SftpPoller {
         - \c start_thread: (required when imported into a context where @ref Qore::PO_NO_THREAD_CONTROL is set) a
           @ref closure "closure" or @ref call_reference "call reference" for starting threads; must return the integer
           thread ID (if not set then @ref background will be used)
-        - \c sleep: (required when imported into a context where @ref Qore::PO_NO_PROCESS_CONTROL is set) a
+        - \c sleep: (required when the module is loaded by its path into a context where @ref Qore::PO_NO_PROCESS_CONTROL is set; the installed module declares \c PROCESS_CONTROL) a
           @ref closure "closure" or @ref call_reference "call reference" to use instead of @ref Qore::sleep() (if not
           set then @ref Qore::sleep() will be used)
         - \c timeout: connection timeout (default \c 30s)
@@ -499,7 +503,7 @@ public class SftpPoller {
           file content won't be read by the SftpPoller class, opening a space for child classes to implement their own
           file retrieval in @ref SftpPoller::SftpPoller::singleFileEvent or
           @ref SftpPoller::SftpPoller::postSingleFileEvent (default: False); (since ssh2 1.1)
-        - \c sleep: (required when imported into a context where @ref Qore::PO_NO_PROCESS_CONTROL is set) a
+        - \c sleep: (required when the module is loaded by its path into a context where @ref Qore::PO_NO_PROCESS_CONTROL is set; the installed module declares \c PROCESS_CONTROL) a
           @ref closure "closure" or @ref call_reference "call reference" to use instead of @ref Qore::sleep() (if not
           set then @ref Qore::sleep() will be used)
         - \c start_thread: (required when imported into a context where @ref Qore::PO_NO_THREAD_CONTROL is set) a
