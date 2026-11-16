@@ -148,6 +148,9 @@ hash opts = (
     - corrected the source-owned provider presentation catalog so it contains the SFTP poller action without
       duplicating actions contributed by the SFTP client module
     - requires Qore 3.0 (module domains)
+    - an empty \c "regex_mask" option matches every file; it caused the constructor to throw an
+      \c INVALID-MEMBER exception
+      (<a href="https://github.com/qoretechnologies/qore/issues/3377">issue 3377</a>)
 
     @section sftppollerv1_4_1 Version 1.4.1
     - fixed a bug registering the sftp event type
@@ -380,7 +383,8 @@ public class SftpPoller {
           processing; cannot be set if \c delete_remote_file is also set
         - \c path: the remote path(s) for retrieving the files; if a list of strings is given then each path will be
           polled for matching files according to the \c "mask" or \c "regex_mask" option
-        - \c regex_mask: a regular expression to use as a mask (overrides any \c "mask" value)
+        - \c regex_mask: a regular expression to use as a mask (overrides any \c "mask" value); an empty string
+          matches every file
         - \c reopts: regular expression match options (ex RE_Caseless for case-insensitive matches)
         - \c skip_file_content_retrieval: if True then @ref SftpPoller::SftpPoller::singleFileEvent and
           @ref SftpPoller::SftpPoller::postSingleFileEvent methods won't get 'data' member of the input hash, i.e. the
@@ -440,10 +444,14 @@ public class SftpPoller {
         }
 
         bool re = False;
-        if (conf.regex_mask) {
-            mask = remove conf.regex_mask;
-            re = True;
-            conf -= "mask";
+        # an empty regex_mask is a regex that matches every file; it must be removed from the options in any case
+        if (conf.hasKey("regex_mask")) {
+            *string regex_mask = remove conf.regex_mask;
+            if (exists regex_mask) {
+                mask = regex_mask;
+                re = True;
+                conf -= "mask";
+            }
         }
 
         # set options
@@ -496,7 +504,8 @@ public class SftpPoller {
         - \c path: the remote path(s) for retrieving the files; if a list of strings is given then each path will be
           polled for matching files according to the \c "mask" or \c "regex_mask" option
         - \c port: the integer port number to connect to (default 22; must be > 0 if given)
-        - \c regex_mask: a regular expression to use as a mask (overrides any \c "mask" value)
+        - \c regex_mask: a regular expression to use as a mask (overrides any \c "mask" value); an empty string
+          matches every file
         - \c reopts: regular expression match options (ex RE_Caseless for case-insensitive matches)
         - \c skip_file_content_retrieval: if True then @ref SftpPoller::SftpPoller::singleFileEvent and
           @ref SftpPoller::SftpPoller::postSingleFileEvent methods won't get 'data' member of the input hash, i.e. the
@@ -550,10 +559,14 @@ public class SftpPoller {
         }
 
         bool re = False;
-        if (conf.regex_mask) {
-            mask = remove conf.regex_mask;
-            re = True;
-            conf -= "mask";
+        # an empty regex_mask is a regex that matches every file; it must be removed from the options in any case
+        if (conf.hasKey("regex_mask")) {
+            *string regex_mask = remove conf.regex_mask;
+            if (exists regex_mask) {
+                mask = regex_mask;
+                re = True;
+                conf -= "mask";
+            }
         }
 
         # set options

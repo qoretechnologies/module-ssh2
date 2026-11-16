@@ -40,6 +40,26 @@ class MySftpPoller inherits SftpPoller {
     }
 }
 
+#! collects the names of the files that one poll finds
+class NameSftpPoller inherits SftpPoller {
+    public {
+        list<string> names = ();
+    }
+
+    constructor(SFTPClient sc, hash<auto> opts) : SftpPoller(sc, opts) {
+    }
+
+    constructor(hash<auto> opts) : SftpPoller(opts) {
+    }
+
+    nothing singleFileEvent(hash<SftpPollerFileEventInfo> fh) {
+        names += fh.name;
+    }
+
+    nothing postSingleFileEvent(hash<SftpPollerFileEventInfo> fh) {
+    }
+}
+
 class SftpPollerTest inherits QUnit::Test {
     public {}
 
@@ -97,6 +117,12 @@ class SftpPollerTest inherits QUnit::Test {
     private {
         #! the known_hosts file of the test: no test writes the keys of the test server to the user's known_hosts
         string known_hosts = sprintf("%s%sssh2-test-known-hosts-%s", tmp_location(), DirSep, get_random_string(10));
+
+        #! the URI of the test server
+        string uri;
+
+        #! the private key file used for authentication, if any
+        *string keyfile;
     }
 
     constructor() : Test("SftpPollerTest", "1.2", \ARGV, MyOpts) {
@@ -107,26 +133,94 @@ class SftpPollerTest inherits QUnit::Test {
         }
         addTestCase("SftpPollerTests", \sftpPollerTests());
         addTestCase("SftpPolerRemotePathNegTest", \sftpPollerRemotePathNegTest());
+        addTestCase("SftpPollerRegexMaskTest", \sftpPollerRegexMaskTest());
 
-        string uri = m_options.uri ?? shift ARGV ?? sprintf("%s@localhost", getusername());
+        uri = m_options.uri ?? shift ARGV ?? sprintf("%s@localhost", getusername());
 
         printf("Connecting to %y\n", uri);
 
-        sc = new SFTPClient(uri);
         if (m_options.privkey) {
-            sc.setKeys(m_options.privkey);
+            keyfile = m_options.privkey;
         } else {
             if (PlatformOS == "Windows")
                 exit(0);
 
             string sshdir = `echo -n ~/.ssh`;
             if (is_file(sshdir + "/id_rsa"))
-                sc.setKeys(sshdir + "/id_rsa");
+                keyfile = sshdir + "/id_rsa";
             else if (is_file(sshdir + "/id_dsa"))
-                sc.setKeys(sshdir + "/id_dsa");
+                keyfile = sshdir + "/id_dsa";
         }
+        sc = getClient();
 
         set_return_value(main());
+    }
+
+    #! returns a new client for the test server, which starts in the login directory
+    private SFTPClient getClient() {
+        SFTPClient client(uri);
+        if (keyfile) {
+            client.setKeys(keyfile);
+        }
+        return client;
+    }
+
+    #! issue #3377: an empty "regex_mask" matches every file with both constructors
+    sftpPollerRegexMaskTest() {
+        # a client of its own, so that the directory is relative to the login directory
+        SFTPClient setup = getClient();
+        string nd = sprintf("%s/", get_random_string());
+        if (m_options.dir) {
+            nd = sprintf("%s/%s/", m_options.dir, get_random_string());
+        }
+        setup.mkdir(nd);
+        map setup.putFile($1.value, nd + $1.key), Files.pairIterator();
+        on_exit {
+            map setup.removeFile(nd + $1), Files.keyIterator();
+            setup.rmdir(nd);
+        }
+
+        list<string> all = sort(keys Files);
+
+        # runs one poll with the SFTPClient constructor and returns the names of the files found
+        code poll_client = list<string> sub (hash<auto> opts) {
+            NameSftpPoller poller(getClient(), {"path": nd, "skip_file_content_retrieval": True} + opts);
+            poller.runOnce();
+            return sort(poller.names);
+        };
+
+        # runs one poll with the hash-only constructor and returns the names of the files found
+        hash<auto> info = sc.info();
+        code poll_host = list<string> sub (hash<auto> opts) {
+            hash<auto> conf = {
+                "host": info.ssh2host,
+                "path": nd,
+                "skip_file_content_retrieval": True,
+            };
+            if (info.ssh2port) {
+                conf.port = info.ssh2port;
+            }
+            if (info.ssh2user) {
+                conf.user = info.ssh2user;
+            }
+            if (keyfile) {
+                conf.keyfile = keyfile;
+            }
+            NameSftpPoller poller(conf + opts);
+            poller.runOnce();
+            return sort(poller.names);
+        };
+
+        foreach code poll in ((poll_client, poll_host)) {
+            # an empty regex mask matches every file, also when it overrides a glob mask
+            assertEq(all, poll({"regex_mask": ""}));
+            assertEq(all, poll({"regex_mask": "", "mask": "*.txt"}));
+            # a regex mask overrides the glob mask
+            assertEq(("d.php",), poll({"regex_mask": "\\.php$", "mask": "*.txt"}));
+            # without a regex mask, the glob mask is used
+            assertEq(("d.php",), poll({"regex_mask": NOTHING, "mask": "*.php"}));
+            assertEq(all, poll({}));
+        }
     }
 
     private usageIntern() {
