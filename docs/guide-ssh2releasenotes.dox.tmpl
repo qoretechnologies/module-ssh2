@@ -177,9 +177,12 @@
       (<a href="https://github.com/qoretechnologies/qore/issues/3377">issue 3377</a>)
     - an error raised while an @ref SftpPoller::SftpPoller "SftpPoller" handles a polled file (ex: an observer that
       refuses the file event) keeps the remote file and retries the poll after
-      @ref SftpPoller::SftpPoller::ErrorDelay "SftpPoller::ErrorDelay" instead of stopping polling, and an SFTP error
-      transferring a later file of a poll is retried like any other SFTP error (see @ref sftppollererrors;
+      the \c "error_delay" option's delay instead of stopping polling, and an SFTP error transferring a later file
+      of a poll is retried like any other SFTP error (see @ref sftppollererrors;
       <a href="https://github.com/qoretechnologies/qore/issues/6400">issue 6400</a>)
+    - @ref SftpPoller::SftpPoller "SftpPoller" has an \c "error_delay" option for the delay before a poll is
+      retried after an error (default: one minute), and a stop ends a wait between polls at once
+      (<a href="https://github.com/qoretechnologies/module-ssh2/issues/116">issue 116</a>)
     - removed stale TODO in mkdir implementation
     - documented known memory leak in sftp_shutdown timeout (libssh2 limitation)
     - updated copyright years to 2026
