@@ -527,16 +527,18 @@ public class SftpConnection inherits AbstractSsh2Connection {
                 "subtypes: %y", subtype, keys getDataProviderSubtypes());
         }
         checkSubtypeInfo();
-        hash<auto> opts = {
+        # the connection's options are the members of this object (self.opts); a local variable named opts would
+        # shadow them in its own initialization expression
+        hash<auto> dp_opts = {
             "url": url,
-            "keyfile": opts.keyfile,
-            "known_hosts": opts.known_hosts,
-            "host_key_policy": opts.host_key_policy,
-            "verify_host_key": opts.verify_host_key,
-            "use_agent": opts.use_agent,
-            "keepalive_interval": opts.keepalive_interval,
+            "keyfile": self.opts.keyfile,
+            "known_hosts": self.opts.known_hosts,
+            "host_key_policy": self.opts.host_key_policy,
+            "verify_host_key": self.opts.verify_host_key,
+            "use_agent": self.opts.use_agent,
+            "keepalive_interval": self.opts.keepalive_interval,
         } + getSubtypeOptions(subtype_info{subtype}, constructor_options);
-        return create_object(conf."class", opts);
+        return create_object(conf."class", dp_opts);
     }
 
     #! Sets child data provider capabilities
