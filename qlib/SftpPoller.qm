@@ -249,6 +249,7 @@ public class SftpPoller {
         #! optional constructor hash keys
         const OptionalKeys = (
             "path", "user", "pass", "keyfile", "regex_mask", "minage", "encoding", "log_info", "log_detail",
+            "known_hosts", "host_key_policy", "verify_host_key", "use_agent", "keepalive_interval",
             "log_debug", "binary", "delete_remote_file", "move_remote_file",
 %ifndef PO_NO_PROCESS_CONTROL
             "sleep",
@@ -287,6 +288,21 @@ public class SftpPoller {
 
         #! path to the ssh private key in PEM format; one of \c "pass" or \c "keyfile" *must* be set
         *string keyfile;
+
+        #! path to an OpenSSH known_hosts file for host key verification
+        *string known_hosts;
+
+        #! the policy for unknown host keys (\c "reject", \c "tofu" or \c "tofu-session")
+        *string host_key_policy;
+
+        #! enables host key verification against the known_hosts file
+        *bool verify_host_key;
+
+        #! enables SSH agent authentication
+        *bool use_agent;
+
+        #! keepalive interval in seconds; 0 disables keepalive
+        *int keepalive_interval;
 
         #! path(s) to poll
         softlist<string> path = ".";
@@ -538,7 +554,11 @@ public class SftpPoller {
           Cannot be set if \c move_remote_file is also set
         - \c encoding: the encoding for any text files received
         - \c host: (required) the hostname or address to connect to
+        - \c host_key_policy: the policy for unknown host keys: \c "reject", \c "tofu" or \c "tofu-session" (see
+          @ref applyClientOptions())
+        - \c keepalive_interval: the keepalive interval in seconds; 0 disables keepalive
         - \c keyfile: the SSH key (file and path to it)
+        - \c known_hosts: the path to an OpenSSH known_hosts file for host key verification
         - \c local_dir: a local directory to use to transfer remote files so large file data does not appear in events
         - \c log_info: a @ref closure "closure" or @ref call_reference "call reference" for logging important
           information; must accept a single string giving the log message
@@ -573,6 +593,9 @@ public class SftpPoller {
           @ref closure "closure" or @ref call_reference "call reference" for starting threads; must return the integer
           thread ID (if not set then @ref background will be used)
         - \c timeout: connection timeout (default \c 30s)
+        - \c use_agent: enables SSH agent authentication (see @ref applyClientOptions())
+        - \c verify_host_key: enables host key verification against the known_hosts file (see
+          @ref applyClientOptions())
         - \c user: the username to use for the connection
         - \c writable: check if path(s) is/are writable  (default: False see also the \c "check_file" option)
         - \c tempfile_template: (used when \c local_dir and \c atomic_transfer are set) the temporary filename prefix
@@ -648,6 +671,7 @@ public class SftpPoller {
         if (keyfile) {
             sftp.setKeys(keyfile);
         }
+        applyClientOptions(sftp, conf);
 
         url = sprintf("%s@%s:%d", user ? user : "<none>", host, port);
 
@@ -674,6 +698,56 @@ public class SftpPoller {
             return;
         }
         stop();
+    }
+
+    #! applies the host key, agent and keepalive options to an SFTP client
+    /** The options are the ones of the connection that the poller connects with: the client is configured as a
+        client of an SFTP connection or of the SFTP client data provider is, so host keys are verified (or not) on the
+        poller path as the connection says
+
+        @param sftp the client to configure
+        @param options a hash that can have the following keys (the others are ignored):
+        - \c known_hosts: the path to an OpenSSH known_hosts file (environment variables can be prefixed with \c '$');
+          an empty string configures no known_hosts file; if not set, the default of the \c ssh2 module applies
+        - \c host_key_policy: the policy for unknown host keys: \c "reject", \c "tofu" or \c "tofu-session"
+        - \c verify_host_key: enables host key verification against the known_hosts file
+        - \c use_agent: enables SSH agent authentication
+        - \c keepalive_interval: the keepalive interval in seconds; 0 disables keepalive
+
+        @throw OPTION-VALUE-ERROR invalid \c host_key_policy value
+    */
+    static applyClientOptions(SFTPClient sftp, hash<auto> options) {
+        if (exists options.known_hosts) {
+            sftp.setKnownHostsFile(substitute_env_vars(options.known_hosts));
+        }
+        if (exists options.host_key_policy) {
+            sftp.setHostKeyPolicy(SftpPoller::getHostKeyPolicy(options.host_key_policy));
+        }
+        if (exists options.verify_host_key) {
+            sftp.setVerifyHostKey(options.verify_host_key);
+        }
+        if (exists options.use_agent) {
+            sftp.setUseAgent(options.use_agent);
+        }
+        if (exists options.keepalive_interval) {
+            sftp.setKeepalive(options.keepalive_interval);
+        }
+    }
+
+    #! returns the host key policy for the value of a \c host_key_policy option
+    /** @throw OPTION-VALUE-ERROR invalid \c host_key_policy value
+    */
+    static enum<Ssh2HostKeyPolicy> getHostKeyPolicy(string policy) {
+        switch (policy) {
+            case "reject":
+                return Ssh2HostKeyPolicy::Reject;
+            case "tofu":
+                return Ssh2HostKeyPolicy::TrustOnFirstUse;
+            case "tofu-session":
+                return Ssh2HostKeyPolicy::TrustOnFirstUseSession;
+        }
+        throw "OPTION-VALUE-ERROR", sprintf("invalid host_key_policy option value %y; expected one of %y", policy,
+            ("reject", "tofu", "tofu-session"));
     }
 
     updateOptions(SFTPClient sftp) {
@@ -1314,6 +1388,75 @@ public class SftpPollerDataProviderBase inherits DataProvider::AbstractDataProvi
                 "short_desc": "A path to an SSH private key file in PEM format",
                 "type": AbstractDataProviderTypeMap."string",
                 "desc": "A path to an SSH private key file in PEM format to use for key-based authentication",
+            },
+
+            "known_hosts": <DataProviderOptionInfo>{
+                "display_name": "Known Hosts File",
+                "short_desc": "A path to an OpenSSH known_hosts file for host key verification",
+                "type": AbstractDataProviderTypeMap."string",
+                "desc": "A path to an OpenSSH known_hosts file for host key verification; environment variables "
+                    "can be prefixed with '$' in the path; if set to an empty string, no known_hosts file is "
+                    "configured; if not set, the ssh2 module default applies (normally the local user's "
+                    "~/.ssh/known_hosts file, unless the embedding application has changed or disabled the "
+                    "module default)",
+            },
+
+            "host_key_policy": <DataProviderOptionInfo>{
+                "display_name": "Host Key Policy",
+                "short_desc": "Policy for unknown host keys",
+                "type": AbstractDataProviderTypeMap."string",
+                "desc": "Policy for unknown host keys when host-key verification is enabled: `reject` rejects "
+                    "unknown keys, `tofu` persists first-use keys to the configured known_hosts file, and "
+                    "`tofu-session` trusts unknown keys for the current connection only if no known_hosts file is "
+                    "configured",
+                "allowed_values": (
+                    <AllowedValueInfo>{
+                        "display_name": "Reject",
+                        "short_desc": "Reject unknown host keys",
+                        "desc": "Reject unknown host keys",
+                        "value": "reject",
+                    },
+                    <AllowedValueInfo>{
+                        "display_name": "Trust On First Use",
+                        "short_desc": "Trust unknown host keys on first use and persist them",
+                        "desc": "Trust unknown host keys on first use and persist them to the configured known_hosts "
+                            "file",
+                        "value": "tofu",
+                    },
+                    <AllowedValueInfo>{
+                        "display_name": "Session Trust On First Use",
+                        "short_desc": "Trust unknown host keys for the current connection only when needed",
+                        "desc": "Trust unknown host keys for the current connection only if no known_hosts file is "
+                            "configured",
+                        "value": "tofu-session",
+                    },
+                ),
+                "default_value": "tofu",
+            },
+
+            "verify_host_key": <DataProviderOptionInfo>{
+                "display_name": "Verify Host Key",
+                "short_desc": "Enable host key verification against the known_hosts file",
+                "type": AbstractDataProviderTypeMap."bool",
+                "desc": "Enable host key verification against the known_hosts file",
+                "default_value": True,
+            },
+
+            "use_agent": <DataProviderOptionInfo>{
+                "display_name": "Use SSH Agent",
+                "short_desc": "Enable SSH agent authentication",
+                "type": AbstractDataProviderTypeMap."bool",
+                "desc": "Enable SSH agent authentication; when enabled, the client will attempt to authenticate "
+                    "using keys from the running SSH agent before other methods",
+                "default_value": True,
+            },
+
+            "keepalive_interval": <DataProviderOptionInfo>{
+                "display_name": "Keepalive Interval",
+                "short_desc": "Keepalive interval in seconds",
+                "type": AbstractDataProviderTypeMap."int",
+                "desc": "Keepalive interval in seconds; 0 disables keepalive; default: 60",
+                "default_value": 60,
             },
 
             "local_dir": <DataProviderOptionInfo>{

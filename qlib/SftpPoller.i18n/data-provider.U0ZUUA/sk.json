@@ -218,6 +218,102 @@
         "app.U0ZUUA.short_desc": {
           "source": "Generic SFTP server for exchanging files with SFTP",
           "message": "Všeobecný SFTP server na výmenu súborov pomocou SFTP"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.a25vd25faG9zdHM.display_name": {
+          "source": "Known Hosts File",
+          "message": "Súbor známych hostiteľov"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.a25vd25faG9zdHM.short_desc": {
+          "source": "A path to an OpenSSH known_hosts file for host key verification",
+          "message": "Cesta k súboru known_hosts OpenSSH pre overenie hostiteľského kľúča"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.a25vd25faG9zdHM.desc": {
+          "source": "A path to an OpenSSH known_hosts file for host key verification; environment variables can be prefixed with '$' in the path; if set to an empty string, no known_hosts file is configured; if not set, the ssh2 module default applies (normally the local user's ~/.ssh/known_hosts file, unless the embedding application has changed or disabled the module default)",
+          "message": "Cesta k súboru known_hosts OpenSSH pre overenie hostiteľského kľúča; premenné prostredia môžu mať v ceste predponu '$'; ak je nastavené na prázdny reťazec, žiadny súbor known_hosts nie je nakonfigurovaný; ak nie je nastavené, použije sa predvolená hodnota modulu ssh2 (obvykle súbor ~/.ssh/known_hosts lokálneho užívateľa, pokiaľ aplikácia, ktorá modul vložila, nezmenila alebo vypnula predvolenú hodnotu)"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfcG9saWN5.display_name": {
+          "source": "Host Key Policy",
+          "message": "Politika verejného kľúča"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfcG9saWN5.short_desc": {
+          "source": "Policy for unknown host keys",
+          "message": "Pravidlá pre neznáme verejné kľúče"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfcG9saWN5.desc": {
+          "source": "Policy for unknown host keys when host-key verification is enabled: `reject` rejects unknown keys, `tofu` persists first-use keys to the configured known_hosts file, and `tofu-session` trusts unknown keys for the current connection only if no known_hosts file is configured",
+          "message": "Pravidlo pre neznáme kľúče hostiteľa, keď je overovanie hostiteľského kľúča zapnuté: `reject` odmietne neznáme kľúče, `tofu` uloží kľúče použité prvýkrát do konfigurovanej súboru known_hosts a `tofu-session` dôveruje neznámym kľúčom pre aktuálnu spojenie len, ak nie je konfigurovaný súbor known_hosts"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfcG9saWN5.allowed-value.c3RyaW5nOnJlamVjdA.display_name": {
+          "source": "Reject",
+          "message": "Odmietnúť"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfcG9saWN5.allowed-value.c3RyaW5nOnJlamVjdA.short_desc": {
+          "source": "Reject unknown host keys",
+          "message": "Odmietnuť neznáme hostiteľské kľúče"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfcG9saWN5.allowed-value.c3RyaW5nOnJlamVjdA.desc": {
+          "source": "Reject unknown host keys",
+          "message": "Odmietnuť neznáme hostiteľské kľúče"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfcG9saWN5.allowed-value.c3RyaW5nOnRvZnU.display_name": {
+          "source": "Trust On First Use",
+          "message": "Dôvera pri prvom použití"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfcG9saWN5.allowed-value.c3RyaW5nOnRvZnU.short_desc": {
+          "source": "Trust unknown host keys on first use and persist them",
+          "message": "Dôverovať neznámym kľúčom hostiteľa pri prvom použití a uchovávať ich"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfcG9saWN5.allowed-value.c3RyaW5nOnRvZnU.desc": {
+          "source": "Trust unknown host keys on first use and persist them to the configured known_hosts file",
+          "message": "Dôverovať neznámym kľúčom hostiteľa pri prvom použití a uchovávať ich v konfigurovanej súbore known_hosts"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfcG9saWN5.allowed-value.c3RyaW5nOnRvZnUtc2Vzc2lvbg.display_name": {
+          "source": "Session Trust On First Use",
+          "message": "Dôvera pri prvom použití pre spojenie"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfcG9saWN5.allowed-value.c3RyaW5nOnRvZnUtc2Vzc2lvbg.short_desc": {
+          "source": "Trust unknown host keys for the current connection only when needed",
+          "message": "Dôverovať neznámym kľúčom hostiteľa len pre aktuálnu spojenie"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfcG9saWN5.allowed-value.c3RyaW5nOnRvZnUtc2Vzc2lvbg.desc": {
+          "source": "Trust unknown host keys for the current connection only if no known_hosts file is configured",
+          "message": "Dôverovať neznámym kľúčom hostiteľa len pre aktuálnu spojenie, ak nie je konfigurovaný súbor known_hosts"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.dmVyaWZ5X2hvc3Rfa2V5.display_name": {
+          "source": "Verify Host Key",
+          "message": "Overiť kľúč hostiteľa"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.dmVyaWZ5X2hvc3Rfa2V5.short_desc": {
+          "source": "Enable host key verification against the known_hosts file",
+          "message": "Povoliť overenie kľúča hostiteľa podľa súboru known_hosts"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.dmVyaWZ5X2hvc3Rfa2V5.desc": {
+          "source": "Enable host key verification against the known_hosts file",
+          "message": "Povoliť overenie kľúča hostiteľa podľa súboru known_hosts"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.dXNlX2FnZW50.display_name": {
+          "source": "Use SSH Agent",
+          "message": "Použiť SSH agenta"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.dXNlX2FnZW50.short_desc": {
+          "source": "Enable SSH agent authentication",
+          "message": "Povoliť overenie pomocou SSH agenta"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.dXNlX2FnZW50.desc": {
+          "source": "Enable SSH agent authentication; when enabled, the client will attempt to authenticate using keys from the running SSH agent before other methods",
+          "message": "Povoliť overenie pomocou SSH agenta; ak je povolené, klient sa pokúsi overiť pomocou kľúčov z bežiaceho SSH agenta pred inými metódami"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.a2VlcGFsaXZlX2ludGVydmFs.display_name": {
+          "source": "Keepalive Interval",
+          "message": "Interval keepalive"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.a2VlcGFsaXZlX2ludGVydmFs.short_desc": {
+          "source": "Keepalive interval in seconds",
+          "message": "Interval keepalive v sekundách"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.a2VlcGFsaXZlX2ludGVydmFs.desc": {
+          "source": "Keepalive interval in seconds; 0 disables keepalive; default: 60",
+          "message": "Interval keepalive v sekundách; hodnota 0 vypne keepalive; predvolené: 60"
         }
       }
     }

@@ -1,0 +1,219 @@
+#! The data provider that an SFTP connection creates takes and applies the options of the connection
+/** SftpConnection::getDataProviderImpl() builds the constructor options of the data provider from the options of the
+    connection.  A local variable named like the options hash read itself in its own initialization expression, so
+    the options of the connection never reached the data provider (and current Qore refuses that code at parse time).
+    Reading them exposed that the \c sftppoller data provider took only the URL and the key file: it refused the host
+    key, agent and keepalive options of the connection, and the poller it builds ignored them, so host keys were not
+    checked as the connection says.  The data provider and the poller now take the options and apply them to the SFTP
+    client that the poller connects with.
+
+    The key file test needs no SSH server: the data provider loads the key file of the connection when it is created,
+    so a key file that does not exist shows, in the error of the data provider, that the connection's key file reached
+    it.  The host key tests need an SSH server on localhost: the host key is checked before any authentication, so any
+    server does; they are skipped without one.
+*/
+#!/usr/bin/env qore
+# -*- mode: qore; indent-tabs-mode: nil -*-
+
+# Copyright (C) 2026 Qore Technologies, s.r.o.
+
+%modern
+
+%prepend-module-path "${SCRIPT_DIR}/../qlib"
+
+%requires Ssh2Connections
+%requires SftpPoller
+%requires ssh2 >= 2.0
+
+%requires Util
+%requires QUnit
+
+%exec-class Ssh2DataProviderOptionsTest
+
+#! a poller that does nothing with the files: the test only creates it
+class TestPoller inherits SftpPoller {
+    constructor(hash<auto> conf) : SftpPoller(conf) {
+    }
+
+    singleFileEvent(hash<SftpPollerFileEventInfo> event) {
+    }
+
+    postSingleFileEvent(hash<SftpPollerFileEventInfo> event) {
+    }
+}
+
+#! The data provider that an SFTP connection creates takes the options of the connection that it supports
+/** SftpConnection::getDataProviderImpl() builds the constructor options of the data provider from the options of the
+    connection.  A local variable named like the options hash read itself in its own initialization expression, so
+    the options of the connection never reached the data provider (and current Qore refuses that code at parse time).
+    Reading the options of the connection passes the ones that the \c sftppoller data provider supports (the URL and the
+    key file) and leaves out the ones it does not (host key checks, agent, keepalive), which its constructor refuses.
+
+    The test needs no SSH server: the data provider loads the key file of the connection when it is created, so a key
+    file that does not exist shows, in the error of the data provider, that the connection's key file reached it.
+*/
+class Ssh2DataProviderOptionsTest inherits QUnit::Test {
+    private {
+        #! a key file that does not exist
+        string keyfile = sprintf("%s%sssh2-dp-options-no-such-key-%s", tmp_location(), DirSep, get_random_string(10));
+        #! the known_hosts file that no test writes
+        string known_hosts = sprintf("%s%sssh2-dp-options-known-hosts-%s", tmp_location(), DirSep,
+            get_random_string(10));
+    }
+
+    constructor() : Test("Ssh2DataProviderOptionsTest", "1.0", \ARGV) {
+        addTestCase("the key file of the connection reaches the data provider", \keyfileTest());
+        addTestCase("the data provider accepts all the options of the connection", \acceptedOptionsTest());
+        addTestCase("a constructor option of the caller overrides the option of the connection", \callerOptionsTest());
+        addTestCase("the host key, agent and keepalive options are applied to the client", \clientOptionsAppliedTest());
+        addTestCase("an unknown host key is refused on the poller path", \unknownHostKeyRefusedTest());
+
+        set_return_value(main());
+    }
+
+    private SftpConnection getConnection(hash<auto> options) {
+        return new SftpConnection("dp-options-test", "test", "sftp://user@localhost:22", {}, options);
+    }
+
+    #! returns the exception that creating the data provider raises
+    private hash<ExceptionInfo> createFails(SftpConnection conn, *hash<auto> constructor_options) {
+        try {
+            conn.getDataProvider("sftppoller", constructor_options);
+        } catch (hash<ExceptionInfo> ex) {
+            return ex;
+        }
+        throw "TEST-ERROR", "the data provider was created";
+    }
+
+    keyfileTest() {
+        hash<ExceptionInfo> ex = createFails(getConnection({"keyfile": keyfile}));
+        # the data provider loads the key file of the connection: it is the one that the error names
+        assertEq("SSH2-SETKEYS-ERROR", ex.err);
+        assertTrue(ex.desc.find(keyfile) >= 0, ex.desc);
+    }
+
+    acceptedOptionsTest() {
+        hash<auto> options = {
+            "keyfile": keyfile,
+            "known_hosts": known_hosts,
+            "host_key_policy": "reject",
+            "verify_host_key": True,
+            "use_agent": False,
+            "keepalive_interval": 30,
+        };
+        hash<ExceptionInfo> ex = createFails(getConnection(options));
+        # not the refusal of an option, but the load of the key file
+        assertEq("SSH2-SETKEYS-ERROR", ex.err);
+        assertTrue(ex.desc.find("invalid options") < 0, ex.desc);
+        assertTrue(ex.desc.find(keyfile) >= 0, ex.desc);
+    }
+
+    callerOptionsTest() {
+        string other_keyfile = keyfile + "-caller";
+        hash<ExceptionInfo> ex = createFails(getConnection({"keyfile": keyfile}), {"keyfile": other_keyfile});
+        # the option of the caller wins over the option of the connection
+        assertEq("SSH2-SETKEYS-ERROR", ex.err);
+        assertTrue(ex.desc.find(other_keyfile) >= 0, ex.desc);
+    }
+
+    clientOptionsAppliedTest() {
+        SFTPClient sftp("sftp://user@localhost:22");
+        SftpPoller::applyClientOptions(sftp, {
+            "known_hosts": known_hosts,
+            "host_key_policy": "reject",
+            "verify_host_key": True,
+            "use_agent": False,
+            "keepalive_interval": 45,
+        });
+        assertEq(known_hosts, sftp.getKnownHostsFile());
+        assertEq(Ssh2HostKeyPolicy::Reject, sftp.getHostKeyPolicy());
+        assertEq(True, sftp.getVerifyHostKey());
+        assertEq(False, sftp.getUseAgent());
+        assertEq(45, sftp.getKeepalive());
+
+        SftpPoller::applyClientOptions(sftp, {
+            "host_key_policy": "tofu-session",
+            "verify_host_key": False,
+            "use_agent": True,
+            "keepalive_interval": 0,
+        });
+        assertEq(Ssh2HostKeyPolicy::TrustOnFirstUseSession, sftp.getHostKeyPolicy());
+        assertEq(False, sftp.getVerifyHostKey());
+        assertEq(True, sftp.getUseAgent());
+        assertEq(0, sftp.getKeepalive());
+        # an option that is not given leaves the client as it is
+        assertEq(known_hosts, sftp.getKnownHostsFile());
+
+        assertEq(Ssh2HostKeyPolicy::TrustOnFirstUse, SftpPoller::getHostKeyPolicy("tofu"));
+        try {
+            SftpPoller::applyClientOptions(sftp, {"host_key_policy": "bogus"});
+            assertTrue(False, "an invalid host key policy must be refused");
+        } catch (hash<ExceptionInfo> ex) {
+            assertEq("OPTION-VALUE-ERROR", ex.err);
+        }
+    }
+
+    #! skips the test if no SSH server listens on localhost
+    private needServer() {
+        Socket sock();
+        try {
+            sock.connect("localhost:22", 3s);
+            sock.close();
+        } catch (hash<ExceptionInfo> ex) {
+            testSkip("no SSH server on localhost:22: " + ex.err);
+        }
+    }
+
+    #! creates an empty known_hosts file (the host key of the server is unknown to it); the file is removed when the
+    #! test case ends
+    private string emptyKnownHosts(reference<list<string>> files) {
+        string path = sprintf("%s%sssh2-dp-options-empty-%s", tmp_location(), DirSep, get_random_string(10));
+        File f();
+        f.open2(path, O_CREAT | O_WRONLY | O_TRUNC);
+        f.close();
+        files += path;
+        return path;
+    }
+
+    unknownHostKeyRefusedTest() {
+        needServer();
+        # every case has a file of its own: a policy that trusts the key on first use can record it in the file
+        list<string> files = ();
+        on_exit map unlink($1), files;
+
+        hash<auto> conf = {
+            "host": "localhost",
+            "port": 22,
+            "path": ".",
+            "user": getusername(),
+            "pass": "no-such-password",
+            "mask": "*",
+            "poll_interval": 1,
+            "verify_host_key": True,
+        };
+
+        # the policy that trusts the key for the session lets the poller connect: the refusal below is the policy
+        TestPoller control(conf + {"known_hosts": emptyKnownHosts(\files), "host_key_policy": "tofu-session"});
+
+        # the poller refuses the unknown host key with the policy that rejects it
+        try {
+            new TestPoller(conf + {"known_hosts": emptyKnownHosts(\files), "host_key_policy": "reject"});
+            assertTrue(False, "the poller must refuse an unknown host key");
+        } catch (hash<ExceptionInfo> ex) {
+            assertEq("SSH2-HOSTKEY-UNKNOWN", ex.err);
+        }
+
+        # and so does the data provider that a connection creates from the same options
+        SftpConnection conn("host-key-test", "test", sprintf("sftp://%s:no-such-password@localhost:22", getusername()), {}, {
+            "known_hosts": emptyKnownHosts(\files),
+            "host_key_policy": "reject",
+            "verify_host_key": True,
+        });
+        try {
+            conn.getDataProvider("sftppoller");
+            assertTrue(False, "the data provider must refuse an unknown host key");
+        } catch (hash<ExceptionInfo> ex) {
+            assertEq("SSH2-HOSTKEY-UNKNOWN", ex.err);
+        }
+    }
+}

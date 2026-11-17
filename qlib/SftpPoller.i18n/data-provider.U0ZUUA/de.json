@@ -218,6 +218,102 @@
         "app.U0ZUUA.short_desc": {
           "source": "Generic SFTP server for exchanging files with SFTP",
           "message": "Generischer SFTP-Server zum Austauschen von Dateien mit SFTP"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.a25vd25faG9zdHM.display_name": {
+          "source": "Known Hosts File",
+          "message": "Datei mit bekannten Hosts"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.a25vd25faG9zdHM.short_desc": {
+          "source": "A path to an OpenSSH known_hosts file for host key verification",
+          "message": "Pfad zu einer OpenSSH known_hosts-Datei zur Überprüfung von Hostschlüsseln"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.a25vd25faG9zdHM.desc": {
+          "source": "A path to an OpenSSH known_hosts file for host key verification; environment variables can be prefixed with '$' in the path; if set to an empty string, no known_hosts file is configured; if not set, the ssh2 module default applies (normally the local user's ~/.ssh/known_hosts file, unless the embedding application has changed or disabled the module default)",
+          "message": "Pfad zu einer OpenSSH known_hosts-Datei zur Hostschlüsselüberprüfung; Umgebungsvariablen können im Pfad mit '$' präfixiert werden; bei leerer Zeichenkette ist keine known_hosts-Datei konfiguriert; wenn nicht gesetzt, gilt der Standardwert des ssh2-Moduls (normalerweise die Datei ~/.ssh/known_hosts des lokalen Benutzers, sofern die umgebende Anwendung den Standardwert nicht geändert oder deaktiviert hat)"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfcG9saWN5.display_name": {
+          "source": "Host Key Policy",
+          "message": "Host-Schlüssel-Richtlinie"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfcG9saWN5.short_desc": {
+          "source": "Policy for unknown host keys",
+          "message": "Richtlinie für unbekannte Hostschlüssel"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfcG9saWN5.desc": {
+          "source": "Policy for unknown host keys when host-key verification is enabled: `reject` rejects unknown keys, `tofu` persists first-use keys to the configured known_hosts file, and `tofu-session` trusts unknown keys for the current connection only if no known_hosts file is configured",
+          "message": "Richtlinie für unbekannte Hostschlüssel, wenn die Host-Schlüssel-Überprüfung aktiviert ist: `reject` lehnt unbekannte Schlüssel ab, `tofu` speichert erste Verwendung von Schlüsseln in der konfigurierten known_hosts-Datei, und `tofu-session` vertraut unbekannten Schlüsseln für die aktuelle Verbindung nur dann, wenn keine known_hosts-Datei konfiguriert ist"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfcG9saWN5.allowed-value.c3RyaW5nOnJlamVjdA.display_name": {
+          "source": "Reject",
+          "message": "Ablehnen"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfcG9saWN5.allowed-value.c3RyaW5nOnJlamVjdA.short_desc": {
+          "source": "Reject unknown host keys",
+          "message": "Unbekannte Hostschlüssel ablehnen"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfcG9saWN5.allowed-value.c3RyaW5nOnJlamVjdA.desc": {
+          "source": "Reject unknown host keys",
+          "message": "Unbekannte Hostschlüssel ablehnen"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfcG9saWN5.allowed-value.c3RyaW5nOnRvZnU.display_name": {
+          "source": "Trust On First Use",
+          "message": "Vertrauen beim ersten Verbinden"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfcG9saWN5.allowed-value.c3RyaW5nOnRvZnU.short_desc": {
+          "source": "Trust unknown host keys on first use and persist them",
+          "message": "Unbekannte Hostschlüssel beim ersten Verwenden vertrauen und dauerhaft speichern"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfcG9saWN5.allowed-value.c3RyaW5nOnRvZnU.desc": {
+          "source": "Trust unknown host keys on first use and persist them to the configured known_hosts file",
+          "message": "Unbekannte Hostschlüssel beim ersten Verbinden vertrauen und in der konfigurierten known_hosts-Datei speichern"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfcG9saWN5.allowed-value.c3RyaW5nOnRvZnUtc2Vzc2lvbg.display_name": {
+          "source": "Session Trust On First Use",
+          "message": "Sitzungs-Trust-On-First-Use"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfcG9saWN5.allowed-value.c3RyaW5nOnRvZnUtc2Vzc2lvbg.short_desc": {
+          "source": "Trust unknown host keys for the current connection only when needed",
+          "message": "Unbekannte Hostschlüssel nur für die aktuelle Verbindung vertrauen, wenn nötig"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfcG9saWN5.allowed-value.c3RyaW5nOnRvZnUtc2Vzc2lvbg.desc": {
+          "source": "Trust unknown host keys for the current connection only if no known_hosts file is configured",
+          "message": "Unbekannte Hostschlüssel nur für die aktuelle Verbindung vertrauen, wenn keine known_hosts-Datei konfiguriert ist"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.dmVyaWZ5X2hvc3Rfa2V5.display_name": {
+          "source": "Verify Host Key",
+          "message": "Hostschlüssel überprüfen"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.dmVyaWZ5X2hvc3Rfa2V5.short_desc": {
+          "source": "Enable host key verification against the known_hosts file",
+          "message": "Hostschlüsselüberprüfung gegen die known_hosts-Datei aktivieren"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.dmVyaWZ5X2hvc3Rfa2V5.desc": {
+          "source": "Enable host key verification against the known_hosts file",
+          "message": "Hostschlüsselüberprüfung gegen die known_hosts-Datei aktivieren"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.dXNlX2FnZW50.display_name": {
+          "source": "Use SSH Agent",
+          "message": "SSH-Agent verwenden"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.dXNlX2FnZW50.short_desc": {
+          "source": "Enable SSH agent authentication",
+          "message": "SSH-Agent-Authentifizierung aktivieren"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.dXNlX2FnZW50.desc": {
+          "source": "Enable SSH agent authentication; when enabled, the client will attempt to authenticate using keys from the running SSH agent before other methods",
+          "message": "SSH-Agent-Authentifizierung aktivieren; wenn aktiviert, versucht der Client, sich mit Schlüsseln aus dem laufenden SSH-Agenten zu authentifizieren, bevor andere Methoden verwendet werden"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.a2VlcGFsaXZlX2ludGVydmFs.display_name": {
+          "source": "Keepalive Interval",
+          "message": "Keepalive-Intervall"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.a2VlcGFsaXZlX2ludGVydmFs.short_desc": {
+          "source": "Keepalive interval in seconds",
+          "message": "Keepalive-Intervall in Sekunden"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.a2VlcGFsaXZlX2ludGVydmFs.desc": {
+          "source": "Keepalive interval in seconds; 0 disables keepalive; default: 60",
+          "message": "Keepalive-Intervall in Sekunden; 0 deaktiviert Keepalive; Standard: 60"
         }
       }
     }
