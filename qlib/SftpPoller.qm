@@ -135,6 +135,20 @@ hash opts = (
 
     A useful poller class would implement the @ref SftpPoller::SftpPoller::singleFileEvent() "SftpPoller::singleFileEvent()" method which process already-transferred files and the @ref SftpPoller::SftpPoller::postSingleFileEvent() "SftpPoller::postSingleFileEvent()" by deleting / moving / renaming the files so that they would not be acquired on the next poll.
 
+    @section sftppollererrors SftpPoller Errors and Retries
+
+    An @ref SftpPoller::SftpPoller "SftpPoller" handles errors while polling as follows:
+    - an SFTP error while files are listed or transferred is logged, and the poll is retried after
+      @ref SftpPoller::SftpPoller::ErrorDelay "SftpPoller::ErrorDelay"
+    - an error raised while a polled file is handled, by
+      @ref SftpPoller::SftpPoller::singleFileEvent() "SftpPoller::singleFileEvent()" or by an observer of an
+      @ref SftpPoller::SftpPollerDataProvider "SftpPollerDataProvider" that refuses or fails to handle the file event,
+      is logged, the remote file is kept, and the poll is retried after
+      @ref SftpPoller::SftpPoller::ErrorDelay "SftpPoller::ErrorDelay", so the file is handled again
+    - an error after a file was handled, in
+      @ref SftpPoller::SftpPoller::postSingleFileEvent() "SftpPoller::postSingleFileEvent()" or while the remote file
+      is deleted or moved, stops polling, as continuing could handle the file more than once
+
     @section sftpollersandbox SftpPoller Module in Sandboxed Programs
 
     The @ref SftpPoller::SftpPoller "SftpPoller" class includes support for running in sandboxed Program objects with the following parse options set:
@@ -144,6 +158,13 @@ hash opts = (
     @section sftppollerrelnotes SftpPoller Module Release Notes
 
     @section sftppollerv1_5 Version 1.5
+    - an error raised while a polled file is handled (ex: an observer that refuses the file event) is logged, the
+      remote file is kept, and the poll is retried after
+      @ref SftpPoller::SftpPoller::ErrorDelay "SftpPoller::ErrorDelay"; previously polling stopped (see
+      @ref sftppollererrors;
+      <a href="https://github.com/qoretechnologies/qore/issues/6400">qore issue 6400</a>)
+    - an SFTP error transferring a file after the first file of a poll is retried after
+      @ref SftpPoller::SftpPoller::ErrorDelay "SftpPoller::ErrorDelay" like any other SFTP error; it stopped polling
     - added data provider and app action support
     - corrected the source-owned provider presentation catalog so it contains the SFTP poller action without
       duplicating actions contributed by the SFTP client module
@@ -295,6 +316,9 @@ public class SftpPoller {
 
         #! internal "get files" flag
         bool get_files;
+
+        #! internal flag: True while singleFileEvent() handles a file (see @ref sftppollererrors)
+        bool in_event;
 
         #! internal fatal error flag
         bool fatal = False;
@@ -912,6 +936,7 @@ public class SftpPoller {
         bool ret = False;
         foreach string subdir in (path) {
             get_files = True;
+            in_event = False;
             if (path.size() != 1) {
                 sftp.chdir(rootSftpPath);
                 sftp.chdir(subdir);
@@ -924,6 +949,8 @@ public class SftpPoller {
 
                 if (fileEvent(files)) {
                     foreach hash<SftpPollerFileEventInfo> fh in (files) {
+                        # an error transferring any file is an SFTP error, after which the poll is retried
+                        get_files = True;
                         fh.filepath = subdir == "." ? fh.name : (subdir + "/" + fh.name);
                         if (skip_file_content_retrieval) {
                             logInfo("%y: skipping retrieval of file data based on the poller configuration", fh.name);
@@ -939,9 +966,15 @@ public class SftpPoller {
                             }
                         }
 
-                        # make sure any errors after this point cause the polling operation to stop
                         get_files = False;
+
+                        # an error raised by the event handler (ex: an observer that refuses the event) leaves the
+                        # remote file in place, and the poll is retried after the error delay
+                        # (qoretechnologies/qore#6400)
+                        in_event = True;
                         singleFileEvent(fh);
+                        # make sure any errors after this point cause the polling operation to stop
+                        in_event = False;
 
                         # set the "fatal" flag if an exception is thrown in postSingleFileEvent()
                         on_error fatal = True;
@@ -1091,6 +1124,7 @@ public class SftpPoller {
 
         while (runflag) {
             try {
+                in_event = False;
                 if (new_sftp) {
                     logInfo("Continuing polling with an updated SFTP connection");
                     setup(remove new_sftp);
@@ -1102,6 +1136,13 @@ public class SftpPoller {
             } catch (hash<ExceptionInfo> ex) {
                 if (get_files) {
                     logInfo("SFTP error in %y: %s: %s; waiting %y for next try", path, ex.err, ex.desc, ErrorDelay);
+                    if (runflag)
+                        sftpSleep(ErrorDelay);
+                } else if (in_event) {
+                    # the event handler refused or failed to handle the file, which is left in place
+                    in_event = False;
+                    logInfo("event handler error in %y: %s: %s; the remote file is kept; waiting %y for next try",
+                        path, ex.err, ex.desc, ErrorDelay);
                     if (runflag)
                         sftpSleep(ErrorDelay);
                 } else {
@@ -1120,7 +1161,7 @@ public class SftpPoller {
         return True;
     }
 
-    #! called for each matching file individually whenever matching files are polled with the list of matching file names; if any error occurs here, the error is logged and the polling operation is retried
+    #! called for each matching file individually whenever matching files are polled with the list of matching file names; if any error occurs here, the error is logged, the remote file is kept, and the poll is retried after ErrorDelay (see @ref sftppollererrors)
     /** @param fih a hash of file data and information with the following keys:
         - \c name: the name of the file, link, or directory
         - \c size: the size of the file in bytes
