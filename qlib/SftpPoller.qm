@@ -138,13 +138,13 @@ hash opts = (
     @section sftppollererrors SftpPoller Errors and Retries
 
     An @ref SftpPoller::SftpPoller "SftpPoller" handles errors while polling as follows:
-    - an SFTP error while files are listed or transferred is logged, and the poll is retried after
-      @ref SftpPoller::SftpPoller::ErrorDelay "SftpPoller::ErrorDelay"
+    - an SFTP error while files are listed or transferred is logged, and the poll is retried after the
+      \c "error_delay" option's delay (default: one minute)
     - an error raised while a polled file is handled, by
       @ref SftpPoller::SftpPoller::singleFileEvent() "SftpPoller::singleFileEvent()" or by an observer of an
       @ref SftpPoller::SftpPollerDataProvider "SftpPollerDataProvider" that refuses or fails to handle the file event,
-      is logged, the remote file is kept, and the poll is retried after
-      @ref SftpPoller::SftpPoller::ErrorDelay "SftpPoller::ErrorDelay", so the file is handled again
+      is logged, the remote file is kept, and the poll is retried after the \c "error_delay" option's delay, so the
+      file is handled again
     - an error after a file was handled, in
       @ref SftpPoller::SftpPoller::postSingleFileEvent() "SftpPoller::postSingleFileEvent()" or while the remote file
       is deleted or moved, stops polling, as continuing could handle the file more than once
@@ -159,12 +159,16 @@ hash opts = (
 
     @section sftppollerv1_5 Version 1.5
     - an error raised while a polled file is handled (ex: an observer that refuses the file event) is logged, the
-      remote file is kept, and the poll is retried after
-      @ref SftpPoller::SftpPoller::ErrorDelay "SftpPoller::ErrorDelay"; previously polling stopped (see
-      @ref sftppollererrors;
+      remote file is kept, and the poll is retried after the \c "error_delay" option's delay; previously polling
+      stopped (see @ref sftppollererrors;
       <a href="https://github.com/qoretechnologies/qore/issues/6400">qore issue 6400</a>)
-    - an SFTP error transferring a file after the first file of a poll is retried after
-      @ref SftpPoller::SftpPoller::ErrorDelay "SftpPoller::ErrorDelay" like any other SFTP error; it stopped polling
+    - an SFTP error transferring a file after the first file of a poll is retried after the \c "error_delay"
+      option's delay like any other SFTP error; it stopped polling
+    - added the \c "error_delay" option for the delay before a poll is retried after an error (default: one minute,
+      the previous fixed delay), and @ref SftpPoller::SftpPoller::stop() "stop()" and
+      @ref SftpPoller::SftpPoller::stopNoWait() "stopNoWait()" end a wait between polls at once (without a
+      \c "sleep" closure); a stop waited for the end of the wait
+      (<a href="https://github.com/qoretechnologies/module-ssh2/issues/116">issue 116</a>)
     - added data provider and app action support
     - corrected the source-owned provider presentation catalog so it contains the SFTP poller action without
       duplicating actions contributed by the SFTP client module
@@ -239,6 +243,7 @@ public class SftpPoller {
             "check_file": "qore-sftp-check-file",
             "tempfile_template": ".tmp.%s.part",
             "atomic_transfer": False,
+            "error_delay": ErrorDelaySeconds,
         };
 
         #! optional constructor hash keys
@@ -257,8 +262,11 @@ public class SftpPoller {
         #! all keys
         const AllKeys = RequiredKeysWithHost + Defaults.keys() + OptionalKeys;
 
-        #! pause when SFTP errors are detected
+        #! the default delay before a poll is retried after an error (see the \c "error_delay" option)
         const ErrorDelay = 1m;
+
+        #! the default delay in seconds before a poll is retried after an error (see the \c "error_delay" option)
+        const ErrorDelaySeconds = 60;
     }
 
     private {
@@ -291,6 +299,15 @@ public class SftpPoller {
 
         #! poll interval in seconds
         int poll_interval;
+
+        #! the delay in seconds before a poll is retried after an error (see @ref sftppollererrors)
+        int error_delay = ErrorDelaySeconds;
+
+        #! sleep mutex for the condition-based wait between polls
+        Qore::Thread::Mutex sleep_m();
+
+        #! sleep condition, signaled when polling is stopped
+        Qore::Thread::Condition sleep_cond();
 
         #! Local directory to transfer file
         string local_dir;
@@ -400,6 +417,8 @@ public class SftpPoller {
           information; must accept a single string giving the log message
         - \c log_debug: a @ref closure "closure" or @ref call_reference "call reference" for logging verbose
           debgugging information; must accept a single string giving the log message
+        - \c error_delay: the delay in seconds before the poll is retried after an SFTP error or an error handling
+          a polled file (see @ref sftppollererrors; default: 60 seconds; must be > 0 if given)
         - \c poll_interval: the integer polling interval in seconds (default: 10 seconds; must be > 0 if given)
         - \c mask: the file glob mask to use (default: \c "*", ignored if \c "regex_mask" is also present)
         - \c minage: the minimum file age in seconds before a file will be acquired (default: 0)
@@ -420,7 +439,8 @@ public class SftpPoller {
           thread ID (if not set then @ref background will be used)
         - \c sleep: (required when the module is loaded by its path into a context where @ref Qore::PO_NO_PROCESS_CONTROL is set; the installed module declares \c PROCESS_CONTROL) a
           @ref closure "closure" or @ref call_reference "call reference" to use instead of @ref Qore::sleep() (if not
-          set then @ref Qore::sleep() will be used)
+          set then a wait that a stop ends at once is used); it is called with 1 (second) at a time until the wait
+          ends or polling is stopped, so it must really sleep (since SftpPoller 1.5)
         - \c timeout: connection timeout (default \c 30s)
         - \c writable: check if path(s) is/are writable  (default: False see also the \c "check_file" option)
         - \c tempfile_template: (used when \c local_dir and \c atomic_transfer are set) the temporary filename prefix
@@ -431,7 +451,8 @@ public class SftpPoller {
         they are in the remote SFTP server, unless they are removed or moved during polling processing. Only one of
         these options may be set at one time; setting both will result in an error
 
-        @throw SFTPPOLLER-CONSTRUCTOR-ARG-ERROR missing required key, invalid port or poll_interval given
+        @throw SFTPPOLLER-CONSTRUCTOR-ARG-ERROR missing required key, invalid port, poll_interval or error_delay
+        given
         @throw SFTPCLIENT-PARAMETER-ERROR empty hostname passed
         @throw SOCKET-CONNECT-ERROR error establishing socket connection (no listener, port blocked, etc); timeout
         establishing socket connection
@@ -460,6 +481,12 @@ public class SftpPoller {
         if (conf.poll_interval <= 0) {
             throw "SFTPPOLLER-CONSTRUCTOR-ARG-ERROR", sprintf("poll_interval cannot be <= 0 (val: %d)",
                 conf.poll_interval);
+        }
+
+        conf.error_delay = int(conf.error_delay);
+        if (conf.error_delay <= 0) {
+            throw "SFTPPOLLER-CONSTRUCTOR-ARG-ERROR", sprintf("error_delay cannot be <= 0 (val: %d)",
+                conf.error_delay);
         }
 
         if (conf.delete_remote_file && conf.move_remote_file.val()) {
@@ -519,6 +546,8 @@ public class SftpPoller {
           information; must accept a single string giving the log message
         - \c log_debug: a @ref closure "closure" or @ref call_reference "call reference" for logging verbose
           debgugging information; must accept a single string giving the log message
+        - \c error_delay: the delay in seconds before the poll is retried after an SFTP error or an error handling
+          a polled file (see @ref sftppollererrors; default: 60 seconds; must be > 0 if given)
         - \c poll_interval: the integer polling interval in seconds (default: 10 seconds; must be > 0 if given)
         - \c mask: the file glob mask to use (default: \c "*", ignored if \c "regex_mask" is also present)
         - \c minage: the minimum file age in seconds before a file will be acquired (default: 0)
@@ -538,7 +567,8 @@ public class SftpPoller {
           @ref SftpPoller::SftpPoller::postSingleFileEvent (default: False); (since ssh2 1.1)
         - \c sleep: (required when the module is loaded by its path into a context where @ref Qore::PO_NO_PROCESS_CONTROL is set; the installed module declares \c PROCESS_CONTROL) a
           @ref closure "closure" or @ref call_reference "call reference" to use instead of @ref Qore::sleep() (if not
-          set then @ref Qore::sleep() will be used)
+          set then a wait that a stop ends at once is used); it is called with 1 (second) at a time until the wait
+          ends or polling is stopped, so it must really sleep (since SftpPoller 1.5)
         - \c start_thread: (required when imported into a context where @ref Qore::PO_NO_THREAD_CONTROL is set) a
           @ref closure "closure" or @ref call_reference "call reference" for starting threads; must return the integer
           thread ID (if not set then @ref background will be used)
@@ -549,7 +579,8 @@ public class SftpPoller {
           to use when transferring files to the local directory specified by \c local_dir; use \c "%s" as the
           placeholder for the target filename
 
-        @throw SFTPPOLLER-CONSTRUCTOR-ARG-ERROR missing required key, invalid port or poll_interval given
+        @throw SFTPPOLLER-CONSTRUCTOR-ARG-ERROR missing required key, invalid port, poll_interval or error_delay
+        given
         @throw SFTPCLIENT-PARAMETER-ERROR empty hostname passed
         @throw SOCKET-CONNECT-ERROR error establishing socket connection (no listener, port blocked, etc); timeout
         establishing socket connection
@@ -574,6 +605,11 @@ public class SftpPoller {
         if (conf.poll_interval <= 0)
             throw "SFTPPOLLER-CONSTRUCTOR-ARG-ERROR", sprintf("poll_interval cannot be <= 0 (val: %d)",
                 conf.poll_interval);
+        conf.error_delay = int(conf.error_delay);
+        if (conf.error_delay <= 0) {
+            throw "SFTPPOLLER-CONSTRUCTOR-ARG-ERROR", sprintf("error_delay cannot be <= 0 (val: %d)",
+                conf.error_delay);
+        }
         if (conf.port <= 0)
             throw "SFTPPOLLER-CONSTRUCTOR-ARG-ERROR", sprintf("port cannot be <= 0 (val: %d)", conf.port);
 
@@ -880,7 +916,7 @@ public class SftpPoller {
         m.lock();
         on_exit m.unlock();
 
-        runflag = False;
+        stopIntern();
     }
 
     #! stops the polling operation, returns when the polling operation has been stopped
@@ -896,9 +932,16 @@ public class SftpPoller {
         m.lock();
         on_exit m.unlock();
 
-        runflag = False;
+        stopIntern();
 
         sc.waitForZero();
+    }
+
+    #! clears the run flag and wakes the polling thread from a wait between polls
+    private stopIntern() {
+        AutoLock al(sleep_m);
+        runflag = False;
+        sleep_cond.broadcast();
     }
 
     #! waits indefinitely for the polling operation to stop; if polling was not in progress then this method returns immediately
@@ -1080,12 +1123,41 @@ public class SftpPoller {
         return event;
     }
 
-    #! sleeps for the specificed number of seconds
+    #! waits for the given number of seconds, or until polling is stopped
+    /** With a \c "sleep" closure, the closure is called with one second at a time, so that a stop takes effect
+        within a second; otherwise the wait is on a condition that stop() and stopNoWait() signal, so that a stop
+        takes effect at once
+    */
     private sftpSleep(softint secs) {
 %ifdef PO_NO_PROCESS_CONTROL
-        call_function(sleep, secs);
+        date end = now_us() + seconds(secs);
+        while (runflag) {
+            call_function(sleep, 1);
+            if (now_us() >= end) {
+                break;
+            }
+        }
 %else
-        sleep ? call_function(sleep, secs) : Qore::sleep(secs);
+        if (sleep) {
+            date end = now_us() + seconds(secs);
+            while (runflag) {
+                call_function(sleep, 1);
+                if (now_us() >= end) {
+                    break;
+                }
+            }
+        } else {
+            # a wait can end before its timeout without a signal, so the deadline is checked
+            date end = now_us() + seconds(secs);
+            AutoLock al(sleep_m);
+            while (runflag) {
+                date left = end - now_us();
+                if (left <= 0s) {
+                    break;
+                }
+                sleep_cond.wait(sleep_m, left);
+            }
+        }
 %endif
     }
 
@@ -1135,16 +1207,17 @@ public class SftpPoller {
                 }
             } catch (hash<ExceptionInfo> ex) {
                 if (get_files) {
-                    logInfo("SFTP error in %y: %s: %s; waiting %y for next try", path, ex.err, ex.desc, ErrorDelay);
+                    logInfo("SFTP error in %y: %s: %s; waiting %ds for next try", path, ex.err, ex.desc,
+                        error_delay);
                     if (runflag)
-                        sftpSleep(ErrorDelay);
+                        sftpSleep(error_delay);
                 } else if (in_event) {
                     # the event handler refused or failed to handle the file, which is left in place
                     in_event = False;
-                    logInfo("event handler error in %y: %s: %s; the remote file is kept; waiting %y for next try",
-                        path, ex.err, ex.desc, ErrorDelay);
+                    logInfo("event handler error in %y: %s: %s; the remote file is kept; waiting %ds for next try",
+                        path, ex.err, ex.desc, error_delay);
                     if (runflag)
-                        sftpSleep(ErrorDelay);
+                        sftpSleep(error_delay);
                 } else {
                     # error thrown in "post transfer" code
                     logInfo("error in post transfer code; polling terminated: %s: %s", ex.err, ex.desc);
@@ -1161,7 +1234,7 @@ public class SftpPoller {
         return True;
     }
 
-    #! called for each matching file individually whenever matching files are polled with the list of matching file names; if any error occurs here, the error is logged, the remote file is kept, and the poll is retried after ErrorDelay (see @ref sftppollererrors)
+    #! called for each matching file individually whenever matching files are polled with the list of matching file names; if any error occurs here, the error is logged, the remote file is kept, and the poll is retried after the \c "error_delay" option's delay (see @ref sftppollererrors)
     /** @param fih a hash of file data and information with the following keys:
         - \c name: the name of the file, link, or directory
         - \c size: the size of the file in bytes
