@@ -1,0 +1,89 @@
+#!/usr/bin/env qore
+# -*- mode: qore; indent-tabs-mode: nil -*-
+
+# Copyright (C) 2026 Qore Technologies, s.r.o.
+
+%modern
+
+%prepend-module-path "${SCRIPT_DIR}/../qlib"
+
+%requires Ssh2Connections
+%requires ssh2 >= 2.0
+
+%requires Util
+%requires QUnit
+
+%exec-class Ssh2DataProviderOptionsTest
+
+#! The data provider that an SFTP connection creates takes the options of the connection that it supports
+/** SftpConnection::getDataProviderImpl() builds the constructor options of the data provider from the options of the
+    connection.  A local variable named like the options hash read itself in its own initialization expression, so
+    the options of the connection never reached the data provider (and current Qore refuses that code at parse time).
+    Reading the options of the connection passes the ones that the \c sftppoller data provider supports (the URL and the
+    key file) and leaves out the ones it does not (host key checks, agent, keepalive), which its constructor refuses.
+
+    The test needs no SSH server: the data provider loads the key file of the connection when it is created, so a key
+    file that does not exist shows, in the error of the data provider, that the connection's key file reached it.
+*/
+class Ssh2DataProviderOptionsTest inherits QUnit::Test {
+    private {
+        #! a key file that does not exist
+        string keyfile = sprintf("%s%sssh2-dp-options-no-such-key-%s", tmp_location(), DirSep, get_random_string(10));
+        #! the known_hosts file that no test writes
+        string known_hosts = sprintf("%s%sssh2-dp-options-known-hosts-%s", tmp_location(), DirSep,
+            get_random_string(10));
+    }
+
+    constructor() : Test("Ssh2DataProviderOptionsTest", "1.0", \ARGV) {
+        addTestCase("the key file of the connection reaches the data provider", \keyfileTest());
+        addTestCase("the options that the data provider does not support are not passed to it", \unsupportedTest());
+        addTestCase("a constructor option of the caller overrides the option of the connection", \callerOptionsTest());
+
+        set_return_value(main());
+    }
+
+    private SftpConnection getConnection(hash<auto> options) {
+        return new SftpConnection("dp-options-test", "test", "sftp://user@localhost:22", {}, options);
+    }
+
+    #! returns the exception that creating the data provider raises
+    private hash<ExceptionInfo> createFails(SftpConnection conn, *hash<auto> constructor_options) {
+        try {
+            conn.getDataProvider("sftppoller", constructor_options);
+        } catch (hash<ExceptionInfo> ex) {
+            return ex;
+        }
+        throw "TEST-ERROR", "the data provider was created";
+    }
+
+    keyfileTest() {
+        hash<ExceptionInfo> ex = createFails(getConnection({"keyfile": keyfile}));
+        # the data provider loads the key file of the connection: it is the one that the error names
+        assertEq("SSH2-SETKEYS-ERROR", ex.err);
+        assertTrue(ex.desc.find(keyfile) >= 0, ex.desc);
+    }
+
+    unsupportedTest() {
+        hash<auto> options = {
+            "keyfile": keyfile,
+            "known_hosts": known_hosts,
+            "host_key_policy": "reject",
+            "verify_host_key": True,
+            "use_agent": False,
+            "keepalive_interval": 30,
+        };
+        hash<ExceptionInfo> ex = createFails(getConnection(options));
+        # not the refusal of the options that the data provider does not support, but the load of the key file
+        assertEq("SSH2-SETKEYS-ERROR", ex.err);
+        assertTrue(ex.desc.find("invalid options") < 0, ex.desc);
+        assertTrue(ex.desc.find(keyfile) >= 0, ex.desc);
+    }
+
+    callerOptionsTest() {
+        string other_keyfile = keyfile + "-caller";
+        hash<ExceptionInfo> ex = createFails(getConnection({"keyfile": keyfile}), {"keyfile": other_keyfile});
+        # the option of the caller wins over the option of the connection
+        assertEq("SSH2-SETKEYS-ERROR", ex.err);
+        assertTrue(ex.desc.find(other_keyfile) >= 0, ex.desc);
+    }
+}
