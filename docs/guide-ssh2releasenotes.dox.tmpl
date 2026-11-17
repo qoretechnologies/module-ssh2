@@ -175,6 +175,11 @@
     - an empty \c "regex_mask" option of @ref SftpPoller::SftpPoller::constructor() "SftpPoller::constructor()"
       matches every file; it caused the constructor to throw an \c INVALID-MEMBER exception
       (<a href="https://github.com/qoretechnologies/qore/issues/3377">issue 3377</a>)
+    - an error raised while an @ref SftpPoller::SftpPoller "SftpPoller" handles a polled file (ex: an observer that
+      refuses the file event) keeps the remote file and retries the poll after
+      @ref SftpPoller::SftpPoller::ErrorDelay "SftpPoller::ErrorDelay" instead of stopping polling, and an SFTP error
+      transferring a later file of a poll is retried like any other SFTP error (see @ref sftppollererrors;
+      <a href="https://github.com/qoretechnologies/qore/issues/6400">issue 6400</a>)
     - removed stale TODO in mkdir implementation
     - documented known memory leak in sftp_shutdown timeout (libssh2 limitation)
     - updated copyright years to 2026
