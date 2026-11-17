@@ -529,7 +529,7 @@ public class SftpConnection inherits AbstractSsh2Connection {
         checkSubtypeInfo();
         # the connection's options are the members of this object (self.opts); a local variable named opts would
         # shadow them in its own initialization expression
-        hash<auto> conn_opts = {
+        hash<auto> dp_opts = {
             "url": url,
             "keyfile": self.opts.keyfile,
             "known_hosts": self.opts.known_hosts,
@@ -537,18 +537,7 @@ public class SftpConnection inherits AbstractSsh2Connection {
             "verify_host_key": self.opts.verify_host_key,
             "use_agent": self.opts.use_agent,
             "keepalive_interval": self.opts.keepalive_interval,
-        };
-        # only the connection's options that the data provider supports are passed on: its constructor refuses any
-        # other option (the sftppoller data provider takes the URL and the key file of the connection, and has no
-        # options for its host key checks, agent or keepalive)
-        *hash<string, hash<DataProviderOptionInfo>> supported = subtype_info{subtype};
-        hash<auto> dp_opts;
-        foreach hash<auto> i in (conn_opts.pairIterator()) {
-            if (exists i.value && supported && supported.hasKey(i.key)) {
-                dp_opts{i.key} = i.value;
-            }
-        }
-        dp_opts += getSubtypeOptions(supported, constructor_options);
+        } + getSubtypeOptions(subtype_info{subtype}, constructor_options);
         return create_object(conf."class", dp_opts);
     }
 
