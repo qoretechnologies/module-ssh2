@@ -27,11 +27,11 @@
 %modern
 
 %requires(reexport) DataProvider
-%requires(reexport) ssh2 >= 2.0
+%requires(reexport) ssh2 >= 2.1
 %requires FileLocationHandler
 
 module SftpClientDataProvider {
-    version = "2.0";
+    version = "2.1";
     desc = "user module providing a data provider API for SFTP servers";
     author = "David Nichols <david@qore.org>";
     url = "http://qore.org";
@@ -56,6 +56,30 @@ module SftpClientDataProvider {
         });
 
         # register all supported actions
+        DataProviderActionCatalog::registerAction(<DataProviderActionInfo>{
+            "app": SftpClientDataProvider::AppName,
+            "path": "/acquire-verified",
+            "action": "acquire-verified",
+            "display_name": "Acquire Verified File",
+            "short_desc": "Acquire a committed file over SFTP",
+            "desc": "Verify a committed version before exposing the local file. Supply the producer digest for a replaceable path. Use the endpoint, principal, remote path and version in the receipt for deduplication.",
+            "action_code": DPAT_API,
+            "options": DataProviderActionCatalog::getActionOptionFromFields(SftpAcquireRequestType::Fields),
+            "output_type": SftpExchangeReceiptDataType,
+        });
+
+        DataProviderActionCatalog::registerAction(<DataProviderActionInfo>{
+            "app": SftpClientDataProvider::AppName,
+            "path": "/publish-verified",
+            "action": "publish-verified",
+            "display_name": "Publish Verified File",
+            "short_desc": "Publish a complete file over SFTP",
+            "desc": "Verify the length and optional producer digest before committing a private stage. Select `openssh-posix` for replacement or `hosted-immutable` for enforced no-replace. Reconcile an `indeterminate` receipt before retrying.",
+            "action_code": DPAT_API,
+            "options": DataProviderActionCatalog::getActionOptionFromFields(SftpPublishRequestType::Fields),
+            "output_type": SftpExchangeReceiptDataType,
+        });
+
         DataProviderActionCatalog::registerAction(<DataProviderActionInfo>{
             "app": SftpClientDataProvider::AppName,
             "path": "/get-file-location",
@@ -199,6 +223,9 @@ module SftpClientDataProvider {
     - @ref SftpClientDataProvider::SftpClientStatResponseDataType "SftpClientStatResponseDataType"
 
     @section sftpclientdataprovider_relnotes Release Notes
+
+    @subsection sftpclientdataprovider_v2_1 SftpClientDataProvider v2.1
+    - Added publish-verified and acquire-verified actions with typed commit receipts.
 
     @subsection sftpclientdataprovider_v2_0 SftpClientDataProvider v2.0
     - added host-key verification constructor options: \c known_hosts, \c host_key_policy,

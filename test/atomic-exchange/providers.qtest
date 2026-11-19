@@ -1,0 +1,99 @@
+#!/usr/bin/env qore
+# Copyright 2026 Qore Technologies, s.r.o.
+# SPDX-License-Identifier: MIT
+%modern
+%prepend-module-path "${SCRIPT_DIR}/../../qlib"
+%requires ssh2
+%requires SftpClientDataProvider
+%requires SftpPoller
+%requires QUnit
+%exec-class ProviderTest
+
+class ReceiptPoller inherits SftpPoller {
+    public {
+        list<hash<SftpPollerFileEventInfo>> events = ();
+        int batches;
+    }
+    constructor(SFTPClient c, hash<auto> opts) : SftpPoller(c, opts) {
+    }
+    *bool fileEvent(list<hash<SftpPollerFileEventInfo>> files) {
+        if (!files[0].receipt || !is_file(files[0].local_path)) {
+            throw "PREMATURE-EVENT", "fileEvent ran before the local commit";
+        }
+        ++batches;
+        return True;
+    }
+    nothing singleFileEvent(hash<SftpPollerFileEventInfo> event) {
+        events += event;
+    }
+    nothing postSingleFileEvent(hash<SftpPollerFileEventInfo> event) {
+    }
+}
+
+class ProviderTest inherits QUnit::Test {
+    private {
+        string root = ENV.EXCHANGE_ROOT;
+    }
+    constructor() : Test("SFTP exchange actions and polling", "1.0", \ARGV) {
+        addTestCase("scheme actions publish and acquire a manifest member", \actions());
+        addTestCase("strict polling emits only verified committed versions", \poller());
+        set_return_value(main());
+    }
+    private SFTPClient client() {
+        SFTPClient c(ENV.EXCHANGE_URI);
+        c.setKnownHostsFile(root + "/known_hosts");
+        c.setHostKeyPolicy(Ssh2HostKeyPolicy::Reject);
+        c.setKeys(root + "/client");
+        c.setUseAgent(False);
+        return c;
+    }
+    private actions() {
+        SftpClientDataProvider dp(client());
+        foreach string action in ("publish-verified", "acquire-verified") {
+            hash<DataProviderActionInfo> info = DataProviderActionCatalog::getAppActionEx("SFTP", action);
+            assertEq("/" + action, info.path);
+            assertEq(2, info.options.profile.allowed_values.size());
+            assertTrue(exists info.options.length);
+            assertTrue(exists info.options.local_path);
+            assertEq("SftpExchangeReceipt", info.output_type.getName());
+        }
+        hash<auto> req = {"profile": "openssh-posix", "collision_policy": "replace", "length": 3,
+            "remote_path": root + "/in/manifest-v42", "staging_dir": root + "/stage",
+            "sha256": digest("sha256", "abc").toHex(), "local_path": root + "/source"};
+        FileOutputStream f(req.local_path);
+        f.write(binary("abc"));
+        f.close();
+        hash<auto> pub = dp.getChildProviderEx("publish-verified").doRequest(req);
+        assertEq("confirmed", pub.outcome, sprintf("%y", pub));
+        remove req.staging_dir;
+        req.local_path = root + "/local/manifest";
+        hash<auto> got = dp.getChildProviderEx("acquire-verified").doRequest(req);
+        assertEq(pub.version, got.version);
+        assertEq("abc", ReadOnlyFile::readTextFile(req.local_path));
+        req.sha256 = strmul("0", 64);
+        assertEq("failed", dp.getChildProviderEx("acquire-verified").doRequest(req).outcome);
+        assertEq("abc", ReadOnlyFile::readTextFile(req.local_path));
+    }
+    private poller() {
+        string filename = digest("sha256", "abc").toHex() + ".member";
+        SFTPClient c = client();
+        c.putFile("abc", root + "/in/" + filename);
+        c.putFile("ignored", root + "/in/.qore-stage-incomplete");
+        hash<auto> opts = {"path": root + "/in", "local_dir": root + "/local",
+            "commit_profile": "openssh-sha256-name", "host_key_sha256": ENV.EXCHANGE_PIN};
+        ReceiptPoller p(c, opts);
+        assertTrue(p.runOnce());
+        assertTrue(p.runOnce());
+        assertEq(2, p.events.size());
+        assertEq(filename, p.events[0].name);
+        assertEq(p.events[0].receipt, p.events[1].receipt);
+        assertEq("abc", ReadOnlyFile::readTextFile(p.events[1].local_path));
+        c.putFile("xyz", root + "/in/" + filename);
+        assertThrows("SFTPPOLLER-ACQUISITION-ERROR", sub() { p.runOnce(); });
+        assertEq(2, p.batches);
+        assertEq("abc", ReadOnlyFile::readTextFile(p.events[1].local_path));
+        assertThrows("SFTPPOLLER-CONSTRUCTOR-ARG-ERROR", sub() {
+            ReceiptPoller invalid(c, opts + {"skip_file_content_retrieval": True});
+        });
+    }
+}

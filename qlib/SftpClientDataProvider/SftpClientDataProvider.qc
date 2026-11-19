@@ -155,6 +155,8 @@ public class SftpClientDataProvider inherits AbstractDataProvider {
 
     private {
         const ChildMap = {
+            "acquire-verified": Class::forName("SftpClientDataProvider::SftpClientAcquireDataProvider"),
+            "publish-verified": Class::forName("SftpClientDataProvider::SftpClientPublishDataProvider"),
             "chmod": Class::forName("SftpClientDataProvider::SftpClientChmodDataProvider"),
             "chown": Class::forName("SftpClientDataProvider::SftpClientChownDataProvider"),
             "create-file": Class::forName("SftpClientDataProvider::SftpClientCreateFileDataProvider"),

@@ -4,6 +4,13 @@
 
     @tableofcontents
 
+    @section ssh2v210 ssh2 Module Version 2.1.0
+
+    - Added SFTPClient::publishVerified() and SFTPClient::acquireVerified(), typed agreements and reconciliation receipts.
+    - Added the Publish Verified File and Acquire Verified File provider actions and opt-in verified SFTP polling.
+    - Existing send, retrieve, rename and polling configurations keep their existing behavior. Strict exchange requires
+      libssh2 1.11.1 or later and an explicit endpoint agreement. See @ref ssh2verifiedexchange for setup and examples.
+
     @section ssh2v200 ssh2 Module Version 2.0.0
     Major feature release closing all client-side feature gaps in the libssh2 wrapper.
 

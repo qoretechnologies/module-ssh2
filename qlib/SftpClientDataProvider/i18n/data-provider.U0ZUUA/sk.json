@@ -39,6 +39,118 @@
           "source": "Changes file or directory permissions on an SFTP server",
           "message": "Zmení oprávnenia súboru alebo adresára na SFTP serveri"
         },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.desc": {
+          "source": "Verify a committed version before exposing the local file. Supply the producer digest for a replaceable path. Use the endpoint, principal, remote path and version in the receipt for deduplication.",
+          "message": "Pred sprístupnením miestneho súboru overte zverejnenú verziu. Pre nahraditeľnú cestu zadajte odtlačok od producenta. Duplicity rozpoznáte podľa koncového bodu, identity, vzdialenej cesty a verzie v potvrdení."
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.display_name": {
+          "source": "Acquire Verified File",
+          "message": "Prevziať overený súbor"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.allowed-value.c3RyaW5nOm5vLXJlcGxhY2U.display_name": {
+          "source": "No Replace",
+          "message": "Nenahrádzať"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.allowed-value.c3RyaW5nOnJlcGxhY2U.display_name": {
+          "source": "Replace",
+          "message": "Nahradiť"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.desc": {
+          "source": "Select how the endpoint handles an existing file",
+          "message": "Vyberte, ako koncový bod spracuje existujúci súbor"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.display_name": {
+          "source": "Collision Policy",
+          "message": "Riešenie kolízií"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.short_desc": {
+          "source": "Select how the endpoint handles an existing file",
+          "message": "Vyberte, ako koncový bod spracuje existujúci súbor"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.aG9zdF9rZXlfc2hhMjU2.desc": {
+          "source": "Pinned SSH host key in lowercase hex, required for the hosted profile",
+          "message": "Pripnutý kľúč hostiteľa SSH v malých šestnástkových čísliciach, povinný pre hostovaný profil"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.aG9zdF9rZXlfc2hhMjU2.display_name": {
+          "source": "Host Key SHA-256",
+          "message": "SHA-256 kľúča hostiteľa"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.aG9zdF9rZXlfc2hhMjU2.short_desc": {
+          "source": "Pinned SSH host key in lowercase hex, required for the hosted profile",
+          "message": "Pripnutý kľúč hostiteľa SSH v malých šestnástkových čísliciach, povinný pre hostovaný profil"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.bG9jYWxfcGF0aA.desc": {
+          "source": "Local file to replace after verification",
+          "message": "Miestny súbor, ktorý sa po overení nahradí"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.bG9jYWxfcGF0aA.display_name": {
+          "source": "Destination File",
+          "message": "Cieľový súbor"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.bG9jYWxfcGF0aA.short_desc": {
+          "source": "Local file to replace after verification",
+          "message": "Miestny súbor, ktorý sa po overení nahradí"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.bGVuZ3Ro.desc": {
+          "source": "Declared file length in bytes",
+          "message": "Deklarovaná dĺžka súboru v bajtoch"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.bGVuZ3Ro.display_name": {
+          "source": "Expected Length",
+          "message": "Očakávaná dĺžka"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.bGVuZ3Ro.short_desc": {
+          "source": "Declared file length in bytes",
+          "message": "Deklarovaná dĺžka súboru v bajtoch"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.c2hhMjU2.desc": {
+          "source": "Expected lowercase SHA-256, required when acquiring a replaceable file",
+          "message": "Očakávaný odtlačok SHA-256 malými písmenami, povinný pri prevzatí nahraditeľného súboru"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.c2hhMjU2.display_name": {
+          "source": "Producer SHA-256",
+          "message": "SHA-256 od producenta"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.c2hhMjU2.short_desc": {
+          "source": "Expected lowercase SHA-256, required when acquiring a replaceable file",
+          "message": "Očakávaný odtlačok SHA-256 malými písmenami, povinný pri prevzatí nahraditeľného súboru"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.cHJvZmlsZQ.allowed-value.c3RyaW5nOm9wZW5zc2gtcG9zaXg.display_name": {
+          "source": "OpenSSH POSIX",
+          "message": "OpenSSH POSIX"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.cHJvZmlsZQ.allowed-value.c3RyaW5nOmhvc3RlZC1pbW11dGFibGU.display_name": {
+          "source": "Hosted Immutable",
+          "message": "Hostované nemenné súbory"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.cHJvZmlsZQ.desc": {
+          "source": "Publication agreement for this endpoint",
+          "message": "Dohoda o zverejňovaní pre tento koncový bod"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.cHJvZmlsZQ.display_name": {
+          "source": "Endpoint Profile",
+          "message": "Profil koncového bodu"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.cHJvZmlsZQ.short_desc": {
+          "source": "Publication agreement for this endpoint",
+          "message": "Dohoda o zverejňovaní pre tento koncový bod"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.cmVtb3RlX3BhdGg.desc": {
+          "source": "Absolute path of the committed file",
+          "message": "Absolútna cesta k zverejnenému súboru"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.cmVtb3RlX3BhdGg.display_name": {
+          "source": "Remote Path",
+          "message": "Vzdialená cesta"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.cmVtb3RlX3BhdGg.short_desc": {
+          "source": "Absolute path of the committed file",
+          "message": "Absolútna cesta k zverejnenému súboru"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.short_desc": {
+          "source": "Acquire a committed file over SFTP",
+          "message": "Prevziať zverejnený súbor cez SFTP"
+        },
         "app.U0ZUUA.action.Z2V0LWZpbGU.desc": {
           "source": "Retrieve a file from an SFTP server",
           "message": "Získať súbor zo SFTP servera"
@@ -182,6 +294,130 @@
         "app.U0ZUUA.action.c2VuZC1maWxl.short_desc": {
           "source": "Sends a file to an SFTP server",
           "message": "Odošle súbor na SFTP server"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.desc": {
+          "source": "Verify the length and optional producer digest before committing a private stage. Select `openssh-posix` for replacement or `hosted-immutable` for enforced no-replace. Reconcile an `indeterminate` receipt before retrying.",
+          "message": "Pred zverejnením súkromného pracovného súboru overte dĺžku a voliteľný odtlačok od producenta. Na nahradenie zvoľte `openssh-posix`, na vynútený zákaz nahradenia `hosted-immutable`. Pri výsledku `indeterminate` pred opakovaním overte stav."
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.display_name": {
+          "source": "Publish Verified File",
+          "message": "Zverejniť overený súbor"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.allowed-value.c3RyaW5nOm5vLXJlcGxhY2U.display_name": {
+          "source": "No Replace",
+          "message": "Nenahrádzať"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.allowed-value.c3RyaW5nOnJlcGxhY2U.display_name": {
+          "source": "Replace",
+          "message": "Nahradiť"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.desc": {
+          "source": "Select how the endpoint handles an existing file",
+          "message": "Vyberte, ako koncový bod spracuje existujúci súbor"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.display_name": {
+          "source": "Collision Policy",
+          "message": "Riešenie kolízií"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.short_desc": {
+          "source": "Select how the endpoint handles an existing file",
+          "message": "Vyberte, ako koncový bod spracuje existujúci súbor"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.aG9zdF9rZXlfc2hhMjU2.desc": {
+          "source": "Pinned SSH host key in lowercase hex, required for the hosted profile",
+          "message": "Pripnutý kľúč hostiteľa SSH v malých šestnástkových čísliciach, povinný pre hostovaný profil"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.aG9zdF9rZXlfc2hhMjU2.display_name": {
+          "source": "Host Key SHA-256",
+          "message": "SHA-256 kľúča hostiteľa"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.aG9zdF9rZXlfc2hhMjU2.short_desc": {
+          "source": "Pinned SSH host key in lowercase hex, required for the hosted profile",
+          "message": "Pripnutý kľúč hostiteľa SSH v malých šestnástkových čísliciach, povinný pre hostovaný profil"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.bG9jYWxfcGF0aA.desc": {
+          "source": "Local file to publish",
+          "message": "Miestny súbor na zverejnenie"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.bG9jYWxfcGF0aA.display_name": {
+          "source": "Source File",
+          "message": "Zdrojový súbor"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.bG9jYWxfcGF0aA.short_desc": {
+          "source": "Local file to publish",
+          "message": "Miestny súbor na zverejnenie"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.bGVuZ3Ro.desc": {
+          "source": "Declared file length in bytes",
+          "message": "Deklarovaná dĺžka súboru v bajtoch"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.bGVuZ3Ro.display_name": {
+          "source": "Expected Length",
+          "message": "Očakávaná dĺžka"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.bGVuZ3Ro.short_desc": {
+          "source": "Declared file length in bytes",
+          "message": "Deklarovaná dĺžka súboru v bajtoch"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.c2hhMjU2.desc": {
+          "source": "Expected lowercase SHA-256, required when acquiring a replaceable file",
+          "message": "Očakávaný odtlačok SHA-256 malými písmenami, povinný pri prevzatí nahraditeľného súboru"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.c2hhMjU2.display_name": {
+          "source": "Producer SHA-256",
+          "message": "SHA-256 od producenta"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.c2hhMjU2.short_desc": {
+          "source": "Expected lowercase SHA-256, required when acquiring a replaceable file",
+          "message": "Očakávaný odtlačok SHA-256 malými písmenami, povinný pri prevzatí nahraditeľného súboru"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.c3RhZ2luZ19kaXI.desc": {
+          "source": "Private staging directory on the remote filesystem",
+          "message": "Súkromný pracovný adresár vo vzdialenom súborovom systéme"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.c3RhZ2luZ19kaXI.display_name": {
+          "source": "Staging Directory",
+          "message": "Pracovný adresár"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.c3RhZ2luZ19kaXI.short_desc": {
+          "source": "Private staging directory on the remote filesystem",
+          "message": "Súkromný pracovný adresár vo vzdialenom súborovom systéme"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.cHJvZmlsZQ.allowed-value.c3RyaW5nOm9wZW5zc2gtcG9zaXg.display_name": {
+          "source": "OpenSSH POSIX",
+          "message": "OpenSSH POSIX"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.cHJvZmlsZQ.allowed-value.c3RyaW5nOmhvc3RlZC1pbW11dGFibGU.display_name": {
+          "source": "Hosted Immutable",
+          "message": "Hostované nemenné súbory"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.cHJvZmlsZQ.desc": {
+          "source": "Publication agreement for this endpoint",
+          "message": "Dohoda o zverejňovaní pre tento koncový bod"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.cHJvZmlsZQ.display_name": {
+          "source": "Endpoint Profile",
+          "message": "Profil koncového bodu"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.cHJvZmlsZQ.short_desc": {
+          "source": "Publication agreement for this endpoint",
+          "message": "Dohoda o zverejňovaní pre tento koncový bod"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.cmVtb3RlX3BhdGg.desc": {
+          "source": "Absolute path of the committed file",
+          "message": "Absolútna cesta k zverejnenému súboru"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.cmVtb3RlX3BhdGg.display_name": {
+          "source": "Remote Path",
+          "message": "Vzdialená cesta"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.cmVtb3RlX3BhdGg.short_desc": {
+          "source": "Absolute path of the committed file",
+          "message": "Absolútna cesta k zverejnenému súboru"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.short_desc": {
+          "source": "Publish a complete file over SFTP",
+          "message": "Zverejniť úplný súbor cez SFTP"
         },
         "app.U0ZUUA.action.cm1kaXI.desc": {
           "source": "Removes an empty directory on an SFTP server",

@@ -51,6 +51,8 @@ struct ErrDesc {
 typedef std::map<int, ErrDesc> edmap_t;
 DLLLOCAL extern edmap_t sftp_emap;
 
+DLLLOCAL TypedHashDecl* init_hashdecl_SftpExchangeSpec(QoreNamespace& ns);
+DLLLOCAL TypedHashDecl* init_hashdecl_SftpExchangeReceipt(QoreNamespace& ns);
 DLLLOCAL TypedHashDecl* init_hashdecl_SftpFileInfo(QoreNamespace& ns);
 DLLLOCAL TypedHashDecl* init_hashdecl_SftpDirInfo(QoreNamespace& ns);
 DLLLOCAL TypedHashDecl* init_hashdecl_SftpConnectionInfo(QoreNamespace& ns);
@@ -63,6 +65,8 @@ DLLLOCAL QoreEnumDecl* init_enum_Ssh2HostKeyPolicy(QoreNamespace& ns);
 DLLLOCAL QoreEnumDecl* init_enum_Ssh2ClientAuthOrder(QoreNamespace& ns);
 DLLLOCAL QoreEnumDecl* init_enum_Ssh2ClientIdentityFallbackPolicy(QoreNamespace& ns);
 
+DLLLOCAL extern const TypedHashDecl* hashdeclSftpExchangeSpec;
+DLLLOCAL extern const TypedHashDecl* hashdeclSftpExchangeReceipt;
 DLLLOCAL extern const TypedHashDecl* hashdeclSftpFileInfo;
 DLLLOCAL extern const TypedHashDecl* hashdeclSftpDirInfo;
 DLLLOCAL extern const TypedHashDecl* hashdeclSftpConnectionInfo;

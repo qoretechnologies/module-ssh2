@@ -116,6 +116,9 @@ public:
 
 class SFTPClient : public SSH2Client {
     friend class QSftpHelper;
+    friend class SftpExchange;
+    // Protected by m. A stream callback can disconnect the session reentrantly.
+    QSftpHelper* exchange_reader = nullptr;
     friend class SftpPollOperationPriv;
 
 protected:
@@ -132,7 +135,8 @@ protected:
     }
 
     DLLLOCAL QoreStringNode* sftpPathUnlocked();
-    DLLLOCAL int sftpConnectUnlocked(int timeout_ms, ExceptionSink* xsink);
+    DLLLOCAL int sftpConnectUnlocked(int timeout_ms, ExceptionSink* xsink,
+        const std::function<bool()>& check_peer = {}, bool require_known = false);
 
     DLLLOCAL void doSessionErrUnlocked(ExceptionSink* xsink, QoreStringNode* desc);
     DLLLOCAL void doSessionErrUnlocked(ExceptionSink* xsink, QoreStringNode* desc, int err,
@@ -213,6 +217,9 @@ public:
 #ifdef HAVE_LIBSSH2_SFTP_STATVFS
     DLLLOCAL QoreHashNode* sftpStatvfs(const char* path, int timeout_ms, ExceptionSink* xsink);
 #endif
+
+    DLLLOCAL QoreHashNode* exchange(InputStream* input, const QoreStringNode* local_path,
+        const QoreHashNode* spec, int64 timeout, ExceptionSink* xsink);
 
     DLLLOCAL QoreHashNode* sftpInfo(ExceptionSink* xsink);
 };

@@ -26,14 +26,14 @@
 %requires qore >= 3.0
 
 # requires ssh2 functionality
-%requires (reexport) ssh2
+%requires (reexport) ssh2 >= 2.1
 
 %modern
 
 %requires DataProvider
 
 module SftpPollerUtil {
-    version = "1.4.1";
+    version = "1.5";
     desc = "SftpPollerUtil module";
     author = "David Nichols <david@qore.org>";
     url = "http://qore.org";
@@ -56,6 +56,9 @@ module SftpPollerUtil {
     The SftpPollerUtil module defines types for the @ref sftppollerintro "SftpPoller" module.
 
     @section sftppollerutilrelnotes SftpPollerUtil Module Release Notes
+
+    @section sftppollerutilv15 Version 1.5
+    - Added the optional verified acquisition receipt to file events.
 
     @section sftppollerutilv1_4_1 Version 1.4.1
     - fixed a bug registering the sftp event type
@@ -196,6 +199,11 @@ public class SftpPollerFileEventInfoDataType inherits HashDataType {
                 "desc": "The relative date/time value giving the time taken to transfer the file",
                 "example_value": 0.154947s,
             },
+            "receipt": {
+                "display_name": "Acquisition Receipt",
+                "short_desc": "Verified content version and endpoint evidence",
+                "desc": "Verified content version and endpoint evidence",
+            },
             "local_path":  {
                 "display_name": "Local Path",
                 "short_desc": "The target path for the file if applicable",
@@ -309,6 +317,9 @@ public hashdecl SftpPollerFileEventInfo {
 
     #! Only included when <tt>local_dir</tt> is set; the target path for the file
     *string local_path;
+
+    #! Verification evidence when a publication agreement is configured
+    *hash<SftpExchangeReceipt> receipt;
 
     #! Remote status; one of @ref sftp_remote_status_constants
     string remote_status;

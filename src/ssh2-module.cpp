@@ -194,6 +194,8 @@ extern "C" DLLEXPORT void ssh2_qore_module_desc(QoreModuleInfo& mod_info) {
 emap_t ssh2_emap;
 edmap_t sftp_emap;
 
+DLLLOCAL const TypedHashDecl* hashdeclSftpExchangeSpec;
+DLLLOCAL const TypedHashDecl* hashdeclSftpExchangeReceipt;
 DLLLOCAL const TypedHashDecl* hashdeclSftpFileInfo;
 DLLLOCAL const TypedHashDecl* hashdeclSftpDirInfo;
 DLLLOCAL const TypedHashDecl* hashdeclSftpConnectionInfo;
@@ -357,6 +359,8 @@ static void ssh2_module_init(QoreModuleInitContext& ctx, ExceptionSink& xsink) {
     sftp_emap.insert(edmap_t::value_type(LIBSSH2_FX_LINK_LOOP, ErrDesc("LIBSSH2_FX_LINK_LOOP", "link loop")));
 
     // add all hashdecls first
+    hashdeclSftpExchangeSpec = init_hashdecl_SftpExchangeSpec(ssh2ns);
+    hashdeclSftpExchangeReceipt = init_hashdecl_SftpExchangeReceipt(ssh2ns);
     hashdeclSftpFileInfo = init_hashdecl_SftpFileInfo(ssh2ns);
     hashdeclSftpDirInfo = init_hashdecl_SftpDirInfo(ssh2ns);
     hashdeclSftpConnectionInfo = init_hashdecl_SftpConnectionInfo(ssh2ns);

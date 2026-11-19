@@ -1,0 +1,29 @@
+#!/usr/bin/env qore
+# Copyright 2026 Qore Technologies, s.r.o.
+# SPDX-License-Identifier: MIT
+%modern
+%prepend-module-path "${SCRIPT_DIR}/../../qlib"
+%requires ssh2
+%requires QUnit
+%exec-class ContractTest
+
+class ContractTest inherits QUnit::Test {
+    constructor() : Test("SFTP publication contracts", "1.0", \ARGV) {
+        addTestCase("refuse unqualified agreements before connecting", \refusal());
+        set_return_value(main());
+    }
+    private refusal() {
+        SFTPClient c("sftp://fixture@127.0.0.1:1");
+        hash<SftpExchangeSpec> s = <SftpExchangeSpec>{"profile": "openssh-posix", "collision_policy": "no-replace",
+            "remote_path": "/incoming/orders", "staging_dir": "/staging", "length": 0};
+        assertEq("unsupported", c.publishVerified(new BinaryInputStream(binary()), s).outcome);
+        s.profile = "generic-sftp-v3";
+        assertEq("unsupported", c.acquireVerified(s, "/incoming/orders").outcome);
+        if (ENV.QORE_TEST_UNQUALIFIED_LIBSSH2) {
+            s.profile = "openssh-posix";
+            s.collision_policy = "replace";
+            assertEq("unsupported", c.publishVerified(new BinaryInputStream(binary()), s).outcome);
+            assertEq("unsupported", c.acquireVerified(s, "/incoming/orders").outcome);
+        }
+    }
+}

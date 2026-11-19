@@ -39,6 +39,38 @@
           "source": "The glob mask to use to match files to poll; will be treated as a regex if `regex` is `true`",
           "message": "The glob mask to use to match files to poll; will be treated as a regex if `regex` is `true`"
         },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.Y29tbWl0X3Byb2ZpbGU.display_name": {
+          "source": "Publication Agreement",
+          "message": "Publication Agreement"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.Y29tbWl0X3Byb2ZpbGU.short_desc": {
+          "source": "Verify committed files before emitting events",
+          "message": "Verify committed files before emitting events"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.Y29tbWl0X3Byb2ZpbGU.desc": {
+          "source": "Use a dedicated committed directory and a writable local directory. Hosted files are immutable. On OpenSSH the committed name starts with the producer SHA-256 and a dot.",
+          "message": "Use a dedicated committed directory and a writable local directory. Hosted files are immutable. On OpenSSH the committed name starts with the producer SHA-256 and a dot."
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.Y29tbWl0X3Byb2ZpbGU.allowed-value.c3RyaW5nOmhvc3RlZC1pbW11dGFibGU.display_name": {
+          "source": "Hosted Immutable",
+          "message": "Hosted Immutable"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.Y29tbWl0X3Byb2ZpbGU.allowed-value.c3RyaW5nOm9wZW5zc2gtc2hhMjU2LW5hbWU.display_name": {
+          "source": "OpenSSH Digest Filename",
+          "message": "OpenSSH Digest Filename"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfc2hhMjU2.display_name": {
+          "source": "Host Key SHA-256",
+          "message": "Host Key SHA-256"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfc2hhMjU2.short_desc": {
+          "source": "Pinned host key fingerprint",
+          "message": "Pinned host key fingerprint"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfc2hhMjU2.desc": {
+          "source": "Pinned SSH host key in lowercase hex, required for the hosted profile",
+          "message": "Pinned SSH host key in lowercase hex, required for the hosted profile"
+        },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.YXRvbWljX3RyYW5zZmVy.display_name": {
           "source": "Atomic File Transfer",
           "message": "Atomic File Transfer"

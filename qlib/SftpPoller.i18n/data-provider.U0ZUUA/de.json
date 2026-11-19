@@ -11,6 +11,26 @@
           "source": "SFTP File Received",
           "message": "SFTP-Datei empfangen"
         },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.Y29tbWl0X3Byb2ZpbGU.allowed-value.c3RyaW5nOm9wZW5zc2gtc2hhMjU2LW5hbWU.display_name": {
+          "source": "OpenSSH Digest Filename",
+          "message": "OpenSSH-Dateiname mit Prüfsumme"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.Y29tbWl0X3Byb2ZpbGU.allowed-value.c3RyaW5nOmhvc3RlZC1pbW11dGFibGU.display_name": {
+          "source": "Hosted Immutable",
+          "message": "Gehostete unveränderliche Dateien"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.Y29tbWl0X3Byb2ZpbGU.desc": {
+          "source": "Use a dedicated committed directory and a writable local directory. Hosted files are immutable. On OpenSSH the committed name starts with the producer SHA-256 and a dot.",
+          "message": "Verwenden Sie ein eigenes Verzeichnis für veröffentlichte Dateien und ein beschreibbares lokales Verzeichnis. Gehostete Dateien sind unveränderlich. Bei OpenSSH beginnt der veröffentlichte Dateiname mit dem SHA-256-Wert des Erstellers und einem Punkt."
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.Y29tbWl0X3Byb2ZpbGU.display_name": {
+          "source": "Publication Agreement",
+          "message": "Veröffentlichungsvereinbarung"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.Y29tbWl0X3Byb2ZpbGU.short_desc": {
+          "source": "Verify committed files before emitting events",
+          "message": "Veröffentlichte Dateien vor der Ereignisausgabe prüfen"
+        },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.YXRvbWljX3RyYW5zZmVy.desc": {
           "source": "Use an atomic transfer mechanism with `local_dir` where remote files are first moved to a temporary location and then moved to the final location when they have been fully transferred.\n\nThis ensures that files will never be read until they are fully transferred",
           "message": "Einen atomaren Übertragungsmechanismus mit `local_dir` verwenden, bei dem Remote-Dateien zuerst an einen temporären Ort und dann an den endgültigen Ort verschoben werden, wenn sie vollständig übertragen wurden.\n\nDies stellt sicher, dass Dateien niemals gelesen werden, bevor sie vollständig übertragen wurden"
@@ -34,6 +54,18 @@
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.a2V5ZmlsZQ.short_desc": {
           "source": "A path to an SSH private key file in PEM format",
           "message": "Ein Pfad zu einer SSH-Schlüsseldatei im PEM-Format"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfc2hhMjU2.desc": {
+          "source": "Pinned SSH host key in lowercase hex, required for the hosted profile",
+          "message": "Festgelegter SSH-Hostschlüssel als Hexwert in Kleinbuchstaben, für das gehostete Profil erforderlich"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfc2hhMjU2.display_name": {
+          "source": "Host Key SHA-256",
+          "message": "SHA-256 des Hostschlüssels"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfc2hhMjU2.short_desc": {
+          "source": "Pinned host key fingerprint",
+          "message": "Fingerabdruck des festgelegten Hostschlüssels"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.bG9jYWxfZGly.desc": {
           "source": "A local directory that will be used to retrieve files",

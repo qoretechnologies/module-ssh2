@@ -65,5 +65,11 @@ for test in test/*.qtest; do
     gosu qore:qore qore $test -vv
 done
 
+if pkg-config --atleast-version=1.11.1 libssh2; then
+    gosu qore:qore python3 test/atomic-exchange/run.py --build build
+else
+    QORE_TEST_UNQUALIFIED_LIBSSH2=1 gosu qore:qore qore -b --enable-debug test/atomic-exchange/contracts.qtest -v
+fi
+
 # ... and they still do once the tests have run
 ${MODULE_SRC_DIR}/test/docker_test/check-loaded-modules.sh ${MODULE_SRC_DIR}/build gosu qore:qore

@@ -48,6 +48,66 @@ static QoreHashNode* attr2hash(const LIBSSH2_SFTP_ATTRIBUTES& attr, ExceptionSin
     return ret.release();
 }
 
+//! Agreement for one version of a file exchanged with a qualified partner endpoint.
+/** @since ssh2 2.1
+*/
+hashdecl SftpExchangeSpec {
+    //! Qualified backend profile: openssh-posix or hosted-immutable.
+    string profile;
+    //! SHA-256 of the SSH host key as lowercase hex, required for hosted-immutable.
+    *string host_key_sha256;
+    //! Absolute committed file path. On hosted-immutable this is an immutable versioned name.
+    string remote_path;
+    //! Declared byte length, including zero for an empty member.
+    int length;
+    //! Lowercase SHA-256 supplied by the producer. Required for acquisition from replaceable paths.
+    *string sha256;
+    //! Absolute private staging directory on the same remote filesystem. Required for publication.
+    *string staging_dir;
+    //! Agreed collision policy: no-replace or replace.
+    string collision_policy;
+}
+
+//! Evidence for one publication or acquisition, including uncertain commit results.
+/** @since ssh2 2.1
+*/
+hashdecl SftpExchangeReceipt {
+    //! confirmed, failed, unsupported or indeterminate
+    string outcome;
+    //! Configured endpoint, authenticated account, and absolute committed path.
+    string host;
+    //! SHA-256 of the negotiated SSH host key
+    *string host_key_sha256;
+    //! SSH endpoint port
+    int port;
+    //! SSH login principal
+    string principal;
+    //! Absolute remote path
+    string remote_path;
+    //! Intended producer digest when supplied
+    *string expected_sha256;
+    //! Declared byte count
+    int expected_length;
+    //! Acknowledged upload bytes or bytes written locally
+    int length;
+    //! SHA-256 of the complete stream when observed
+    *string sha256;
+    //! Remote private staging path for publication
+    *string staging_path;
+    //! Local final path for acquisition
+    *string local_path;
+    //! Protocol operation or endpoint agreement used
+    string profile;
+    //! Requested collision policy
+    string collision_policy;
+    //! Stable content version within the endpoint, principal and remote path
+    *string version;
+    //! Error category
+    *string error;
+    //! Diagnostic for reconciliation
+    *string detail;
+}
+
 //! SFTP file event hash
 /**
 */
@@ -701,6 +761,34 @@ int SFTPClient::transferFile(string local_path, string remote_path, timeout time
 */
 int SFTPClient::put(Qore::InputStream[InputStream] input_stream, string remote_path, timeout timeout = 60s, int mode = 0644) [flags=NAMED_ARGS] {
     return myself->sftpPut(*input_stream, remote_path->c_str(), (int) mode, (int) timeout, xsink);
+}
+
+//! Streams a file to exclusive staging and commits the verified content.
+/** @param input_stream source, for example a FileInputStream
+     @param spec qualified endpoint agreement, paths, length and optional producer SHA-256
+     @param timeout network operation timeout
+     @return a receipt; inspect outcome before treating the file as published
+     @throw SFTP-EXCHANGE-ARG invalid timeout
+     @see @ref ssh2verifiedexchange for endpoint configuration and recovery
+     @par Example
+     @code{.py} hash<SftpExchangeReceipt> receipt = client.publishVerified(new FileInputStream(path), spec); @endcode
+ */
+hash<SftpExchangeReceipt> SFTPClient::publishVerified(Qore::InputStream[InputStream] input_stream, hash<SftpExchangeSpec> spec, timeout timeout = 60s) [flags=NAMED_ARGS] {
+    return myself->exchange(*input_stream, nullptr, spec, timeout, xsink);
+}
+
+//! Acquires a committed file through private local staging and an atomic local rename.
+/** @param spec qualified immutable path or producer-bound replacement version
+     @param local_path absolute destination on a filesystem supporting atomic rename
+     @param timeout network operation timeout
+     @return a receipt; confirmed means the verified file is available at local_path
+     @throw SFTP-EXCHANGE-ARG invalid timeout
+     @see @ref ssh2verifiedexchange for endpoint configuration and recovery
+     @par Example
+     @code{.py} hash<SftpExchangeReceipt> receipt = client.acquireVerified(spec, "/in/orders.csv"); @endcode
+ */
+hash<SftpExchangeReceipt> SFTPClient::acquireVerified(hash<SftpExchangeSpec> spec, string local_path, timeout timeout = 60s) [dom=FILESYSTEM;flags=NAMED_ARGS] {
+    return myself->exchange(nullptr, local_path, spec, timeout, xsink);
 }
 
 //! Makes a directory on the remote server; throws an exception if any errors occur

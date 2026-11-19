@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.5...3.31)
 
-project(qore-ssh2-module VERSION 2.0.0)
+project(qore-ssh2-module VERSION 2.1.0)
 
 include(CheckCXXCompilerFlag)
 include(CheckCXXSymbolExists)
@@ -62,6 +62,8 @@ check_cxx_symbol_exists(libssh2_session_supported_algs libssh2.h HAVE_LIBSSH2_SU
 check_cxx_symbol_exists(libssh2_channel_signal_ex libssh2.h HAVE_LIBSSH2_CHANNEL_SIGNAL_EX)
 check_cxx_symbol_exists(libssh2_channel_request_auth_agent libssh2.h HAVE_LIBSSH2_CHANNEL_REQUEST_AUTH_AGENT)
 check_cxx_symbol_exists(libssh2_channel_direct_streamlocal_ex libssh2.h HAVE_LIBSSH2_CHANNEL_DIRECT_STREAMLOCAL)
+check_cxx_symbol_exists(libssh2_session_banner_get libssh2.h HAVE_LIBSSH2_SERVER_BANNER)
+check_cxx_symbol_exists(libssh2_sftp_posix_rename_ex libssh2_sftp.h HAVE_LIBSSH2_POSIX_RENAME)
 check_cxx_symbol_exists(libssh2_sftp_statvfs libssh2_sftp.h HAVE_LIBSSH2_SFTP_STATVFS)
 check_cxx_symbol_exists(libssh2_scp_send64 libssh2.h HAVE_LIBSSH2_SCP_SEND64)
 check_cxx_symbol_exists(libssh2_scp_recv2 libssh2.h HAVE_LIBSSH2_SCP_RECV2)
@@ -90,6 +92,7 @@ set(QPP_SRC
 )
 
 set(CPP_SRC
+    src/SftpExchange.cpp
     src/SFTPClient.cpp
     src/SftpPollOperation.cpp
     src/SSH2Channel.cpp
@@ -124,7 +127,7 @@ list(APPEND MODULE_DOX_INPUT
     ${CMAKE_CURRENT_BINARY_DIR}/guide-ssh2releasenotes.dox
     ${CMAKE_CURRENT_BINARY_DIR}/guide-thread_safety.dox
 )
-qore_external_binary_module(${module_name} ${PROJECT_VERSION} ${LIBSSH2_LDFLAGS})
+qore_external_binary_module(${module_name} ${PROJECT_VERSION} ${LIBSSH2_LDFLAGS} OpenSSL::Crypto)
 
 qore_external_user_module("qlib/SftpClientDataProvider" "")
 qore_external_user_module("qlib/SftpPollerUtil.qm" "")

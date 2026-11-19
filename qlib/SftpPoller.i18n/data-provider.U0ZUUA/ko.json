@@ -11,6 +11,26 @@
           "source": "SFTP File Received",
           "message": "SFTP 파일 수신됨"
         },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.Y29tbWl0X3Byb2ZpbGU.allowed-value.c3RyaW5nOm9wZW5zc2gtc2hhMjU2LW5hbWU.display_name": {
+          "source": "OpenSSH Digest Filename",
+          "message": "다이제스트를 포함한 OpenSSH 파일 이름"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.Y29tbWl0X3Byb2ZpbGU.allowed-value.c3RyaW5nOmhvc3RlZC1pbW11dGFibGU.display_name": {
+          "source": "Hosted Immutable",
+          "message": "호스팅된 불변 파일"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.Y29tbWl0X3Byb2ZpbGU.desc": {
+          "source": "Use a dedicated committed directory and a writable local directory. Hosted files are immutable. On OpenSSH the committed name starts with the producer SHA-256 and a dot.",
+          "message": "게시된 파일 전용 디렉터리와 쓰기 가능한 로컬 디렉터리를 사용합니다. 호스팅된 파일은 변경할 수 없습니다. OpenSSH에서는 게시된 이름이 생성자의 SHA-256과 점으로 시작합니다."
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.Y29tbWl0X3Byb2ZpbGU.display_name": {
+          "source": "Publication Agreement",
+          "message": "게시 규약"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.Y29tbWl0X3Byb2ZpbGU.short_desc": {
+          "source": "Verify committed files before emitting events",
+          "message": "이벤트 발행 전에 게시된 파일 검증"
+        },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.YXRvbWljX3RyYW5zZmVy.desc": {
           "source": "Use an atomic transfer mechanism with `local_dir` where remote files are first moved to a temporary location and then moved to the final location when they have been fully transferred.\n\nThis ensures that files will never be read until they are fully transferred",
           "message": "원격 파일을 먼저 임시 위치로 이동한 다음 완전 전송되었을 때 최종 위치로 이동하는 `local_dir`의 원자적 전송 메커니즘을 사용합니다.\n\n이렇게 하면 파일이 완전히 전송될 때까지 절대로 읽히지 않습니다."
@@ -34,6 +54,18 @@
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.a2V5ZmlsZQ.short_desc": {
           "source": "A path to an SSH private key file in PEM format",
           "message": "PEM 형식의 SSH 개인 키 파일 경로"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfc2hhMjU2.desc": {
+          "source": "Pinned SSH host key in lowercase hex, required for the hosted profile",
+          "message": "고정된 SSH 호스트 키의 소문자 16진수 지문. 호스팅 프로필에서 필수"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfc2hhMjU2.display_name": {
+          "source": "Host Key SHA-256",
+          "message": "호스트 키 SHA-256"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfc2hhMjU2.short_desc": {
+          "source": "Pinned host key fingerprint",
+          "message": "고정된 호스트 키 지문"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.bG9jYWxfZGly.desc": {
           "source": "A local directory that will be used to retrieve files",

@@ -591,7 +591,7 @@ QoreHashNode* SSH2Client::makeObservedHostKeyInfo(const char* hostkey, size_t ho
 }
 
 int SSH2Client::verifyHostKeyWithStore(QoreObject* store, const char* hostkey, size_t hostkey_len, int hostkey_type,
-        int timeout_ms, ExceptionSink* xsink) {
+        int timeout_ms, ExceptionSink* xsink, bool require_known) {
     ReferenceHolder<QoreHashNode> ctxt(makeProviderContext("host-key-verify", timeout_ms, xsink), xsink);
     ReferenceHolder<QoreHashNode> observed(makeObservedHostKeyInfo(hostkey, hostkey_len, hostkey_type, xsink), xsink);
     if (*xsink) {
@@ -613,7 +613,12 @@ int SSH2Client::verifyHostKeyWithStore(QoreObject* store, const char* hostkey, s
         return -1;
     }
 
+    if (require_known && decision_name != "matched") {
+        xsink->raiseException("SSH2-HOSTKEY-UNVERIFIED", "the host key store did not match an enrolled key");
+        return -1;
+    }
     if (ssh2_hostkey_decision_success(decision_name)) {
+        known_host_key_matched = decision_name == "matched";
         return 0;
     }
 
@@ -693,9 +698,11 @@ int SSH2Client::disconnectUnlocked(bool force, int timeout_ms, AbstractDisconnec
         }
 
         while ((rc = libssh2_session_free(ssh_session)) == LIBSSH2_ERROR_EAGAIN) {
-            // there can be a memory leak here, but there is no other way to free memory without waiting for the remote socket
-            if (waitSocketUnlocked(xsink, SSH2CLIENT_TIMEOUT, "SSSHCLIENT-DISCONNECT", "SSHClient::disconnect", timeout_ms, true))
-                break;
+            if (waitSocketUnlocked(xsink, SSH2CLIENT_TIMEOUT, "SSSHCLIENT-DISCONNECT", "SSHClient::disconnect",
+                    timeout_ms, true)) {
+                // Finish freeing libssh2's session even when graceful network teardown is interrupted.
+                socket.shutdown();
+            }
         }
 
         ssh_session = 0;
@@ -1530,7 +1537,8 @@ void SSH2Client::finishConnectUnlocked() {
 #endif
 }
 
-int SSH2Client::verifyHostKeyUnlocked(int timeout_ms, ExceptionSink* xsink) {
+int SSH2Client::verifyHostKeyUnlocked(int timeout_ms, ExceptionSink* xsink, bool require_known) {
+    known_host_key_matched = false;
 #ifdef HAVE_LIBSSH2_KNOWNHOST_API
     // verify host key if enabled
     if (verify_host_key) {
@@ -1545,7 +1553,7 @@ int SSH2Client::verifyHostKeyUnlocked(int timeout_ms, ExceptionSink* xsink) {
 
         if (host_key_store) {
             ReferenceHolder<QoreObject> store(host_key_store->objectRefSelf(), xsink);
-            if (verifyHostKeyWithStore(*store, hostkey, hostkey_len, hostkey_type, timeout_ms, xsink)) {
+            if (verifyHostKeyWithStore(*store, hostkey, hostkey_len, hostkey_type, timeout_ms, xsink, require_known)) {
                 disconnectUnlocked(true);
                 return -1;
             }
@@ -1647,7 +1655,7 @@ int SSH2Client::verifyHostKeyUnlocked(int timeout_ms, ExceptionSink* xsink) {
                 sshhost.c_str(), sshport, known_hosts_file.c_str());
             return -1;
         } else if (check == LIBSSH2_KNOWNHOST_CHECK_NOTFOUND) {
-            if (host_key_policy == SSH2_HOSTKEY_TOFU || host_key_policy == SSH2_HOSTKEY_TOFU_SESSION) {
+            if (!require_known && (host_key_policy == SSH2_HOSTKEY_TOFU || host_key_policy == SSH2_HOSTKEY_TOFU_SESSION)) {
                 // Trust On First Use: record the key in this known-hosts context. If a known_hosts
                 // file is configured, persist it. SSH2_HOSTKEY_TOFU_SESSION also allows
                 // session-only trust when no known_hosts file is configured.
@@ -1722,7 +1730,7 @@ int SSH2Client::verifyHostKeyUnlocked(int timeout_ms, ExceptionSink* xsink) {
             xsink && xsink->raiseException("SSH2-HOSTKEY-ERROR", "internal error checking known hosts for '%s:%d'", sshhost.c_str(), sshport);
             return -1;
         }
-        // LIBSSH2_KNOWNHOST_CHECK_MATCH: host key matches, continue
+        known_host_key_matched = check == LIBSSH2_KNOWNHOST_CHECK_MATCH;
 
         libssh2_knownhost_free(nh);
         }
@@ -1774,7 +1782,8 @@ int SSH2Client::checkConnectPreconditionsUnlocked(ExceptionSink* xsink) {
  * 0    ok
  * -1   error (exception raised in xsink if not null)
  */
-int SSH2Client::sshConnectUnlocked(int timeout_ms, ExceptionSink *xsink = 0) {
+int SSH2Client::sshConnectUnlocked(int timeout_ms, ExceptionSink* xsink, const std::function<bool()>& check_peer,
+        bool require_known) {
     // check for host connectivity
     // getaddrinfo(3)
     // see Socket class
@@ -1825,8 +1834,14 @@ int SSH2Client::sshConnectUnlocked(int timeout_ms, ExceptionSink *xsink = 0) {
         return -1;
     }
 
+    // A qualified exchange checks its agreed listener and optional pin before sending credentials or enrolling a key.
+    if (check_peer && !check_peer()) {
+        disconnectUnlocked(true);
+        return -1;
+    }
+
     // verify the server's host key according to the configured policy
-    if (verifyHostKeyUnlocked(timeout_ms, xsink)) {
+    if (verifyHostKeyUnlocked(timeout_ms, xsink, require_known)) {
         return -1;
     }
 

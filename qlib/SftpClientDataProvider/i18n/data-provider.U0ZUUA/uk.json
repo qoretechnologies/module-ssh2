@@ -39,6 +39,118 @@
           "source": "Changes file or directory permissions on an SFTP server",
           "message": "Змінює права доступу до файлу або каталогу на сервері SFTP"
         },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.desc": {
+          "source": "Verify a committed version before exposing the local file. Supply the producer digest for a replaceable path. Use the endpoint, principal, remote path and version in the receipt for deduplication.",
+          "message": "Перевірте опубліковану версію перед наданням доступу до локального файлу. Для шляху, що допускає заміну, вкажіть хеш виробника. Для виявлення дублікатів використовуйте кінцеву точку, обліковий запис, віддалений шлях і версію з квитанції."
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.display_name": {
+          "source": "Acquire Verified File",
+          "message": "Отримати перевірений файл"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.allowed-value.c3RyaW5nOm5vLXJlcGxhY2U.display_name": {
+          "source": "No Replace",
+          "message": "Заборонити заміну"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.allowed-value.c3RyaW5nOnJlcGxhY2U.display_name": {
+          "source": "Replace",
+          "message": "Замінити"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.desc": {
+          "source": "Select how the endpoint handles an existing file",
+          "message": "Виберіть, як кінцева точка обробляє наявний файл"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.display_name": {
+          "source": "Collision Policy",
+          "message": "Політика конфліктів"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.short_desc": {
+          "source": "Select how the endpoint handles an existing file",
+          "message": "Виберіть, як кінцева точка обробляє наявний файл"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.aG9zdF9rZXlfc2hhMjU2.desc": {
+          "source": "Pinned SSH host key in lowercase hex, required for the hosted profile",
+          "message": "Закріплений ключ хоста SSH у шістнадцятковому записі малими літерами, обов’язковий для серверного профілю"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.aG9zdF9rZXlfc2hhMjU2.display_name": {
+          "source": "Host Key SHA-256",
+          "message": "SHA-256 ключа хоста"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.aG9zdF9rZXlfc2hhMjU2.short_desc": {
+          "source": "Pinned SSH host key in lowercase hex, required for the hosted profile",
+          "message": "Закріплений ключ хоста SSH у шістнадцятковому записі малими літерами, обов’язковий для серверного профілю"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.bG9jYWxfcGF0aA.desc": {
+          "source": "Local file to replace after verification",
+          "message": "Локальний файл для заміни після перевірки"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.bG9jYWxfcGF0aA.display_name": {
+          "source": "Destination File",
+          "message": "Цільовий файл"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.bG9jYWxfcGF0aA.short_desc": {
+          "source": "Local file to replace after verification",
+          "message": "Локальний файл для заміни після перевірки"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.bGVuZ3Ro.desc": {
+          "source": "Declared file length in bytes",
+          "message": "Заявлена довжина файлу в байтах"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.bGVuZ3Ro.display_name": {
+          "source": "Expected Length",
+          "message": "Очікувана довжина"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.bGVuZ3Ro.short_desc": {
+          "source": "Declared file length in bytes",
+          "message": "Заявлена довжина файлу в байтах"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.c2hhMjU2.desc": {
+          "source": "Expected lowercase SHA-256, required when acquiring a replaceable file",
+          "message": "Очікуваний SHA-256 малими літерами, обов’язковий для отримання файлу, який можна замінити"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.c2hhMjU2.display_name": {
+          "source": "Producer SHA-256",
+          "message": "SHA-256 від виробника"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.c2hhMjU2.short_desc": {
+          "source": "Expected lowercase SHA-256, required when acquiring a replaceable file",
+          "message": "Очікуваний SHA-256 малими літерами, обов’язковий для отримання файлу, який можна замінити"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.cHJvZmlsZQ.allowed-value.c3RyaW5nOm9wZW5zc2gtcG9zaXg.display_name": {
+          "source": "OpenSSH POSIX",
+          "message": "OpenSSH POSIX"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.cHJvZmlsZQ.allowed-value.c3RyaW5nOmhvc3RlZC1pbW11dGFibGU.display_name": {
+          "source": "Hosted Immutable",
+          "message": "Незмінні файли на сервері"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.cHJvZmlsZQ.desc": {
+          "source": "Publication agreement for this endpoint",
+          "message": "Угода про публікацію для цієї кінцевої точки"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.cHJvZmlsZQ.display_name": {
+          "source": "Endpoint Profile",
+          "message": "Профіль кінцевої точки"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.cHJvZmlsZQ.short_desc": {
+          "source": "Publication agreement for this endpoint",
+          "message": "Угода про публікацію для цієї кінцевої точки"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.cmVtb3RlX3BhdGg.desc": {
+          "source": "Absolute path of the committed file",
+          "message": "Абсолютний шлях до опублікованого файлу"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.cmVtb3RlX3BhdGg.display_name": {
+          "source": "Remote Path",
+          "message": "Віддалений шлях"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.cmVtb3RlX3BhdGg.short_desc": {
+          "source": "Absolute path of the committed file",
+          "message": "Абсолютний шлях до опублікованого файлу"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.short_desc": {
+          "source": "Acquire a committed file over SFTP",
+          "message": "Отримати опублікований файл через SFTP"
+        },
         "app.U0ZUUA.action.Z2V0LWZpbGU.desc": {
           "source": "Retrieve a file from an SFTP server",
           "message": "Отримати файл із сервера SFTP"
@@ -182,6 +294,130 @@
         "app.U0ZUUA.action.c2VuZC1maWxl.short_desc": {
           "source": "Sends a file to an SFTP server",
           "message": "Надсилає файл на сервер SFTP"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.desc": {
+          "source": "Verify the length and optional producer digest before committing a private stage. Select `openssh-posix` for replacement or `hosted-immutable` for enforced no-replace. Reconcile an `indeterminate` receipt before retrying.",
+          "message": "Перевірте довжину та необов’язковий хеш виробника, перш ніж опублікувати приватний проміжний файл. Виберіть `openssh-posix` для заміни або `hosted-immutable` для її заборони. Якщо квитанція містить `indeterminate`, перевірте стан перед повторною спробою."
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.display_name": {
+          "source": "Publish Verified File",
+          "message": "Опублікувати перевірений файл"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.allowed-value.c3RyaW5nOm5vLXJlcGxhY2U.display_name": {
+          "source": "No Replace",
+          "message": "Заборонити заміну"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.allowed-value.c3RyaW5nOnJlcGxhY2U.display_name": {
+          "source": "Replace",
+          "message": "Замінити"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.desc": {
+          "source": "Select how the endpoint handles an existing file",
+          "message": "Виберіть, як кінцева точка обробляє наявний файл"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.display_name": {
+          "source": "Collision Policy",
+          "message": "Політика конфліктів"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.short_desc": {
+          "source": "Select how the endpoint handles an existing file",
+          "message": "Виберіть, як кінцева точка обробляє наявний файл"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.aG9zdF9rZXlfc2hhMjU2.desc": {
+          "source": "Pinned SSH host key in lowercase hex, required for the hosted profile",
+          "message": "Закріплений ключ хоста SSH у шістнадцятковому записі малими літерами, обов’язковий для серверного профілю"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.aG9zdF9rZXlfc2hhMjU2.display_name": {
+          "source": "Host Key SHA-256",
+          "message": "SHA-256 ключа хоста"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.aG9zdF9rZXlfc2hhMjU2.short_desc": {
+          "source": "Pinned SSH host key in lowercase hex, required for the hosted profile",
+          "message": "Закріплений ключ хоста SSH у шістнадцятковому записі малими літерами, обов’язковий для серверного профілю"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.bG9jYWxfcGF0aA.desc": {
+          "source": "Local file to publish",
+          "message": "Локальний файл для публікації"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.bG9jYWxfcGF0aA.display_name": {
+          "source": "Source File",
+          "message": "Вихідний файл"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.bG9jYWxfcGF0aA.short_desc": {
+          "source": "Local file to publish",
+          "message": "Локальний файл для публікації"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.bGVuZ3Ro.desc": {
+          "source": "Declared file length in bytes",
+          "message": "Заявлена довжина файлу в байтах"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.bGVuZ3Ro.display_name": {
+          "source": "Expected Length",
+          "message": "Очікувана довжина"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.bGVuZ3Ro.short_desc": {
+          "source": "Declared file length in bytes",
+          "message": "Заявлена довжина файлу в байтах"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.c2hhMjU2.desc": {
+          "source": "Expected lowercase SHA-256, required when acquiring a replaceable file",
+          "message": "Очікуваний SHA-256 малими літерами, обов’язковий для отримання файлу, який можна замінити"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.c2hhMjU2.display_name": {
+          "source": "Producer SHA-256",
+          "message": "SHA-256 від виробника"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.c2hhMjU2.short_desc": {
+          "source": "Expected lowercase SHA-256, required when acquiring a replaceable file",
+          "message": "Очікуваний SHA-256 малими літерами, обов’язковий для отримання файлу, який можна замінити"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.c3RhZ2luZ19kaXI.desc": {
+          "source": "Private staging directory on the remote filesystem",
+          "message": "Приватний проміжний каталог у віддаленій файловій системі"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.c3RhZ2luZ19kaXI.display_name": {
+          "source": "Staging Directory",
+          "message": "Проміжний каталог"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.c3RhZ2luZ19kaXI.short_desc": {
+          "source": "Private staging directory on the remote filesystem",
+          "message": "Приватний проміжний каталог у віддаленій файловій системі"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.cHJvZmlsZQ.allowed-value.c3RyaW5nOm9wZW5zc2gtcG9zaXg.display_name": {
+          "source": "OpenSSH POSIX",
+          "message": "OpenSSH POSIX"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.cHJvZmlsZQ.allowed-value.c3RyaW5nOmhvc3RlZC1pbW11dGFibGU.display_name": {
+          "source": "Hosted Immutable",
+          "message": "Незмінні файли на сервері"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.cHJvZmlsZQ.desc": {
+          "source": "Publication agreement for this endpoint",
+          "message": "Угода про публікацію для цієї кінцевої точки"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.cHJvZmlsZQ.display_name": {
+          "source": "Endpoint Profile",
+          "message": "Профіль кінцевої точки"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.cHJvZmlsZQ.short_desc": {
+          "source": "Publication agreement for this endpoint",
+          "message": "Угода про публікацію для цієї кінцевої точки"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.cmVtb3RlX3BhdGg.desc": {
+          "source": "Absolute path of the committed file",
+          "message": "Абсолютний шлях до опублікованого файлу"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.cmVtb3RlX3BhdGg.display_name": {
+          "source": "Remote Path",
+          "message": "Віддалений шлях"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.cmVtb3RlX3BhdGg.short_desc": {
+          "source": "Absolute path of the committed file",
+          "message": "Абсолютний шлях до опублікованого файлу"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.short_desc": {
+          "source": "Publish a complete file over SFTP",
+          "message": "Опублікувати повний файл через SFTP"
         },
         "app.U0ZUUA.action.cm1kaXI.desc": {
           "source": "Removes an empty directory on an SFTP server",
