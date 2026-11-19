@@ -1,6 +1,8 @@
 #!/usr/bin/env qore
 # -*- mode: qore; indent-tabs-mode: nil -*-
 
+# Copyright 2026 Qore Technologies, s.r.o.
+
 # Comprehensive tests for the SftpClientDataProvider module
 
 %modern
@@ -103,7 +105,7 @@ class SftpClientDataProviderTest inherits QUnit::Test {
 
         # Check all child providers exist
         list<string> expectedChildren = (
-            "chmod", "chown", "create-file", "create-file-location", "delete", "exists",
+            "acquire-verified", "publish-verified", "chmod", "chown", "create-file", "create-file-location", "delete", "exists",
             "get-file", "get-file-location", "list", "lstat", "mkdir", "move",
             "readlink", "rmdir", "stat", "statvfs", "symlink"
         );

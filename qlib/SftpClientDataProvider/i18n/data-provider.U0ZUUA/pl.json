@@ -39,6 +39,118 @@
           "source": "Changes file or directory permissions on an SFTP server",
           "message": "Zmienia uprawnienia do pliku lub katalogu na serwerze SFTP"
         },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.desc": {
+          "source": "Verify a committed version before exposing the local file. Supply the producer digest for a replaceable path. Use the endpoint, principal, remote path and version in the receipt for deduplication.",
+          "message": "Zweryfikuj opublikowaną wersję przed udostępnieniem pliku lokalnego. Podaj skrót producenta dla ścieżki umożliwiającej zastąpienie. Wykrywaj duplikaty na podstawie punktu końcowego, tożsamości, ścieżki zdalnej i wersji z potwierdzenia."
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.display_name": {
+          "source": "Acquire Verified File",
+          "message": "Pobierz zweryfikowany plik"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.allowed-value.c3RyaW5nOm5vLXJlcGxhY2U.display_name": {
+          "source": "No Replace",
+          "message": "Zabroń zastępowania"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.allowed-value.c3RyaW5nOnJlcGxhY2U.display_name": {
+          "source": "Replace",
+          "message": "Zastąp"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.desc": {
+          "source": "Select how the endpoint handles an existing file",
+          "message": "Wybierz sposób obsługi istniejącego pliku przez punkt końcowy"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.display_name": {
+          "source": "Collision Policy",
+          "message": "Zasady obsługi kolizji"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.short_desc": {
+          "source": "Select how the endpoint handles an existing file",
+          "message": "Wybierz sposób obsługi istniejącego pliku przez punkt końcowy"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.aG9zdF9rZXlfc2hhMjU2.desc": {
+          "source": "Pinned SSH host key in lowercase hex, required for the hosted profile",
+          "message": "Przypięty klucz hosta SSH zapisany szesnastkowo małymi literami, wymagany dla profilu hostowanego"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.aG9zdF9rZXlfc2hhMjU2.display_name": {
+          "source": "Host Key SHA-256",
+          "message": "SHA-256 klucza hosta"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.aG9zdF9rZXlfc2hhMjU2.short_desc": {
+          "source": "Pinned SSH host key in lowercase hex, required for the hosted profile",
+          "message": "Przypięty klucz hosta SSH zapisany szesnastkowo małymi literami, wymagany dla profilu hostowanego"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.bG9jYWxfcGF0aA.desc": {
+          "source": "Local file to replace after verification",
+          "message": "Plik lokalny do zastąpienia po weryfikacji"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.bG9jYWxfcGF0aA.display_name": {
+          "source": "Destination File",
+          "message": "Plik docelowy"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.bG9jYWxfcGF0aA.short_desc": {
+          "source": "Local file to replace after verification",
+          "message": "Plik lokalny do zastąpienia po weryfikacji"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.bGVuZ3Ro.desc": {
+          "source": "Declared file length in bytes",
+          "message": "Zadeklarowana długość pliku w bajtach"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.bGVuZ3Ro.display_name": {
+          "source": "Expected Length",
+          "message": "Oczekiwana długość"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.bGVuZ3Ro.short_desc": {
+          "source": "Declared file length in bytes",
+          "message": "Zadeklarowana długość pliku w bajtach"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.c2hhMjU2.desc": {
+          "source": "Expected lowercase SHA-256, required when acquiring a replaceable file",
+          "message": "Oczekiwany skrót SHA-256 małymi literami, wymagany przy pobieraniu pliku podlegającego zastąpieniu"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.c2hhMjU2.display_name": {
+          "source": "Producer SHA-256",
+          "message": "SHA-256 producenta"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.c2hhMjU2.short_desc": {
+          "source": "Expected lowercase SHA-256, required when acquiring a replaceable file",
+          "message": "Oczekiwany skrót SHA-256 małymi literami, wymagany przy pobieraniu pliku podlegającego zastąpieniu"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.cHJvZmlsZQ.allowed-value.c3RyaW5nOm9wZW5zc2gtcG9zaXg.display_name": {
+          "source": "OpenSSH POSIX",
+          "message": "OpenSSH POSIX"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.cHJvZmlsZQ.allowed-value.c3RyaW5nOmhvc3RlZC1pbW11dGFibGU.display_name": {
+          "source": "Hosted Immutable",
+          "message": "Niezmienne pliki hostowane"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.cHJvZmlsZQ.desc": {
+          "source": "Publication agreement for this endpoint",
+          "message": "Umowa publikacji dla tego punktu końcowego"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.cHJvZmlsZQ.display_name": {
+          "source": "Endpoint Profile",
+          "message": "Profil punktu końcowego"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.cHJvZmlsZQ.short_desc": {
+          "source": "Publication agreement for this endpoint",
+          "message": "Umowa publikacji dla tego punktu końcowego"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.cmVtb3RlX3BhdGg.desc": {
+          "source": "Absolute path of the committed file",
+          "message": "Ścieżka bezwzględna opublikowanego pliku"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.cmVtb3RlX3BhdGg.display_name": {
+          "source": "Remote Path",
+          "message": "Ścieżka zdalna"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.cmVtb3RlX3BhdGg.short_desc": {
+          "source": "Absolute path of the committed file",
+          "message": "Ścieżka bezwzględna opublikowanego pliku"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.short_desc": {
+          "source": "Acquire a committed file over SFTP",
+          "message": "Pobierz opublikowany plik przez SFTP"
+        },
         "app.U0ZUUA.action.Z2V0LWZpbGU.desc": {
           "source": "Retrieve a file from an SFTP server",
           "message": "Pobierz plik z serwera SFTP"
@@ -182,6 +294,130 @@
         "app.U0ZUUA.action.c2VuZC1maWxl.short_desc": {
           "source": "Sends a file to an SFTP server",
           "message": "Wysyła plik na serwer SFTP"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.desc": {
+          "source": "Verify the length and optional producer digest before committing a private stage. Select `openssh-posix` for replacement or `hosted-immutable` for enforced no-replace. Reconcile an `indeterminate` receipt before retrying.",
+          "message": "Przed opublikowaniem prywatnego pliku tymczasowego sprawdź długość i opcjonalny skrót producenta. Wybierz `openssh-posix`, aby zezwolić na zastąpienie, lub `hosted-immutable`, aby je zablokować. Przy wyniku `indeterminate` sprawdź stan przed ponowieniem."
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.display_name": {
+          "source": "Publish Verified File",
+          "message": "Opublikuj zweryfikowany plik"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.allowed-value.c3RyaW5nOm5vLXJlcGxhY2U.display_name": {
+          "source": "No Replace",
+          "message": "Zabroń zastępowania"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.allowed-value.c3RyaW5nOnJlcGxhY2U.display_name": {
+          "source": "Replace",
+          "message": "Zastąp"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.desc": {
+          "source": "Select how the endpoint handles an existing file",
+          "message": "Wybierz sposób obsługi istniejącego pliku przez punkt końcowy"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.display_name": {
+          "source": "Collision Policy",
+          "message": "Zasady obsługi kolizji"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.short_desc": {
+          "source": "Select how the endpoint handles an existing file",
+          "message": "Wybierz sposób obsługi istniejącego pliku przez punkt końcowy"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.aG9zdF9rZXlfc2hhMjU2.desc": {
+          "source": "Pinned SSH host key in lowercase hex, required for the hosted profile",
+          "message": "Przypięty klucz hosta SSH zapisany szesnastkowo małymi literami, wymagany dla profilu hostowanego"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.aG9zdF9rZXlfc2hhMjU2.display_name": {
+          "source": "Host Key SHA-256",
+          "message": "SHA-256 klucza hosta"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.aG9zdF9rZXlfc2hhMjU2.short_desc": {
+          "source": "Pinned SSH host key in lowercase hex, required for the hosted profile",
+          "message": "Przypięty klucz hosta SSH zapisany szesnastkowo małymi literami, wymagany dla profilu hostowanego"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.bG9jYWxfcGF0aA.desc": {
+          "source": "Local file to publish",
+          "message": "Plik lokalny do opublikowania"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.bG9jYWxfcGF0aA.display_name": {
+          "source": "Source File",
+          "message": "Plik źródłowy"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.bG9jYWxfcGF0aA.short_desc": {
+          "source": "Local file to publish",
+          "message": "Plik lokalny do opublikowania"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.bGVuZ3Ro.desc": {
+          "source": "Declared file length in bytes",
+          "message": "Zadeklarowana długość pliku w bajtach"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.bGVuZ3Ro.display_name": {
+          "source": "Expected Length",
+          "message": "Oczekiwana długość"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.bGVuZ3Ro.short_desc": {
+          "source": "Declared file length in bytes",
+          "message": "Zadeklarowana długość pliku w bajtach"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.c2hhMjU2.desc": {
+          "source": "Expected lowercase SHA-256, required when acquiring a replaceable file",
+          "message": "Oczekiwany skrót SHA-256 małymi literami, wymagany przy pobieraniu pliku podlegającego zastąpieniu"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.c2hhMjU2.display_name": {
+          "source": "Producer SHA-256",
+          "message": "SHA-256 producenta"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.c2hhMjU2.short_desc": {
+          "source": "Expected lowercase SHA-256, required when acquiring a replaceable file",
+          "message": "Oczekiwany skrót SHA-256 małymi literami, wymagany przy pobieraniu pliku podlegającego zastąpieniu"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.c3RhZ2luZ19kaXI.desc": {
+          "source": "Private staging directory on the remote filesystem",
+          "message": "Prywatny katalog tymczasowy w zdalnym systemie plików"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.c3RhZ2luZ19kaXI.display_name": {
+          "source": "Staging Directory",
+          "message": "Katalog tymczasowy"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.c3RhZ2luZ19kaXI.short_desc": {
+          "source": "Private staging directory on the remote filesystem",
+          "message": "Prywatny katalog tymczasowy w zdalnym systemie plików"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.cHJvZmlsZQ.allowed-value.c3RyaW5nOm9wZW5zc2gtcG9zaXg.display_name": {
+          "source": "OpenSSH POSIX",
+          "message": "OpenSSH POSIX"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.cHJvZmlsZQ.allowed-value.c3RyaW5nOmhvc3RlZC1pbW11dGFibGU.display_name": {
+          "source": "Hosted Immutable",
+          "message": "Niezmienne pliki hostowane"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.cHJvZmlsZQ.desc": {
+          "source": "Publication agreement for this endpoint",
+          "message": "Umowa publikacji dla tego punktu końcowego"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.cHJvZmlsZQ.display_name": {
+          "source": "Endpoint Profile",
+          "message": "Profil punktu końcowego"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.cHJvZmlsZQ.short_desc": {
+          "source": "Publication agreement for this endpoint",
+          "message": "Umowa publikacji dla tego punktu końcowego"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.cmVtb3RlX3BhdGg.desc": {
+          "source": "Absolute path of the committed file",
+          "message": "Ścieżka bezwzględna opublikowanego pliku"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.cmVtb3RlX3BhdGg.display_name": {
+          "source": "Remote Path",
+          "message": "Ścieżka zdalna"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.cmVtb3RlX3BhdGg.short_desc": {
+          "source": "Absolute path of the committed file",
+          "message": "Ścieżka bezwzględna opublikowanego pliku"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.short_desc": {
+          "source": "Publish a complete file over SFTP",
+          "message": "Opublikuj kompletny plik przez SFTP"
         },
         "app.U0ZUUA.action.cm1kaXI.desc": {
           "source": "Removes an empty directory on an SFTP server",

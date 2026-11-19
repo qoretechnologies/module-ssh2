@@ -25,7 +25,7 @@
 # make sure we have the required qore version
 %requires qore >= 3.0
 %requires(reexport) SftpPollerUtil
-%requires(reexport) ssh2
+%requires(reexport) ssh2 >= 2.1
 
 %modern
 
@@ -34,7 +34,7 @@
 %requires DataProvider
 
 module SftpPoller {
-    version = "1.4.1";
+    version = "1.6";
     desc = "SftpPoller module";
     author = "David Nichols <david@qore.org>";
     url = "http://qore.org";
@@ -157,6 +157,9 @@ hash opts = (
 
     @section sftppollerrelnotes SftpPoller Module Release Notes
 
+    @section sftppollerv1_6 Version 1.6
+    - Added opt-in verified acquisition from dedicated publication directories.
+
     @section sftppollerv1_5 Version 1.5
     - an error raised while a polled file is handled (ex: an observer that refuses the file event) is logged, the
       remote file is kept, and the poll is retried after the \c "error_delay" option's delay; previously polling
@@ -257,7 +260,7 @@ public class SftpPoller {
 %ifndef PO_NO_THREAD_CONTROL
             "start_thread",
 %endif
-            "skip_file_content_retrieval",
+            "skip_file_content_retrieval", "commit_profile", "host_key_sha256",
         );
 
         #! all keys
@@ -327,6 +330,8 @@ public class SftpPoller {
 
         #! Local directory to transfer file
         string local_dir;
+        *string commit_profile;
+        *string host_key_sha256;
 
         #! The temporary filename template when \c local_dir is set
         string tempfile_template;
@@ -417,6 +422,9 @@ public class SftpPoller {
     #! creates the SftpPoller object from the @ref Qore::SSH2::SFTPClient "SFTPClient" argument and configuration hash argument passed
     /** @param sftp the new @ref Qore::SSH2::SFTPClient "SFTPClient" object
         @param nconf a hash with the following optional keys:
+        - \c commit_profile: opt in to hosted-immutable or openssh-sha256-name. Configure one absolute committed
+          directory in path and an existing local_dir. Each callback receives a verified receipt.
+        - \c host_key_sha256: lowercase SHA-256 fingerprint of the qualified host key, required for hosted-immutable
         - \c atomic_transfer: if @ref True and \c local_dir is set, then \c tempfile_template is used to write SFTP
           files to a temporary filename during transfer
         - \c binary: if set to @ref Qore::True "True" then files are transferred in binary mode by default (with
@@ -480,6 +488,10 @@ public class SftpPoller {
     constructor(Qore::SSH2::SFTPClient sftp, hash<auto> nconf) {
         # create hash of keys with only valid options in argument hash
         hash<auto> conf = Defaults + nconf{AllKeys};
+        if (exists conf.commit_profile) {
+            conf.local_dir = nconf.local_dir;
+            validateCommitOptions(conf);
+        }
 
         foreach string k in (RequiredKeys) {
             if (!exists conf{k})
@@ -544,6 +556,9 @@ public class SftpPoller {
 
     #! creates the SftpPoller object from the configuration hash argument passed
     /** @param nconf a hash with the following keys:
+        - \c commit_profile: opt in to hosted-immutable or openssh-sha256-name. Configure one absolute committed
+          directory in path and an existing local_dir. Each callback receives a verified receipt.
+        - \c host_key_sha256: lowercase SHA-256 fingerprint of the qualified host key, required for hosted-immutable
         - \c atomic_transfer: if @ref True and \c local_dir is set, then \c tempfile_template is used to write SFTP
           files to a temporary filename during transfer
         - \c binary: if set to @ref Qore::True "True" then files are transferred in binary mode by default (with
@@ -615,6 +630,10 @@ public class SftpPoller {
     constructor(hash<auto> nconf) {
         # create hash of keys with only valid options in argument hash
         hash<auto> conf = Defaults + nconf{AllKeys};
+        if (exists conf.commit_profile) {
+            conf.local_dir = nconf.local_dir;
+            validateCommitOptions(conf);
+        }
 
         foreach string k in (RequiredKeysWithHost) {
             if (!exists conf{k})
@@ -688,6 +707,26 @@ public class SftpPoller {
         setup(sftp);
     }
 
+    private static nothing validateCommitOptions(hash<auto> conf) {
+        softlist<string> dirs = conf.path ?? ".";
+        if ((conf.commit_profile != "hosted-immutable" && conf.commit_profile != "openssh-sha256-name")
+                || dirs.size() != 1 || !dirs[0].startsWith("/") || dirs[0].find("//") >= 0
+                || dirs[0].find("/../") >= 0 || dirs[0].find("/./") >= 0
+                || dirs[0].endsWith("/..") || dirs[0].endsWith("/.")
+                || (dirs[0] != "/" && dirs[0].endsWith("/"))
+                || !conf.local_dir || !absolute_path(conf.local_dir)
+                || !is_dir(conf.local_dir) || !is_writable(conf.local_dir)
+                || conf.skip_file_content_retrieval || conf.delete_remote_file || conf.move_remote_file
+                || conf.writable) {
+            throw "SFTPPOLLER-CONSTRUCTOR-ARG-ERROR", "Strict polling requires one absolute committed directory, "
+                "an absolute writable local directory and remote files retained after acquisition";
+        }
+        if (conf.commit_profile == "hosted-immutable" && (dirs[0] != "/inbound"
+                || !conf.host_key_sha256 || conf.host_key_sha256 !~ /^[a-f0-9]{64}$/)) {
+            throw "SFTPPOLLER-CONSTRUCTOR-ARG-ERROR", "Hosted immutable polling requires /inbound and a pinned host key";
+        }
+    }
+
     #! stops the polling operation if in progress and destroys the object
     destructor() {
         # if the object is being destroyed in the polling thread itself (for example because the last
@@ -757,9 +796,10 @@ public class SftpPoller {
         if (info.ssh2port) {
             url += sprintf(":%d", info.ssh2port);
         }
-        logDetail("%s: logging in (timeout %y)", url, timeout);
-        # connect to the remote system
-        sftp.connect(timeout);
+        if (!commit_profile) {
+            logDetail("%s: logging in (timeout %y)", url, timeout);
+            sftp.connect(timeout);
+        }
 
         self.url = url;
 
@@ -908,8 +948,13 @@ public class SftpPoller {
     list<hash<SftpPollerFileEventInfo>> getFiles(int sort = SftpPoller::SortNone, int order = SftpPoller::OrderAsc) {
         list<hash<SftpPollerFileEventInfo>> l =
             map cast<hash<SftpPollerFileEventInfo>>($1),
-                sftp.listFull(NOTHING, timeout),
+                (commit_profile ? sftp.listExchangeDirectory(path[0], commit_profile == "hosted-immutable"
+                    ? "hosted-immutable" : "openssh-posix", host_key_sha256, timeout) : sftp.listFull(NOTHING, timeout)),
                 $1.type == "REGULAR";
+
+        if (commit_profile) {
+            l = select l, eligibleCommittedName($1.name);
+        }
 
         # remove all files that don't fit the mask
         if (mask) {
@@ -1050,6 +1095,9 @@ public class SftpPoller {
     #! runs a single poll (useful for checking for errors inline before starting a background thread)
     bool runOnce() {
         ++pollcnt;
+        if (commit_profile) {
+            return pollCommitted();
+        }
         bool ret = False;
         foreach string subdir in (path) {
             get_files = True;
@@ -1114,6 +1162,53 @@ public class SftpPoller {
             }
         }
         return ret;
+    }
+
+    private bool eligibleCommittedName(string name) {
+        if (!name || name == "." || name == ".." || name.startsWith(".qore-stage-")
+                || name.find("/") >= 0 || name.find("\\") >= 0 || name.find(":") >= 0 || name.find("\0") >= 0) {
+            return False;
+        }
+        return commit_profile == "hosted-immutable" || name =~ /^[a-f0-9]{64}\..+$/;
+    }
+
+    private bool pollCommitted() {
+        get_files = True;
+        in_event = False;
+        bool emitted = False;
+        foreach hash<SftpPollerFileEventInfo> event in (getFiles()) {
+            if (!exists event.size) {
+                throw "SFTPPOLLER-ACQUISITION-ERROR", sprintf("Endpoint omitted the byte length of %y", event.name);
+            }
+            bool hosted = commit_profile == "hosted-immutable";
+            string remote = (path[0] == "/" ? "" : path[0]) + "/" + event.name;
+            string target = local_dir + DirSep + event.name;
+            date start = now_us();
+            hash<SftpExchangeReceipt> receipt = sftp.acquireVerified(<SftpExchangeSpec>{
+                "profile": hosted ? "hosted-immutable" : "openssh-posix",
+                "collision_policy": hosted ? "no-replace" : "replace",
+                "remote_path": remote, "length": event.size, "host_key_sha256": host_key_sha256,
+                "sha256": hosted ? NOTHING : event.name.substr(0, 64),
+            }, target, timeout);
+            if (receipt.outcome != "confirmed") {
+                throw "SFTPPOLLER-ACQUISITION-ERROR", receipt.detail, receipt;
+            }
+            event += {"filepath": remote, "local_path": target, "transfer_time": now_us() - start,
+                "receipt": receipt, "remote_status": RS_NONE};
+            if (fileEvent((event,))) {
+                get_files = False;
+                in_event = True;
+                singleFileEvent(event);
+                in_event = False;
+                {
+                    on_error fatal = True;
+                    postSingleFileEvent(event);
+                }
+                emitted = True;
+                get_files = True;
+            }
+        }
+        return emitted;
     }
 
     #! Retrieves remote file data and adds it to the event data
@@ -1241,6 +1336,10 @@ public class SftpPoller {
         hash<auto> ih = sftp.info();
         if (!url) {
             url = sprintf("%s@%s:%d", ih.ssh2user ? ih.ssh2user : "<none>", ih.ssh2host, ih.ssh2port);
+        }
+        if (commit_profile) {
+            self.sftp = sftp;
+            return;
         }
         if (!ih.connected) {
             logDetail("%s: logging in (timeout %y)", url, timeout);
@@ -1372,6 +1471,23 @@ public class SftpPollerDataProviderBase inherits DataProvider::AbstractDataProvi
     public {
         #! Constructor options
         const ConstructorOptions = {
+            "commit_profile": <DataProviderOptionInfo>{
+                "display_name": "Publication Agreement",
+                "short_desc": "Verify committed files before emitting events",
+                "desc": "Use a dedicated committed directory and a writable local directory. Hosted files are immutable. "
+                    "On OpenSSH the committed name starts with the producer SHA-256 and a dot.",
+                "type": AbstractDataProviderTypeMap."string",
+                "allowed_values": (
+                    <AllowedValueInfo>{"value": "hosted-immutable", "display_name": "Hosted Immutable"},
+                    <AllowedValueInfo>{"value": "openssh-sha256-name", "display_name": "OpenSSH Digest Filename"},
+                ),
+            },
+            "host_key_sha256": <DataProviderOptionInfo>{
+                "display_name": "Host Key SHA-256",
+                "short_desc": "Pinned host key fingerprint",
+                "desc": "Pinned SSH host key in lowercase hex, required for the hosted profile",
+                "type": AbstractDataProviderTypeMap."string",
+            },
             "atomic_transfer":  <DataProviderOptionInfo>{
                 "display_name": "Atomic File Transfer",
                 "short_desc": "Use an atomic file transfer mechanism",

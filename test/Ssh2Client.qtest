@@ -1,7 +1,9 @@
 #!/usr/bin/env qore
 # -*- mode: qore; indent-tabs-mode: nil -*-
+# Copyright 2026 Qore Technologies, s.r.o.
 
 %modern
+%prepend-module-path "${SCRIPT_DIR}/../qlib"
 
 %requires qore >= 2.3
 %requires ssh2 >= 2.0
@@ -77,18 +79,23 @@ class RejectingHostKeyStore inherits SshUtil::AbstractSshHostKeyStore {
 
 class LockProbeHostKeyStore inherits SshUtil::AbstractSshHostKeyStore {
     private {
-        *SSH2Client client;
+        *SSH2Base client;
+        *code<nothing()> during_verify;
         int verify_calls;
         bool connected_during_verify;
         *string callback_error;
     }
 
-    constructor(SSH2Client client) {
+    constructor(SSH2Base client, *code<nothing()> during_verify) {
         self.client = client;
+        self.during_verify = during_verify;
     }
 
     hash<SshUtil::SshHostKeyDecisionInfo> verifyHostKey(hash<auto> ctxt, hash<auto> observed_key) {
         ++verify_calls;
+        if (during_verify) {
+            during_verify();
+        }
         try {
             connected_during_verify = boolean(client.connected());
         } catch (hash<ExceptionInfo> ex) {
@@ -249,6 +256,7 @@ class Ssh2ClientTest inherits QUnit::Test {
         addTestCase("Known hosts stat error fail-closed test", \knownHostsStatErrorFailClosedTest());
         addTestCase("Known hosts filesystem sandbox test", \knownHostsFilesystemSandboxTest());
         addTestCase("Client identity provider test", \clientIdentityProviderTest());
+        addTestCase("SFTP handshake reserves the client during trust callbacks", \sftpConnectCallbackReservationTest());
         addTestCase("Virtual host-key store no-filesystem test", \virtualHostKeyStoreNoFilesystemTest());
         addTestCase("Host key store callback lock test", \hostKeyStoreCallbackLockTest());
         addTestCase("Client identity provider callback lock test", \clientIdentityProviderCallbackLockTest());
@@ -1142,6 +1150,22 @@ class Ssh2ClientTest inherits QUnit::Test {
         assertNothing(store.getCallbackError(), "host-key store callback same-client call must not throw");
         assertFalse(store.getConnectedDuringVerify(),
             "same-client connected() call from a host-key store callback must not see a completed connection");
+    }
+
+    sftpConnectCallbackReservationTest() {
+        SFTPClient sc(uri);
+        LockProbeHostKeyStore store(sc, nothing sub() {
+            assertThrows("SSH2-CONNECT-IN-PROGRESS", sub() { sc.connect(); });
+            assertThrows("SSH2-CONNECT-IN-PROGRESS", sub() { sc.startPollGetFile("member"); });
+        });
+        sc.setHostKeyStore(store);
+        sc.setHostKeyPolicy(Ssh2HostKeyPolicy::Reject);
+        on_exit {
+            sc.setHostKeyStore(NOTHING);
+            store.clearClient();
+        }
+        assertThrows("SSH2-HOSTKEY-UNKNOWN", sub() { sc.connect(); });
+        assertEq(1, store.getVerifyCalls());
     }
 
     clientIdentityProviderCallbackLockTest() {

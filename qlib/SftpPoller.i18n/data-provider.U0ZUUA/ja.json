@@ -11,6 +11,26 @@
           "source": "SFTP File Received",
           "message": "SFTPファイル受信"
         },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.Y29tbWl0X3Byb2ZpbGU.allowed-value.c3RyaW5nOm9wZW5zc2gtc2hhMjU2LW5hbWU.display_name": {
+          "source": "OpenSSH Digest Filename",
+          "message": "ダイジェスト付き OpenSSH ファイル名"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.Y29tbWl0X3Byb2ZpbGU.allowed-value.c3RyaW5nOmhvc3RlZC1pbW11dGFibGU.display_name": {
+          "source": "Hosted Immutable",
+          "message": "ホスト型の不変ファイル"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.Y29tbWl0X3Byb2ZpbGU.desc": {
+          "source": "Use a dedicated committed directory and a writable local directory. Hosted files are immutable. On OpenSSH the committed name starts with the producer SHA-256 and a dot.",
+          "message": "公開済みファイル専用のディレクトリと書き込み可能なローカルディレクトリを使用します。ホスト型のファイルは変更できません。OpenSSH では、公開名の先頭に作成者の SHA-256 とピリオドが必要です。"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.Y29tbWl0X3Byb2ZpbGU.display_name": {
+          "source": "Publication Agreement",
+          "message": "公開方式の取り決め"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.Y29tbWl0X3Byb2ZpbGU.short_desc": {
+          "source": "Verify committed files before emitting events",
+          "message": "イベント送出前に公開済みファイルを検証"
+        },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.YXRvbWljX3RyYW5zZmVy.desc": {
           "source": "Use an atomic transfer mechanism with `local_dir` where remote files are first moved to a temporary location and then moved to the final location when they have been fully transferred.\n\nThis ensures that files will never be read until they are fully transferred",
           "message": "`local_dir` でアトミック転送メカニズムを使用します。リモートファイルは最初に一時的な場所に移動され、完全に転送されてから最終的な場所に移動されます。\n\nこれにより、完全に転送されるまでファイルが読み取られることはありません"
@@ -34,6 +54,18 @@
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.a2V5ZmlsZQ.short_desc": {
           "source": "A path to an SSH private key file in PEM format",
           "message": "PEM形式のSSH秘密鍵ファイルへのパス"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfc2hhMjU2.desc": {
+          "source": "Pinned SSH host key in lowercase hex, required for the hosted profile",
+          "message": "固定した SSH ホスト鍵の小文字の 16 進指紋。ホスト型プロファイルでは必須"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfc2hhMjU2.display_name": {
+          "source": "Host Key SHA-256",
+          "message": "ホスト鍵の SHA-256"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfc2hhMjU2.short_desc": {
+          "source": "Pinned host key fingerprint",
+          "message": "固定したホスト鍵の指紋"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.bG9jYWxfZGly.desc": {
           "source": "A local directory that will be used to retrieve files",

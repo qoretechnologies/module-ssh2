@@ -1,0 +1,122 @@
+#!/usr/bin/env qore
+# Copyright 2026 Qore Technologies, s.r.o.
+# SPDX-License-Identifier: MIT
+%modern
+%prepend-module-path "${SCRIPT_DIR}/../../qlib"
+%requires ssh2
+%requires SftpPoller
+%requires QUnit
+%try-module ssh
+%define NoHostedServer
+%endtry
+%requires reflection
+%try-module SftpServerDataProvider
+%define NoHostedServer
+%endtry
+%try-module sqlite3
+%define NoHostedServer
+%endtry
+%exec-class HostedTest
+
+class HostedPoller inherits SftpPoller {
+    public {
+        list<hash<SftpPollerFileEventInfo>> received = ();
+    }
+    constructor(SFTPClient client, hash<auto> options) : SftpPoller(client, options) {
+    }
+    nothing singleFileEvent(hash<SftpPollerFileEventInfo> event) {
+        received += event;
+    }
+    nothing postSingleFileEvent(hash<SftpPollerFileEventInfo> event) {
+    }
+}
+
+class HostedTest inherits QUnit::Test {
+    constructor() : Test("Hosted SFTP exchange", "1.0", \ARGV) {
+        addTestCase("immutable staged exchange over the module-ssh listener", \hosted());
+        set_return_value(main());
+    }
+    private hosted() {
+%ifdef NoHostedServer
+        testSkip("requires module-ssh with StagedSftpExchange and the sqlite3 driver");
+%else
+        string root = ENV.EXCHANGE_ROOT;
+        Class backend_class;
+        try {
+            backend_class = Class::forName("SftpServerDataProvider::StagedSftpExchange");
+        } catch (hash<ExceptionInfo> ex) {
+            if (ex.err == "UNKNOWN-CLASS") {
+                testSkip("installed module-ssh predates the staged exchange");
+            }
+            rethrow;
+        }
+        object backend = backend_class.newObject(root + "/receipts.sqlite");
+        string password = get_random_bytes(24).toHex();
+        hash<Qore::Ssh::SshServerConfig> config = <Qore::Ssh::SshServerConfig>{
+            "name": "staged-test",
+            "listeners": (<Qore::Ssh::SshListenerConfig>{
+                "name": "fixture", "bind_address": "127.0.0.1", "port": 0,
+                "banner": "QoreStagedSFTP_1", "host_keys": (root + "/host",),
+                "enabled_auth_methods": ("password",), "allow_sftp_service": True,
+            },),
+            "auth_callback": hash<auto> sub(hash<Qore::Ssh::SshAuthContextInfo> ctx) {
+                return {"accepted": ctx.auth_method == "password" && ctx.password == password,
+                    "principal": ctx.username, "allowed_auth_methods": ("password",),
+                    "command_policy": {"mode": "subsystem-only", "allowed_subsystems": ("sftp",)},
+                    "sftp_policy": {"mode": "enabled"}};
+            },
+            "sftp_factory_callback": hash<auto> sub(hash<Qore::Ssh::SftpSessionInfo> info) {
+                return {"backend": backend};
+            },
+        };
+        Qore::Ssh::SshServer server(config);
+        server.start();
+        int port = server.getStatus().listeners[0].bound_port;
+        Counter done(1);
+        *hash<ExceptionInfo> service_error;
+        background sub() {
+            on_exit done.dec();
+            try {
+                Qore::Ssh::SshSession session = server.acceptSession(10000);
+                server.authenticateSession(session, 10000);
+                Qore::Ssh::SftpSession sftp = server.dispatchSftpSession(session, 10000);
+                while (sftp.processNextRequest(10000) != NOTHING) {
+                }
+            } catch (hash<ExceptionInfo> ex) {
+                service_error = ex;
+            }
+        }();
+        SFTPClient c("sftp://fixture@127.0.0.1", port);
+        c.setUseAgent(False);
+        c.setPassword(password);
+        c.setKnownHostsFile(root + "/hosted_known_hosts");
+        hash<SftpExchangeSpec> s = <SftpExchangeSpec>{"profile": "hosted-immutable", "collision_policy": "no-replace",
+            "remote_path": "/inbound/version-42", "staging_dir": "/staging", "length": 3,
+            "host_key_sha256": ENV.EXCHANGE_PIN};
+        hash<SftpExchangeReceipt> pub = c.publishVerified(new BinaryInputStream(<fafbfc>), s, 5s);
+        on_exit {
+            c.disconnect();
+            done.waitForZero();
+            server.stop();
+        }
+        assertEq("confirmed", pub.outcome, sprintf("%y %y", pub, service_error));
+        assertEq("failed", c.publishVerified(new BinaryInputStream(<000000>), s).outcome);
+        hash<SftpExchangeReceipt> got = c.acquireVerified(s, root + "/hosted-local");
+        assertEq("confirmed", got.outcome, sprintf("%y", got));
+        assertEq(pub.version, got.version);
+        assertEq(<fafbfc>, ReadOnlyFile::readBinaryFile(root + "/hosted-local"));
+        HostedPoller poller(c, {"path": "/inbound", "commit_profile": "hosted-immutable",
+            "host_key_sha256": s.host_key_sha256, "local_dir": root + "/local"});
+        assertTrue(poller.runOnce());
+        assertTrue(poller.runOnce());
+        assertEq(2, poller.received.size());
+        assertEq(pub.version, poller.received[0].receipt.version);
+        assertEq(poller.received[0].receipt, poller.received[1].receipt);
+        assertEq(<fafbfc>, ReadOnlyFile::readBinaryFile(poller.received[0].local_path));
+        list<hash<auto>> receipts = backend.listPublications("fixture");
+        assertEq(1, receipts.size());
+        assertEq("version-42", receipts[0].final_name);
+        assertEq(3, receipts[0].byte_count);
+%endif
+    }
+}

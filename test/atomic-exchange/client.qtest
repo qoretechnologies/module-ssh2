@@ -1,0 +1,243 @@
+#!/usr/bin/env qore
+# Copyright 2026 Qore Technologies, s.r.o.
+# SPDX-License-Identifier: MIT
+%modern
+%prepend-module-path "${SCRIPT_DIR}/../../qlib"
+%requires ssh2
+%requires QUnit
+%exec-class ExchangeTest
+
+class GeneratedInput inherits InputStream {
+    private {
+        int left;
+        code<nothing()> barrier;
+        bool emitted;
+        bool called;
+    }
+    constructor(int size, code<nothing()> barrier) {
+        left = size;
+        self.barrier = barrier;
+    }
+    *binary read(int limit) {
+        if (emitted && !called) {
+            called = True;
+            barrier();
+        }
+        if (!left) {
+            return;
+        }
+        int count = min(limit, left);
+        left -= count;
+        emitted = True;
+        return binary(strmul("a", count));
+    }
+    int peek() {
+        return left ? 97 : -1;
+    }
+}
+
+class ExchangeTest inherits QUnit::Test {
+    private {
+        string root = ENV.EXCHANGE_ROOT;
+        string remote = root + "/in/member";
+        string local = root + "/local/member";
+    }
+    constructor() : Test("Verified SFTP exchange", "1.0", \ARGV) {
+        addTestCase("streamed and empty atomic replacements", \roundtrip());
+        addTestCase("failures preserve the prior version", \failures());
+        addTestCase("cancellation at a download barrier", \cancelDownload());
+        addTestCase("uncertain commit and unsupported endpoint", \uncertain());
+        addTestCase("enforced concurrent no-replace", \concurrent());
+        set_return_value(main());
+    }
+    private SFTPClient client() {
+        SFTPClient c(ENV.EXCHANGE_URI);
+        c.setKnownHostsFile(root + "/known_hosts");
+        c.setHostKeyPolicy(Ssh2HostKeyPolicy::Reject);
+        c.setUseAgent(False);
+        c.setKeys(root + "/client");
+        return c;
+    }
+    private hash<SftpExchangeSpec> spec(int length, *string sha) {
+        return <SftpExchangeSpec>{"remote_path": remote, "profile": "openssh-posix", "collision_policy": "replace",
+            "length": length, "sha256": sha, "staging_dir": root + "/stage"};
+    }
+    private write(string path, string content) {
+        FileOutputStream f(path);
+        f.write(binary(content));
+        f.close();
+    }
+    private fault(string value) {
+        write(root + "/fault", value);
+    }
+    private roundtrip() {
+        fault("");
+        SFTPClient c = client();
+        int size = 1024 * 1024 + 11;
+        write(remote, "original");
+        write(local, "previous");
+        hash<SftpExchangeSpec> s = spec(size);
+        hash<SftpExchangeReceipt> r = c.publishVerified(new GeneratedInput(size, nothing sub() {
+            assertEq("original", ReadOnlyFile::readTextFile(remote));
+        }), s);
+        assertEq("confirmed", r.outcome, sprintf("%y", r));
+        assertEq(size, r.length);
+        assertEq(digest("sha256", strmul("a", size)).toHex(), r.sha256);
+        assertEq(ENV.EXCHANGE_PIN, r.host_key_sha256);
+        s.sha256 = r.sha256;
+        write(root + "/replacement", "new");
+        fault("replace-during-read");
+        hash<SftpExchangeReceipt> got = c.acquireVerified(s, local);
+        assertEq("confirmed", got.outcome, sprintf("%y", got));
+        assertEq(r.version, got.version);
+        assertEq("previous", ReadOnlyFile::readTextFile(root + "/read-barrier"));
+        assertEq(strmul("a", size), ReadOnlyFile::readTextFile(local));
+        assertEq("new", ReadOnlyFile::readTextFile(remote));
+        fault("");
+        s = spec(0, digest("sha256", "").toHex());
+        r = c.publishVerified(new BinaryInputStream(binary()), s);
+        assertEq("confirmed", r.outcome);
+        assertEq("confirmed", c.acquireVerified(s, local).outcome);
+        assertEq(0, hstat(local).size);
+    }
+    private failures() {
+        SFTPClient c = client();
+        write(remote, "prior");
+        write(local, "prior local");
+        foreach string mode in ("write-error", "close-error") {
+            fault(mode);
+            hash<SftpExchangeReceipt> r = c.publishVerified(new BinaryInputStream(<01>), spec(1));
+            assertEq("failed", r.outcome);
+            assertEq("prior", ReadOnlyFile::readTextFile(remote));
+            assertFalse(is_file(r.staging_path));
+        }
+        fault("stall-close");
+        hash<SftpExchangeReceipt> stalled = c.publishVerified(new BinaryInputStream(<01>), spec(1), 1s);
+        assertEq("failed", stalled.outcome);
+        assertEq("prior", ReadOnlyFile::readTextFile(remote));
+        fault("");
+        foreach hash<SftpExchangeSpec> s in (spec(0), spec(2), spec(1, strmul("0", 64))) {
+            assertEq("failed", c.publishVerified(new BinaryInputStream(<01>), s).outcome);
+        }
+        hash<SftpExchangeReceipt> interrupted = c.publishVerified(new GeneratedInput(1, nothing sub() {
+            throw "INPUT-CANCELLED", "source stopped";
+        }), spec(1));
+        assertEq("failed", interrupted.outcome);
+        assertEq("INPUT-CANCELLED", interrupted.error);
+        assertEq("prior", ReadOnlyFile::readTextFile(remote));
+        interrupted = c.publishVerified(new GeneratedInput(1, nothing sub() {
+            assertThrows("SFTP-EXCHANGE-BUSY", sub() { c.startPollGetFile(remote); });
+            c.disconnect();
+            assertThrows("SFTP-EXCHANGE-BUSY", sub() { c.startPollGetFile(remote); });
+            assertEq("SFTP-EXCHANGE-BUSY", c.publishVerified(new BinaryInputStream(<01>), spec(1)).error);
+        }), spec(1));
+        assertEq("failed", interrupted.outcome);
+        assertEq("prior", ReadOnlyFile::readTextFile(remote));
+        hash<SftpExchangeSpec> absent = spec(0);
+        remove absent.length;
+        assertEq("failed", c.publishVerified(new BinaryInputStream(binary()), absent).outcome);
+        hash<SftpExchangeSpec> s = spec(5, strmul("0", 64));
+        assertEq("failed", c.acquireVerified(s, "../relative").outcome);
+        assertEq("failed", c.acquireVerified(s, local).outcome);
+        s.sha256 = digest("sha256", "prior").toHex();
+        fault("short-read");
+        assertEq("failed", c.acquireVerified(s, local).outcome);
+        fault("");
+        assertEq("failed", c.acquireVerified(s, root + "/local").outcome);
+        s.remote_path += "-missing";
+        assertEq("failed", c.acquireVerified(s, local).outcome);
+        assertEq("prior local", ReadOnlyFile::readTextFile(local));
+    }
+    private cancelDownload() {
+        write(remote, "complete");
+        write(local, "previous version");
+        SFTPClient c = client();
+        c.connect();
+        fault("pause-read");
+        Counter done(1);
+        *string result;
+        int tid = background sub() {
+            on_exit done.dec();
+            try {
+                result = c.acquireVerified(spec(8, digest("sha256", "complete").toHex()), local).error;
+            } catch (hash<ExceptionInfo> ex) {
+                result = ex.err;
+            }
+        }();
+        FileInputStream ready(root + "/gate-ready");
+        assertEq(<01>, ready.read(1));
+        assertTrue(cancel_thread(tid, "cancel verified acquisition"));
+        FileOutputStream release(root + "/gate-release");
+        release.write(<01>);
+        release.close();
+        done.waitForZero();
+        fault("");
+        assertEq("THREAD-CANCELLED", result);
+        assertEq("previous version", ReadOnlyFile::readTextFile(local));
+    }
+    private uncertain() {
+        SFTPClient first = client();
+        first.setKnownHostsFile(root + "/new-known-hosts");
+        first.setHostKeyPolicy(Ssh2HostKeyPolicy::TrustOnFirstUseSession);
+        assertEq("SSH2-HOSTKEY-UNKNOWN", first.publishVerified(new BinaryInputStream(<aa>), spec(1)).error);
+        assertFalse(is_file(root + "/new-known-hosts"));
+        fault("no-extension");
+        hash<SftpExchangeSpec> s = spec(1);
+        SFTPClient c = client();
+        assertEq("unsupported", c.publishVerified(new BinaryInputStream(<aa>), s).outcome);
+        fault("drop-commit");
+        c = client();
+        hash<SftpExchangeReceipt> r = c.publishVerified(new BinaryInputStream(<aa>), s, 2s);
+        assertEq("indeterminate", r.outcome, sprintf("%y", r));
+        assertEq(<aa>, ReadOnlyFile::readBinaryFile(remote));
+        assertEq(digest("sha256", <aa>).toHex(), r.version);
+        fault("");
+    }
+    private concurrent() {
+        fault("no-replace");
+        hash<SftpExchangeSpec> s = spec(1);
+        s.profile = "hosted-immutable";
+        s.collision_policy = "no-replace";
+        s.remote_path = "/inbound/member-immutable";
+        s.staging_dir = "/staging";
+        s.host_key_sha256 = strmul("a", 64);
+        assertEq("unsupported", client().publishVerified(new BinaryInputStream(<ab>), s).outcome);
+        s.host_key_sha256 = ENV.EXCHANGE_PIN;
+        SFTPClient observer = client();
+        assertNothing(observer.stat(root + "/in/member-immutable"));
+        Counter ready(2);
+        Counter done(2);
+        list<string> results;
+        for (int i = 0; i < 2; ++i) {
+            background sub() {
+                on_exit done.dec();
+                push results, client().publishVerified(new GeneratedInput(1, nothing sub() {
+                    assertNothing(observer.stat(root + "/in/member-immutable"));
+                    ready.dec();
+                    ready.waitForZero();
+                }), s).outcome;
+            }();
+        }
+        done.waitForZero();
+        assertEq(("confirmed", "failed"), sort(results));
+        hash<SftpExchangeReceipt> r = client().acquireVerified(s, local);
+        assertEq("confirmed", r.outcome);
+        Counter readers(2);
+        list<hash<SftpExchangeReceipt>> receipts;
+        for (int i = 0; i < 2; ++i) {
+            background sub() {
+                on_exit readers.dec();
+                push receipts, client().acquireVerified(s, local);
+            }();
+        }
+        readers.waitForZero();
+        assertEq(2, receipts.size());
+        foreach hash<SftpExchangeReceipt> acquired in (receipts) {
+            assertEq("confirmed", acquired.outcome);
+            assertEq(r.version, acquired.version);
+        }
+        assertEq("a", ReadOnlyFile::readTextFile(local));
+        assertEq(0600, hstat(local).mode & 0777);
+        fault("");
+    }
+}

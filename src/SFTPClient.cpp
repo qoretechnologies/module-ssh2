@@ -154,15 +154,13 @@ void SFTPClient::doShutdown(int timeout_ms, ExceptionSink* xsink) {
     if (sftp_session) {
         BlockingHelper bh(this);
 
-        int rc;
-        while ((rc = libssh2_sftp_shutdown(sftp_session)) == LIBSSH2_ERROR_EAGAIN) {
-            if (waitSocketUnlocked(xsink, SFTPCLIENT_TIMEOUT, "SFTPCLIENT-DISCONNECT", "SFTPClient::disconnect", timeout_ms, true))
-                break;
+        while (libssh2_sftp_shutdown(sftp_session) == LIBSSH2_ERROR_EAGAIN) {
+            if (waitSocketUnlocked(xsink, SFTPCLIENT_TIMEOUT, "SFTPCLIENT-DISCONNECT", "SFTPClient::disconnect",
+                    timeout_ms, true)) {
+                // EAGAIN retains the SFTP channel. Make the next shutdown observe EOF and release it.
+                socket.shutdown();
+            }
         }
-
-        // NOTE: there is a known memory leak here if libssh2_sftp_shutdown times out;
-        // this is a libssh2 limitation - there is no other way to free the memory
-        // without waiting for the remote end
         sftp_session = nullptr;
     }
 }
@@ -194,6 +192,11 @@ int SFTPClient::disconnectUnlocked(bool force, int timeout_ms, AbstractDisconnec
     // disconnect dependent objects first
     if (adh)
         adh->preDisconnect();
+
+    if (exchange_reader) {
+        // The callback still owns the reservation until its read returns, even after disconnect.
+        exchange_reader->tryClose();
+    }
 
     // close sftp session if not null
     doShutdown(timeout_ms, xsink);
@@ -293,6 +296,10 @@ QoreListNode* SFTPClient::sftpListFull(const char* path, int timeout_ms, Excepti
     if (!sftpConnectedUnlocked() && sftpConnectUnlocked(timeout_ms, xsink))
         return nullptr;
 
+    return sftpListFullUnlocked(path, timeout_ms, xsink);
+}
+
+QoreListNode* SFTPClient::sftpListFullUnlocked(const char* path, int timeout_ms, ExceptionSink* xsink) {
     std::string pstr;
     if (!path) // there is no path given so we use the sftpPath
         pstr = sftppath;
@@ -329,6 +336,9 @@ QoreListNode* SFTPClient::sftpListFull(const char* path, int timeout_ms, Excepti
     LIBSSH2_SFTP_ATTRIBUTES attrs;
 
     while (true) {
+        if (qore_check_cancel(xsink, "SFTP list directory")) {
+            return nullptr;
+        }
         int rc;
         while ((rc = libssh2_sftp_readdir(*qh, buff, sizeof(buff), &attrs)) == LIBSSH2_ERROR_EAGAIN) {
             if (qh.waitSocket())
@@ -342,17 +352,22 @@ QoreListNode* SFTPClient::sftpListFull(const char* path, int timeout_ms, Excepti
         }
 
         ReferenceHolder<QoreHashNode> h(new QoreHashNode(hashdeclSftpFileInfo, xsink), xsink);
-        h->setKeyValue("name", new QoreStringNode(buff), xsink);
+        h->setKeyValue("name", new QoreStringNode(buff, static_cast<size_t>(rc)), xsink);
 
+        if (attrs.flags & LIBSSH2_SFTP_ATTR_SIZE) {
+            h->setKeyValue("size", attrs.filesize, xsink);
+        }
+        if (attrs.flags & LIBSSH2_SFTP_ATTR_ACMODTIME) {
+            h->setKeyValue("atime", DateTimeNode::makeAbsolute(currentTZ(), attrs.atime), xsink);
+            h->setKeyValue("mtime", DateTimeNode::makeAbsolute(currentTZ(), attrs.mtime), xsink);
+        }
+        if (attrs.flags & LIBSSH2_SFTP_ATTR_UIDGID) {
+            h->setKeyValue("uid", attrs.uid, xsink);
+            h->setKeyValue("gid", attrs.gid, xsink);
+        }
         if (attrs.flags & LIBSSH2_SFTP_ATTR_PERMISSIONS) {
             SimpleRefHolder<QoreStringNode> perm(new QoreStringNode);
             const char* type = ssh2_mode_to_perm(attrs.permissions, **perm);
-
-            h->setKeyValue("size", attrs.filesize, xsink);
-            h->setKeyValue("atime", DateTimeNode::makeAbsolute(currentTZ(), (int64)attrs.atime), xsink);
-            h->setKeyValue("mtime", DateTimeNode::makeAbsolute(currentTZ(), (int64)attrs.mtime), xsink);
-            h->setKeyValue("uid", attrs.uid, xsink);
-            h->setKeyValue("gid", attrs.gid, xsink);
             h->setKeyValue("mode", attrs.permissions, xsink);
             h->setKeyValue("type", new QoreStringNode(type), xsink);
             h->setKeyValue("perm", perm.release(), xsink);
@@ -718,17 +733,24 @@ bool SFTPClient::sftpIsAliveEx(int timeout_ms, ExceptionSink* xsink) {
  * 3	socket not created
  * 4	session init failure
  */
-int SFTPClient::sftpConnectUnlocked(int timeout_ms, ExceptionSink* xsink) {
+int SFTPClient::sftpConnectUnlocked(int timeout_ms, ExceptionSink* xsink, const std::function<bool()>& check_peer,
+        bool require_known) {
     if (checkPollOpUnlocked("SFTPClient::connect", xsink)) {
         return -1;
     }
 
-    if (sftp_session)
+    if (connect_in_progress) {
+        xsink->raiseException("SSH2-CONNECT-IN-PROGRESS", "an SFTP connection is already being established");
+        return -1;
+    }
+    ConnectInProgressHelper connecting(*this);
+    if (sftp_session) {
         disconnectUnlocked(true);
+    }
 
     int rc;
 
-    rc = sshConnectUnlocked(timeout_ms, xsink);
+    rc = sshConnectUnlocked(timeout_ms, xsink, check_peer, require_known);
     if (rc)
         return rc;
 
@@ -1848,10 +1870,14 @@ int QSftpHelper::closeIntern() {
     int rc;
     while ((rc = libssh2_sftp_close_handle(sftp_handle)) == LIBSSH2_ERROR_EAGAIN) {
         if (client->waitSocketUnlocked(xsink, SFTPCLIENT_TIMEOUT, errstr, meth, timeout_ms, true)) {
-            // note: memory leak here! we cannot close the handle due to the timeout
-            printd(0, "QSftpHelper::closeIntern() session %p: cannot close remote file descriptor, forcing session " \
-                "disconnect; leaking descriptor\n", client->ssh_session);
-            client->disconnectUnlocked(true, 10, 0, xsink);
+            // libssh2 retains the handle on EAGAIN. Shut down the transport before
+            // retrying close so libssh2 observes EOF and releases its handle state.
+            client->socket.shutdown();
+            do {
+                rc = libssh2_sftp_close_handle(sftp_handle);
+            } while (rc == LIBSSH2_ERROR_EAGAIN);
+            sftp_handle = nullptr;
+            client->disconnectUnlocked(true, 10, nullptr, xsink);
             break;
         }
     }

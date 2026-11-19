@@ -1,0 +1,35 @@
+#!/usr/bin/env qore
+# Copyright 2026 Qore Technologies, s.r.o.
+# SPDX-License-Identifier: MIT
+%modern
+%prepend-module-path "${SCRIPT_DIR}/../../qlib"
+%requires ssh2
+%requires QUnit
+%exec-class DiskTest
+
+class DiskTest inherits QUnit::Test {
+    constructor() : Test("SFTP disk write failure", "1.0", \ARGV) {
+        addTestCase("local write limit preserves the prior committed file", \limited());
+        set_return_value(main());
+    }
+    private limited() {
+        string root = ENV.EXCHANGE_ROOT;
+        SFTPClient c(ENV.EXCHANGE_URI);
+        c.setKnownHostsFile(root + "/known_hosts");
+        c.setKeys(root + "/client");
+        c.setUseAgent(False);
+        string bytes = strmul("q", 131072);
+        string path = root + "/in/disk-limit";
+        c.putFile(bytes, path);
+        string local = root + "/local/disk-limit";
+        FileOutputStream f(local);
+        f.write(<a1>);
+        f.close();
+        hash<SftpExchangeReceipt> r = c.acquireVerified(<SftpExchangeSpec>{"profile": "openssh-posix",
+            "collision_policy": "replace", "remote_path": path, "length": bytes.size(),
+            "sha256": digest("sha256", bytes).toHex()}, local);
+        assertEq("failed", r.outcome, sprintf("%y", r));
+        assertEq(65536, r.length);
+        assertEq(<a1>, ReadOnlyFile::readBinaryFile(local));
+    }
+}

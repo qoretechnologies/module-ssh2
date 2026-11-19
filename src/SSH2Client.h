@@ -28,6 +28,7 @@
 
 #define _QORE_SSH2CLIENT_H
 
+#include <functional>
 #include "ssh2-module.h"
 
 #include <qore/QoreSocket.h>
@@ -187,6 +188,8 @@ class SSH2Client : public AbstractPollableIoObjectBase {
     friend class SSH2Channel;
     friend class SSH2Listener;
     friend class BlockingHelper;
+    friend class SFTPClient;
+    friend class SftpExchange;
     friend class SftpPollOperationPriv;
 
 private:
@@ -208,6 +211,7 @@ private:
     // known hosts verification
     std::string known_hosts_file;
     bool verify_host_key;
+    bool known_host_key_matched = false;  // Negotiated key matched a previously enrolled key, protected by m.
     int host_key_policy;
     QoreObject* host_key_store;
     QoreObject* client_identity_provider;
@@ -327,7 +331,8 @@ protected:
         }
     };
 
-    DLLLOCAL int sshConnectUnlocked(int timeout_ms, ExceptionSink *xsink);
+    DLLLOCAL int sshConnectUnlocked(int timeout_ms, ExceptionSink* xsink,
+        const std::function<bool()>& check_peer = {}, bool require_known = false);
 
     // ==========================================================================================
     // connect stages shared by the blocking connect path and the non-blocking poll operation;
@@ -353,7 +358,7 @@ protected:
 
         @return 0 for OK, -1 if an exception was raised (the connection is closed in this case)
     */
-    DLLLOCAL int verifyHostKeyUnlocked(int timeout_ms, ExceptionSink* xsink);
+    DLLLOCAL int verifyHostKeyUnlocked(int timeout_ms, ExceptionSink* xsink, bool require_known = false);
 
     //! builds the ordered list of authentication attempts to make
     /** this is the single definition of authentication policy and ordering used by both the
@@ -421,7 +426,7 @@ protected:
     DLLLOCAL QoreHashNode* makeObservedHostKeyInfo(const char* hostkey, size_t hostkey_len, int hostkey_type,
         ExceptionSink* xsink) const;
     DLLLOCAL int verifyHostKeyWithStore(QoreObject* store, const char* hostkey, size_t hostkey_len, int hostkey_type,
-        int timeout_ms, ExceptionSink* xsink);
+        int timeout_ms, ExceptionSink* xsink, bool require_known);
     DLLLOCAL int tryAgentAuth(int timeout_ms, bool& loggedin, ExceptionSink* xsink);
     DLLLOCAL int tryProviderAuth(int timeout_ms, bool& loggedin, ExceptionSink* xsink);
     DLLLOCAL void channelDeletedUnlocked(SSH2Channel *channel) {
@@ -484,6 +489,13 @@ protected:
         }
 
         int rc = waitSocketUnlocked(timeout_ms);
+        int wait_errno = errno;
+        // asyncIoWait reports cancellation as a failed wait and discards its private
+        // exception. Preserve the pending cancellation and its reason for this caller.
+        if (rc <= 0 && !in_disconnect && xsink && qore_check_cancel(xsink, m)) {
+            disconnectUnlocked(true, timeout_ms > DEFAULT_TIMEOUT_MS ? timeout_ms : DEFAULT_TIMEOUT_MS, adh, xsink);
+            return -1;
+        }
         if (!rc) {
             if (xsink)
                 xsink->raiseException(toerr, "network timeout after %dms in %s(); closing connection", timeout_ms, m);
@@ -493,7 +505,7 @@ protected:
         }
         if (rc < 0) {
             if (xsink)
-                xsink->raiseErrnoException(err, errno, "error waiting for network (timeout: %dms) in %s(); closing connection", timeout_ms, m);
+                xsink->raiseErrnoException(err, wait_errno, "error waiting for network (timeout: %dms) in %s(); closing connection", timeout_ms, m);
             if (!in_disconnect)
                 disconnectUnlocked(true, timeout_ms > DEFAULT_TIMEOUT_MS ? timeout_ms : DEFAULT_TIMEOUT_MS, adh, xsink);
             return -1;
@@ -589,28 +601,6 @@ public:
     DLLLOCAL int sshConnect(int timeout_ms, ExceptionSink *xsink);
 
     DLLLOCAL int sshConnected();
-
-    //! Reserves the client for a non-blocking poll operation
-    /** A poll operation drives the session from the caller's thread between waits, so no other
-        operation may use the client while one is in progress.
-
-        @return 0 for OK, -1 if an exception was raised
-    */
-    DLLLOCAL int reservePollOperation(ExceptionSink* xsink) {
-        AutoLocker al(m);
-        if (poll_op_in_progress) {
-            xsink->raiseException("SSH2-POLL-IN-PROGRESS",
-                "a non-blocking poll operation is already in progress on this object");
-            return -1;
-        }
-        if (connect_in_progress) {
-            xsink->raiseException("SSH2-CONNECT-IN-PROGRESS",
-                "cannot start a non-blocking poll operation while SSH2Base::connect() is in progress");
-            return -1;
-        }
-        poll_op_in_progress = true;
-        return 0;
-    }
 
     //! Returns the file descriptor of the underlying socket or -1 if not connected
     /** The async I/O controller calls this on its I/O thread, so the object's lock is not taken: a blocking

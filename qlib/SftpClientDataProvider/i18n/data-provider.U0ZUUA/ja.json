@@ -39,6 +39,118 @@
           "source": "Changes file or directory permissions on an SFTP server",
           "message": "SFTPサーバー上のファイルまたはディレクトリの権限を変更します"
         },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.desc": {
+          "source": "Verify a committed version before exposing the local file. Supply the producer digest for a replaceable path. Use the endpoint, principal, remote path and version in the receipt for deduplication.",
+          "message": "ローカルファイルを公開する前に、確定したバージョンを検証します。置換可能なパスには作成者のダイジェストを指定します。重複の判定には受領記録のエンドポイント、主体、リモートパス、バージョンを使用します。"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.display_name": {
+          "source": "Acquire Verified File",
+          "message": "検証済みファイルを取得"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.allowed-value.c3RyaW5nOm5vLXJlcGxhY2U.display_name": {
+          "source": "No Replace",
+          "message": "置換を禁止"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.allowed-value.c3RyaW5nOnJlcGxhY2U.display_name": {
+          "source": "Replace",
+          "message": "置換"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.desc": {
+          "source": "Select how the endpoint handles an existing file",
+          "message": "既存ファイルがある場合のエンドポイントの動作を選択"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.display_name": {
+          "source": "Collision Policy",
+          "message": "名前衝突時の処理"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.short_desc": {
+          "source": "Select how the endpoint handles an existing file",
+          "message": "既存ファイルがある場合のエンドポイントの動作を選択"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.aG9zdF9rZXlfc2hhMjU2.desc": {
+          "source": "Pinned SSH host key in lowercase hex, required for the hosted profile",
+          "message": "固定した SSH ホスト鍵の小文字の 16 進指紋。ホスト型プロファイルでは必須"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.aG9zdF9rZXlfc2hhMjU2.display_name": {
+          "source": "Host Key SHA-256",
+          "message": "ホスト鍵の SHA-256"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.aG9zdF9rZXlfc2hhMjU2.short_desc": {
+          "source": "Pinned SSH host key in lowercase hex, required for the hosted profile",
+          "message": "固定した SSH ホスト鍵の小文字の 16 進指紋。ホスト型プロファイルでは必須"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.bG9jYWxfcGF0aA.desc": {
+          "source": "Local file to replace after verification",
+          "message": "検証後に置換するローカルファイル"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.bG9jYWxfcGF0aA.display_name": {
+          "source": "Destination File",
+          "message": "保存先ファイル"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.bG9jYWxfcGF0aA.short_desc": {
+          "source": "Local file to replace after verification",
+          "message": "検証後に置換するローカルファイル"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.bGVuZ3Ro.desc": {
+          "source": "Declared file length in bytes",
+          "message": "宣言されたファイル長（バイト）"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.bGVuZ3Ro.display_name": {
+          "source": "Expected Length",
+          "message": "想定バイト数"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.bGVuZ3Ro.short_desc": {
+          "source": "Declared file length in bytes",
+          "message": "宣言されたファイル長（バイト）"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.c2hhMjU2.desc": {
+          "source": "Expected lowercase SHA-256, required when acquiring a replaceable file",
+          "message": "小文字で記述した想定 SHA-256。置換可能なファイルの取得時は必須"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.c2hhMjU2.display_name": {
+          "source": "Producer SHA-256",
+          "message": "作成者の SHA-256"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.c2hhMjU2.short_desc": {
+          "source": "Expected lowercase SHA-256, required when acquiring a replaceable file",
+          "message": "小文字で記述した想定 SHA-256。置換可能なファイルの取得時は必須"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.cHJvZmlsZQ.allowed-value.c3RyaW5nOm9wZW5zc2gtcG9zaXg.display_name": {
+          "source": "OpenSSH POSIX",
+          "message": "OpenSSH POSIX"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.cHJvZmlsZQ.allowed-value.c3RyaW5nOmhvc3RlZC1pbW11dGFibGU.display_name": {
+          "source": "Hosted Immutable",
+          "message": "ホスト型の不変ファイル"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.cHJvZmlsZQ.desc": {
+          "source": "Publication agreement for this endpoint",
+          "message": "このエンドポイントで合意した公開方式"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.cHJvZmlsZQ.display_name": {
+          "source": "Endpoint Profile",
+          "message": "エンドポイントプロファイル"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.cHJvZmlsZQ.short_desc": {
+          "source": "Publication agreement for this endpoint",
+          "message": "このエンドポイントで合意した公開方式"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.cmVtb3RlX3BhdGg.desc": {
+          "source": "Absolute path of the committed file",
+          "message": "公開済みファイルの絶対パス"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.cmVtb3RlX3BhdGg.display_name": {
+          "source": "Remote Path",
+          "message": "リモートパス"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.cmVtb3RlX3BhdGg.short_desc": {
+          "source": "Absolute path of the committed file",
+          "message": "公開済みファイルの絶対パス"
+        },
+        "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.short_desc": {
+          "source": "Acquire a committed file over SFTP",
+          "message": "SFTP で公開済みファイルを取得"
+        },
         "app.U0ZUUA.action.Z2V0LWZpbGU.desc": {
           "source": "Retrieve a file from an SFTP server",
           "message": "SFTPサーバーからファイルを取得します"
@@ -182,6 +294,130 @@
         "app.U0ZUUA.action.c2VuZC1maWxl.short_desc": {
           "source": "Sends a file to an SFTP server",
           "message": "SFTPサーバーにファイルを送信します"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.desc": {
+          "source": "Verify the length and optional producer digest before committing a private stage. Select `openssh-posix` for replacement or `hosted-immutable` for enforced no-replace. Reconcile an `indeterminate` receipt before retrying.",
+          "message": "非公開の一時ファイルを公開する前に、長さと任意の作成者ダイジェストを検証します。置換する場合は `openssh-posix`、置換を禁止する場合は `hosted-immutable` を選択します。結果が `indeterminate` の場合は再試行の前に実際の状態を確認してください。"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.display_name": {
+          "source": "Publish Verified File",
+          "message": "検証済みファイルを公開"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.allowed-value.c3RyaW5nOm5vLXJlcGxhY2U.display_name": {
+          "source": "No Replace",
+          "message": "置換を禁止"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.allowed-value.c3RyaW5nOnJlcGxhY2U.display_name": {
+          "source": "Replace",
+          "message": "置換"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.desc": {
+          "source": "Select how the endpoint handles an existing file",
+          "message": "既存ファイルがある場合のエンドポイントの動作を選択"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.display_name": {
+          "source": "Collision Policy",
+          "message": "名前衝突時の処理"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.short_desc": {
+          "source": "Select how the endpoint handles an existing file",
+          "message": "既存ファイルがある場合のエンドポイントの動作を選択"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.aG9zdF9rZXlfc2hhMjU2.desc": {
+          "source": "Pinned SSH host key in lowercase hex, required for the hosted profile",
+          "message": "固定した SSH ホスト鍵の小文字の 16 進指紋。ホスト型プロファイルでは必須"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.aG9zdF9rZXlfc2hhMjU2.display_name": {
+          "source": "Host Key SHA-256",
+          "message": "ホスト鍵の SHA-256"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.aG9zdF9rZXlfc2hhMjU2.short_desc": {
+          "source": "Pinned SSH host key in lowercase hex, required for the hosted profile",
+          "message": "固定した SSH ホスト鍵の小文字の 16 進指紋。ホスト型プロファイルでは必須"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.bG9jYWxfcGF0aA.desc": {
+          "source": "Local file to publish",
+          "message": "公開するローカルファイル"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.bG9jYWxfcGF0aA.display_name": {
+          "source": "Source File",
+          "message": "ソースファイル"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.bG9jYWxfcGF0aA.short_desc": {
+          "source": "Local file to publish",
+          "message": "公開するローカルファイル"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.bGVuZ3Ro.desc": {
+          "source": "Declared file length in bytes",
+          "message": "宣言されたファイル長（バイト）"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.bGVuZ3Ro.display_name": {
+          "source": "Expected Length",
+          "message": "想定バイト数"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.bGVuZ3Ro.short_desc": {
+          "source": "Declared file length in bytes",
+          "message": "宣言されたファイル長（バイト）"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.c2hhMjU2.desc": {
+          "source": "Expected lowercase SHA-256, required when acquiring a replaceable file",
+          "message": "小文字で記述した想定 SHA-256。置換可能なファイルの取得時は必須"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.c2hhMjU2.display_name": {
+          "source": "Producer SHA-256",
+          "message": "作成者の SHA-256"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.c2hhMjU2.short_desc": {
+          "source": "Expected lowercase SHA-256, required when acquiring a replaceable file",
+          "message": "小文字で記述した想定 SHA-256。置換可能なファイルの取得時は必須"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.c3RhZ2luZ19kaXI.desc": {
+          "source": "Private staging directory on the remote filesystem",
+          "message": "リモートファイルシステム上の非公開の一時ディレクトリ"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.c3RhZ2luZ19kaXI.display_name": {
+          "source": "Staging Directory",
+          "message": "一時ディレクトリ"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.c3RhZ2luZ19kaXI.short_desc": {
+          "source": "Private staging directory on the remote filesystem",
+          "message": "リモートファイルシステム上の非公開の一時ディレクトリ"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.cHJvZmlsZQ.allowed-value.c3RyaW5nOm9wZW5zc2gtcG9zaXg.display_name": {
+          "source": "OpenSSH POSIX",
+          "message": "OpenSSH POSIX"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.cHJvZmlsZQ.allowed-value.c3RyaW5nOmhvc3RlZC1pbW11dGFibGU.display_name": {
+          "source": "Hosted Immutable",
+          "message": "ホスト型の不変ファイル"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.cHJvZmlsZQ.desc": {
+          "source": "Publication agreement for this endpoint",
+          "message": "このエンドポイントで合意した公開方式"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.cHJvZmlsZQ.display_name": {
+          "source": "Endpoint Profile",
+          "message": "エンドポイントプロファイル"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.cHJvZmlsZQ.short_desc": {
+          "source": "Publication agreement for this endpoint",
+          "message": "このエンドポイントで合意した公開方式"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.cmVtb3RlX3BhdGg.desc": {
+          "source": "Absolute path of the committed file",
+          "message": "公開済みファイルの絶対パス"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.cmVtb3RlX3BhdGg.display_name": {
+          "source": "Remote Path",
+          "message": "リモートパス"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.cmVtb3RlX3BhdGg.short_desc": {
+          "source": "Absolute path of the committed file",
+          "message": "公開済みファイルの絶対パス"
+        },
+        "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.short_desc": {
+          "source": "Publish a complete file over SFTP",
+          "message": "SFTP で完全なファイルを公開"
         },
         "app.U0ZUUA.action.cm1kaXI.desc": {
           "source": "Removes an empty directory on an SFTP server",

@@ -44,4 +44,82 @@ while (*hash<SocketPollInfo> info = op.continuePoll()) {
     Socket::poll((info,), 10s);
 }
 binary data = op.getOutput();@endcode
+
+    @section ssh2verifiedexchange Verified SFTP exchange
+
+    Use a dedicated committed directory and a private staging directory on the same filesystem. The partner must
+    ensure that only complete, closed stages can enter the committed namespace. Give staging write access only to
+    the publishing account. Enroll the partner's known key before connecting. A strict connection checks any
+    supplied pin before authentication. Without a pin it requires an already enrolled key. The client uses
+    32 KiB chunks and checks the declared length, an optional producer SHA-256, and the write and close acknowledgements.
+
+    @par Endpoint profiles
+    - <tt>openssh-posix</tt> supports <tt>replace</tt> on a qualified OpenSSH SFTP v3 endpoint with the version 1
+      <tt>posix-rename@openssh.com</tt> extension. The client uses libssh2_sftp_posix_rename_ex() exclusively.
+      Configure a filesystem with atomic rename and a committed directory whose writers follow the partner agreement.
+      Read-only acquisition checks the producer digest supplied by a committed manifest or a trusted equivalent.
+      The operator qualifies how the producer publishes on this endpoint.
+    - <tt>hosted-immutable</tt> supports <tt>no-replace</tt> on a dedicated module-ssh listener serving
+      <tt>SftpServerDataProvider::StagedSftpExchange</tt>. Configure the listener's SSH identification
+      <tt>banner</tt> as <tt>QoreStagedSFTP_1</tt> only for accounts bound to that backend. Verify its host key
+      out of band and supply the SHA-256 of the raw public key as 64 lowercase hex digits. Configure
+      <tt>/staging</tt> and a single immutable filename beneath <tt>/inbound</tt>. Ordinary SFTP v3 rename then
+      invokes the backend's transactional, principal-scoped uniqueness constraint. The pin, listener configuration
+      and backend agreement are all required. The mapped server principal and durable server receipt can be
+      obtained from the hosted backend by its operator.
+    - Other profile and policy combinations return <tt>unsupported</tt>. A file listing, age, SSH identification
+      string or successful trial rename cannot establish the publication agreement. The SFTP v3 ordinary rename
+      packet has no collision flags. See the
+      <a href="https://github.com/openssh/openssh-portable/blob/master/PROTOCOL">OpenSSH extension specification</a>
+      and <a href="https://libssh2.org/libssh2_sftp_posix_rename_ex.html">libssh2 POSIX rename API</a>.
+
+    @par Producer and consumer
+    @code{.py}
+    SFTPClient client("sftp://exchange@partner.example");
+    client.setKnownHostsFile("/etc/exchange/known_hosts");
+    client.setHostKeyPolicy(Ssh2HostKeyPolicy::Reject);
+    hash<SftpExchangeSpec> spec = <SftpExchangeSpec>{
+        "profile": "openssh-posix", "collision_policy": "replace",
+        "staging_dir": "/outgoing/.stage", "remote_path": "/outgoing/orders-42.csv",
+        "length": 3, "sha256": digest("sha256", "abc").toHex(),
+    };
+    hash<SftpExchangeReceipt> sent = client.publishVerified(new BinaryInputStream(binary("abc")), spec);
+    if (sent.outcome == "confirmed") {
+        hash<SftpExchangeReceipt> received = client.acquireVerified(spec, "/var/incoming/orders-42.csv");
+        if (received.outcome != "confirmed") {
+            throw "RECEIVE-FAILED", received.detail, received;
+        }
+    }
+    @endcode
+    A producer can pass a FileInputStream directly. The provider actions accept a local filename. For multipart
+    deliveries, use immutable versioned member names, publish the completion manifest last, and acquire each member
+    using the length and digest from that manifest. Qorus correlates members and applies the all-members gate.
+
+    @par Reconciliation and readiness
+    A confirmed receipt records the SSH endpoint, port, SSH account, host key fingerprint, absolute committed path,
+    byte count and SHA-256. Within that namespace, <tt>version</tt> identifies the content by its SHA-256.
+    Use distinct immutable names for logically distinct deliveries with identical bytes. A failed receipt contains
+    diagnostic evidence for a definitive failure. An indeterminate receipt means the rename request may have taken
+    effect. Retain the receipt and use verified acquisition or the hosted receipt store to reconcile the intended
+    version before retrying. The client leaves an uncertain remote target untouched. A transport failure can leave
+    a private stage for the endpoint owner to inspect and expire.
+
+    Acquisition reads one open remote handle through EOF and publishes a mode-0600 local stage by rename in the
+    destination directory. Supply an absolute local destination. Use a trusted local directory on a filesystem with atomic rename. Give concurrent
+    consumers version-specific local destinations when they need independent retention. A confirm acknowledges
+    visibility at commit time. Power-loss durability is a separate endpoint or filesystem agreement.
+
+    Set the poller's <tt>commit_profile</tt>, absolute remote <tt>path</tt>, and absolute writable <tt>local_dir</tt> for
+    verified events. Use <tt>hosted-immutable</tt> with <tt>/inbound</tt> and <tt>host_key_sha256</tt>, or
+    <tt>openssh-sha256-name</tt> with a committed directory containing names of the form
+    <tt>lowercase-sha256.logical-name</tt>. The first discovery and each reconnection qualify the listener before listing the directory. Directory entries
+    need a declared byte length. Each file event carries the receipt after local publication. Repeated
+    discovery yields the same identity for the same committed version. Keep legacy integration settings to retain
+    the existing polling behavior.
+
+    @par Qualification
+    From the module checkout run <tt>python3 test/atomic-exchange/run.py --build build-debug</tt>. The fixture creates
+    a loopback OpenSSH listener with temporary keys and controls close, read and rename replies. Add the companion
+    module's <tt>qlib</tt> and native build directory to <tt>QORE_MODULE_DIR</tt> to include the SQLite-backed
+    hosted listener. Pass <tt>--valgrind</tt> for native memory checks.
 */

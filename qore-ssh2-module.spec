@@ -11,8 +11,8 @@
 %bcond_without tests
 %bcond_without docs
 Name: qore-ssh2-module
-Version: 2.0.0
-Release: 2%{?dist}
+Version: 2.1.0
+Release: 1%{?dist}
 Summary: SSH, SFTP, polling and file providers for Qore
 License: LGPL-2.1-or-later OR MIT
 URL: https://github.com/qoretechnologies/module-ssh2
