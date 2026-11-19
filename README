@@ -71,3 +71,16 @@ The SSH and SFTP suites accept --uri for the test server, for example:
 
 RPM qualification creates its own isolated SSH server, temporary home, and
 fresh keys; see rpm/README.rst for build and installed-package checks.
+
+Develop CI
+----------
+
+After a merge into develop, each platform can reuse a successful job for the
+same Git tree and test environment. The Ubuntu and Alpine results must come
+from the same earlier pipeline. Both jobs publish their fingerprints through
+the existing GitHub commit status. A reused status links to the original job.
+For squash merges CI checks the merged pull request's head tree explicitly.
+
+A changed platform environment or missing evidence runs that platform's full
+suite. Feature branches, manual pipelines and scheduled pipelines always run
+the full suites. Set QORE_CI_FORCE_FULL=1 to force both suites on develop.
