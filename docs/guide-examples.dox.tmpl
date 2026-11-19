@@ -47,6 +47,9 @@ binary data = op.getOutput();@endcode
 
     @section ssh2verifiedexchange Verified SFTP exchange
 
+    Verified publication and acquisition require libssh2 1.11.1 or later at build time and at runtime.
+    Agree on the endpoint profile, paths, naming and receipt rules with the SFTP server operator before use.
+
     Use a dedicated committed directory and a private staging directory on the same filesystem. The partner must
     ensure that only complete, closed stages can enter the committed namespace. Give staging write access only to
     the publishing account. Enroll the partner's known key before connecting. A strict connection checks any

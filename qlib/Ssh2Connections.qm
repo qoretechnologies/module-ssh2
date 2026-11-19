@@ -49,7 +49,7 @@ module Ssh2Connections {
 
     @tableofcontents
 
-    @section ssh2connectionsintro Introduction to the Ssh2Connections Module
+    @section ssh2connectionsintro Ssh2Connections Module Introduction
 
     The %Ssh2Connections module provides connection definitions for classes
     provided by the \c ssh2 module for the @ref connectionproviderintro "ConnectionProvider"
@@ -66,9 +66,23 @@ module Ssh2Connections {
     - @ref Ssh2Connections::SftpConnection "SftpConnection"
     - @ref Ssh2Connections::Ssh2ClientConnection "Ssh2ClientConnection"
 
-    @section ssh2connections_relnotes Ssh2Connections Module Release History
+    @section ssh2connectionshostkeys Host Key Verification
 
-    @subsection ssh2connections_v2_0 Ssh2Connections v2.0
+    The <tt>verify_host_key</tt> connection option inherits the process-wide SSH2 setting, which enables
+    verification by default. An explicit value overrides the default for that connection.
+    Set <tt>host_key_policy</tt> to <tt>reject</tt>, <tt>tofu</tt>, or <tt>tofu-session</tt>.
+    An omitted <tt>known_hosts</tt> inherits the configured path, normally the local user's
+    <tt>~/.ssh/known_hosts</tt>. An empty string disables the path for this connection.
+    See @ref host_key_verification_bp for policy behavior and @ref embedding_multitenant for process defaults.
+
+    @anchor ssh2connections_relnotes
+
+    @subpage ssh2connectionsreleasenotes
+*/
+
+/** @page ssh2connectionsreleasenotes Ssh2Connections Release Notes
+
+    @section ssh2connections_v2_0 Ssh2Connections v2.0
     - added source-owned connection option catalogs in all twelve standard locales; unchanged inherited
       presentation keeps its original producer identity, including HTTP/REST options and allowed values
     - added the \c host_key_policy connection option with readable values \c reject, \c tofu, and
@@ -76,34 +90,27 @@ module Ssh2Connections {
     - the \c verify_host_key connection option now defaults to @ref Qore::True "True" (secure by
       default) and an explicit @ref Qore::False "False" is honored, consistent with the ssh2
       client classes
-    - the \c verify_host_key option's reported default in connection introspection now reflects
-      the ssh2 module's effective process-global host key verification default (which an embedding
-      application may change via \c SSH2Base::setDefaultVerifyHostKey() or the
-      \c QORE_SSH2_DEFAULT_VERIFY_HOST_KEY environment variable)
-    - if the \c known_hosts option is not set, the ssh2 module default applies (normally the local
-      user's <tt>~/.ssh/known_hosts</tt> file, unless the embedding application has changed or
-      disabled the module default); if set to an empty string, no known_hosts file is configured
-      for the connection
+    - See @ref ssh2connectionshostkeys for option inheritance and embedding defaults.
 
-    @subsection ssh2connections_v1_4 Ssh2Connections v1.4
+    @section ssh2connections_v1_4 Ssh2Connections v1.4
     - implemented support for a data provider scheme cache and rich option information for connections
-      (<a href="https://github.com/qorelanguage/qore/issues/4025">issue 4025</a>)
+      (<a href="https://github.com/qoretechnologies/qore/issues/4025">issue 4025</a>)
 
-    @subsection ssh2connections_v1_3 Ssh2Connections v1.3
+    @section ssh2connections_v1_3 Ssh2Connections v1.3
     - removed the obsolete \c Ssh2ClientConnection::getConstructorInfo() and \c SftpConnection::getConstructorInfo()
       methods as connection serialization is a much more elegant and maintainable solution
-      (<a href="https://github.com/qorelanguage/qore/issues/3696">issue 3696</a>)
+      (<a href="https://github.com/qoretechnologies/qore/issues/3696">issue 3696</a>)
 
-    @subsection ssh2connections_v1_2 Ssh2Connections v1.2
+    @section ssh2connections_v1_2 Ssh2Connections v1.2
     - new AbstractConnection infrastructure
 
-    @subsection ssh2connections_v1_1 Ssh2Connections v1.1
+    @section ssh2connections_v1_1 Ssh2Connections v1.1
     - the \c Ssh2ClientConnection::getConstructorInfo()
       and \c SftpConnection::getConstructorInfo()
       methods were added to allow connections to be created dynamically, potentially in another process from a network
-      call (<a href="https://github.com/qorelanguage/qore/issues/2628">issue 2628</a>)
+      call (<a href="https://github.com/qoretechnologies/qore/issues/2628">issue 2628</a>)
 
-    @subsection ssh2connections_v1_0 Ssh2Connections v1.0
+    @section ssh2connections_v1_0 Ssh2Connections v1.0
     - initial release
 */
 

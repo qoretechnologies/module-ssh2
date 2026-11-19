@@ -89,7 +89,7 @@ module SftpPoller {
 
 /** @mainpage SftpPoller Module
 
-    @section sftppollerintro Introduction to the SftpPoller Module
+    @section sftppollerintro SftpPoller Module Introduction
 
     The SftpPoller module implements an abstract class that will poll a remote directory with the SFTP protocol and return
     matching files.
@@ -99,38 +99,33 @@ module SftpPoller {
 
     @section sftppollerexamples SftpPoller Module Examples
 
-    The following simple example will poll for files and then print out information for the files polled (as well as all info, detail, and debug messages) and exit immediately:
-    @code
+    This poller prints file metadata and requests a stop after processing a batch of matching files.
+    Supply the connection URL through the first command-line argument.
+    @code{.py}
+%modern
 %requires ssh2
 %requires SftpPoller
 
-class MySftpPoller inherits SftpPoller {
-    constructor(SFTPClient sc, hash<auto> opts) : SftpPoller(sc, opts) {
+class IncomingFilePoller inherits SftpPoller::SftpPoller {
+    constructor(SSH2::SFTPClient client, hash<auto> options) : SftpPoller::SftpPoller(client, options) {
     }
 
-    nothing singleFileEvent(hash<SftpPollerFileEventInfo> fh) {
-        printf("GOT FILE: %y\n", fh - "data" + ("data_type": fh.data.type(), "data_size": fh.data.size()));
-        # in this case, the polling stop operation will take effect after all the singleFileEvent() calls are made for the polling operation
+    nothing singleFileEvent(hash<SftpPoller::SftpPollerFileEventInfo> file) {
+        printf("Received %y\n", file - "data");
         stopNoWait();
     }
 
-    nothing postSingleFileEvent(hash<SftpPollerFileEventInfo> fh) {
+    nothing postSingleFileEvent(hash<SftpPoller::SftpPollerFileEventInfo> file) {
     }
 }
 
-code info = sub (string msg) { printf("INFO: %s\n", msg); };
-code detail = sub (string msg) { printf("DETAIL: %s\n", msg); };
-code debug = sub (string msg) { printf("DEBUG: %s\n", msg); };
-
-hash opts = (
-    "log_info": info,
-    "log_detail": detail,
-    "log_debug": debug,
-    );    @section sftppollerutilv1_3_1 Version 1.3.1
-
+SSH2::SFTPClient client(ARGV[0]);
+IncomingFilePoller poller(client, {"path": "/incoming"});
+poller.start();
+poller.waitStop();
     @endcode
 
-    Note that @ref SftpPoller::SftpPoller::stopNoWait() "SftpPoller::stopNoWait()" was called in the event thread because calling
+    Note that @ref SftpPoller::SftpPoller::stopNoWait() "SftpPoller::stopNoWait()" is called in the event thread because calling
     @ref SftpPoller::SftpPoller::stop() "SftpPoller::stop()" in the event thread would cause an exception to be thrown.
 
     A useful poller class would implement the @ref SftpPoller::SftpPoller::singleFileEvent() "SftpPoller::singleFileEvent()" method which process already-transferred files and the @ref SftpPoller::SftpPoller::postSingleFileEvent() "SftpPoller::postSingleFileEvent()" by deleting / moving / renaming the files so that they would not be acquired on the next poll.
@@ -155,12 +150,15 @@ hash opts = (
     - \c PO_NO_THREAD_CONTROL: in this case the \c "start_thread" option is required in @ref SftpPoller::SftpPoller::constructor() "SftpPoller::constructor()"
     - \c PO_NO_PROCESS_CONTROL: in this case the \c "sleep" option is required in @ref SftpPoller::SftpPoller::constructor() "SftpPoller::constructor()" when the module is loaded by its path; the installed module declares the \c PROCESS_CONTROL functional domain (it registers data provider types and waits between polls), so a Program restricted like a Qorus interface does not need the option
 
-    @section sftppollerrelnotes SftpPoller Module Release Notes
+    @anchor sftppollerrelnotes
+
+    @subpage sftppollerreleasenotes
+*/
+
+/** @page sftppollerreleasenotes SftpPoller Release Notes
 
     @section sftppollerv1_6 Version 1.6
     - Added opt-in verified acquisition from dedicated publication directories.
-
-    @section sftppollerv1_5 Version 1.5
     - an error raised while a polled file is handled (ex: an observer that refuses the file event) is logged, the
       remote file is kept, and the poll is retried after the \c "error_delay" option's delay; previously polling
       stopped (see @ref sftppollererrors;
@@ -182,7 +180,7 @@ hash opts = (
 
     @section sftppollerv1_4_1 Version 1.4.1
     - fixed a bug registering the sftp event type
-      (<a href="https://github.com/qorelanguage/qore/issues/4389">issue 4389</a>)
+      (<a href="https://github.com/qoretechnologies/qore/issues/4389">issue 4389</a>)
 
     @section sftppollerv1_3_0 Version 1.3.0
     - added support for data provider APIs
