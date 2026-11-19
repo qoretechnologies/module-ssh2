@@ -40,6 +40,116 @@ class MySftpPoller inherits SftpPoller {
     }
 }
 
+#! refuses a number of file events, then accepts one and stops polling; it does not wait between polls
+class RefusingSftpPoller inherits SftpPoller {
+    public {
+        #! the number of file events received
+        int attempts = 0;
+        #! the names of the files accepted
+        list<string> accepted = ();
+        #! the delays of the waits after an error
+        list<int> error_sleeps = ();
+    }
+
+    private {
+        #! the number of events to refuse
+        int refusals;
+        #! throw in postSingleFileEvent()
+        bool post_error;
+        #! the number of waits; only a guard against a loop that does not end
+        int sleeps = 0;
+        #! the number of the transfer that fails, if any
+        int fail_transfer;
+        #! the number of transfers
+        int transfers = 0;
+        #! the number of accepted files after which polling is stopped
+        int stop_after;
+    }
+
+    constructor(SFTPClient sc, hash<auto> opts, int refusals, bool post_error = False, int fail_transfer = 0,
+            int stop_after = 1) : SftpPoller(sc, opts) {
+        self.refusals = refusals;
+        self.post_error = post_error;
+        self.fail_transfer = fail_transfer;
+        self.stop_after = stop_after;
+    }
+
+    hash<SftpPollerFileEventInfo> getRemoteFileData(hash<SftpPollerFileEventInfo> event) {
+        if (++transfers == fail_transfer) {
+            throw "SFTPCLIENT-ERROR", sprintf("transfer of %y failed", event.name);
+        }
+        return SftpPoller::getRemoteFileData(event);
+    }
+
+    nothing singleFileEvent(hash<SftpPollerFileEventInfo> fh) {
+        if (++attempts <= refusals) {
+            throw "REFUSED", sprintf("event %d refused", attempts);
+        }
+        accepted += fh.name;
+        # takes effect after the file has been disposed of
+        if (accepted.size() >= stop_after) {
+            stopNoWait();
+        }
+    }
+
+    nothing postSingleFileEvent(hash<SftpPollerFileEventInfo> fh) {
+        if (post_error) {
+            throw "POST-ERROR", sprintf("cannot dispose of %y", fh.name);
+        }
+    }
+
+    #! records the delay instead of waiting, so the poll is retried at once
+    private sftpSleep(softint secs) {
+        if (secs != poll_interval) {
+            error_sleeps += secs;
+        }
+        if (++sleeps > 100) {
+            stopNoWait();
+        }
+    }
+}
+
+#! refuses every file event, and decrements a counter at the first one
+class AlwaysRefusingSftpPoller inherits SftpPoller {
+    private {
+        Counter refused;
+    }
+
+    constructor(SFTPClient sc, hash<auto> opts, Counter refused) : SftpPoller(sc, opts) {
+        self.refused = refused;
+    }
+
+    nothing singleFileEvent(hash<SftpPollerFileEventInfo> fh) {
+        if (refused.getCount()) {
+            refused.dec();
+        }
+        throw "REFUSED", sprintf("%y refused", fh.name);
+    }
+
+    nothing postSingleFileEvent(hash<SftpPollerFileEventInfo> fh) {
+    }
+}
+
+#! collects the names of the files that one poll finds
+class NameSftpPoller inherits SftpPoller {
+    public {
+        list<string> names = ();
+    }
+
+    constructor(SFTPClient sc, hash<auto> opts) : SftpPoller(sc, opts) {
+    }
+
+    constructor(hash<auto> opts) : SftpPoller(opts) {
+    }
+
+    nothing singleFileEvent(hash<SftpPollerFileEventInfo> fh) {
+        names += fh.name;
+    }
+
+    nothing postSingleFileEvent(hash<SftpPollerFileEventInfo> fh) {
+    }
+}
+
 class SftpPollerTest inherits QUnit::Test {
     public {}
 
@@ -97,6 +207,12 @@ class SftpPollerTest inherits QUnit::Test {
     private {
         #! the known_hosts file of the test: no test writes the keys of the test server to the user's known_hosts
         string known_hosts = sprintf("%s%sssh2-test-known-hosts-%s", tmp_location(), DirSep, get_random_string(10));
+
+        #! the URI of the test server
+        string uri;
+
+        #! the private key file used for authentication, if any
+        *string keyfile;
     }
 
     constructor() : Test("SftpPollerTest", "1.2", \ARGV, MyOpts) {
@@ -107,26 +223,289 @@ class SftpPollerTest inherits QUnit::Test {
         }
         addTestCase("SftpPollerTests", \sftpPollerTests());
         addTestCase("SftpPolerRemotePathNegTest", \sftpPollerRemotePathNegTest());
+        addTestCase("SftpPollerRegexMaskTest", \sftpPollerRegexMaskTest());
+        addTestCase("an event handler refusal keeps the file and polling", \sftpPollerRefusalTest());
+        addTestCase("a post-transfer error stops polling", \sftpPollerPostErrorStopsTest());
+        addTestCase("a transfer error on a later file is retried", \sftpPollerLaterTransferErrorTest());
+        addTestCase("stop() ends the wait after a refusal", \sftpPollerStopDuringErrorDelayTest());
+        addTestCase("the error_delay option", \sftpPollerErrorDelayOptionTest());
 
-        string uri = m_options.uri ?? shift ARGV ?? sprintf("%s@localhost", getusername());
+        uri = m_options.uri ?? shift ARGV ?? sprintf("%s@localhost", getusername());
 
         printf("Connecting to %y\n", uri);
 
-        sc = new SFTPClient(uri);
         if (m_options.privkey) {
-            sc.setKeys(m_options.privkey);
+            keyfile = m_options.privkey;
         } else {
             if (PlatformOS == "Windows")
                 exit(0);
 
             string sshdir = `echo -n ~/.ssh`;
             if (is_file(sshdir + "/id_rsa"))
-                sc.setKeys(sshdir + "/id_rsa");
+                keyfile = sshdir + "/id_rsa";
             else if (is_file(sshdir + "/id_dsa"))
-                sc.setKeys(sshdir + "/id_dsa");
+                keyfile = sshdir + "/id_dsa";
         }
+        sc = getClient();
 
         set_return_value(main());
+    }
+
+    #! returns a new client for the test server, which starts in the login directory
+    private SFTPClient getClient() {
+        SFTPClient client(uri);
+        if (keyfile) {
+            client.setKeys(keyfile);
+        }
+        return client;
+    }
+
+    #! creates a directory with one file on the test server and returns the directory
+    private string makeOneFileDir(SFTPClient setup, string file_name) {
+        string nd = sprintf("%s/", get_random_string());
+        if (m_options.dir) {
+            nd = sprintf("%s/%s/", m_options.dir, get_random_string());
+        }
+        setup.mkdir(nd);
+        setup.putFile("data", nd + file_name);
+        return nd;
+    }
+
+    #! runs a poller inline in another thread until polling stops, and returns the exception that stopped it, if any
+    private *hash<ExceptionInfo> runInline(SftpPoller poller) {
+        Counter done(1);
+        *hash<ExceptionInfo> stop_ex;
+        background sub () {
+            on_exit done.dec();
+            try {
+                poller.startInline();
+            } catch (hash<ExceptionInfo> ex) {
+                stop_ex = ex;
+            }
+        }();
+        # only a guard against a hang
+        if (done.waitForZero(30s)) {
+            poller.stopNoWait();
+            done.waitForZero();
+            throw "ERROR", "polling did not stop in 30s";
+        }
+        return stop_ex;
+    }
+
+    #! qore issue #6400: an event handler that refuses a file (ex: an observer of a data provider) leaves the remote
+    #! file in place, and polling continues after the error delay, so the file is handled again once it is accepted
+    sftpPollerRefusalTest() {
+        SFTPClient setup = getClient();
+        string nd = makeOneFileDir(setup, "refused.txt");
+        on_exit {
+            try {
+                setup.removeFile(nd + "refused.txt");
+            } catch () {
+            }
+            setup.rmdir(nd);
+        }
+
+        RefusingSftpPoller poller(getClient(), {
+            "path": nd,
+            "mask": "*.txt",
+            "writable": True,
+            "delete_remote_file": True,
+        }, 2);
+        *hash<ExceptionInfo> ex = runInline(poller);
+        assertEq(NOTHING, ex, "polling ended without an error");
+
+        # the file was handled again after each refusal: polling went on, waiting the error delay each time
+        assertEq(3, poller.attempts);
+        assertEq(("refused.txt",), poller.accepted);
+        assertEq((SftpPoller::ErrorDelay.durationSeconds(), SftpPoller::ErrorDelay.durationSeconds()),
+            poller.error_sleeps);
+        # the remote file of the accepted event was deleted
+        assertEq(0, setup.list(nd).files.size());
+    }
+
+    #! an error after a file was handled is fatal: polling stops, so the file is not handled more than once
+    sftpPollerPostErrorStopsTest() {
+        SFTPClient setup = getClient();
+        string nd = makeOneFileDir(setup, "post.txt");
+        on_exit {
+            setup.removeFile(nd + "post.txt");
+            setup.rmdir(nd);
+        }
+
+        RefusingSftpPoller poller(getClient(), {
+            "path": nd,
+            "mask": "*.txt",
+        }, 0, True);
+        *hash<ExceptionInfo> ex = runInline(poller);
+        assertEq("POST-ERROR", ex.err);
+        assertEq(1, poller.attempts);
+        assertEq((), poller.error_sleeps);
+    }
+
+    #! an SFTP error transferring a file after the first file of a poll is retried like any other SFTP error
+    sftpPollerLaterTransferErrorTest() {
+        SFTPClient setup = getClient();
+        string nd = makeOneFileDir(setup, "a.txt");
+        setup.putFile("data", nd + "b.txt");
+        on_exit {
+            map setup.removeFile(nd + $1), ("a.txt", "b.txt");
+            setup.rmdir(nd);
+        }
+
+        # fails the second transfer (of the second file of the first poll; the listing order is not given), and stops
+        # once both files have been handled
+        RefusingSftpPoller poller(getClient(), {
+            "path": nd,
+            "mask": "*.txt",
+        }, 0, False, 2, 2);
+        *hash<ExceptionInfo> ex = runInline(poller);
+        assertEq(NOTHING, ex, "polling ended without an error");
+        # the poll was retried after the error delay, and both files were then handled: the first file of the first
+        # poll twice
+        assertEq((SftpPoller::ErrorDelay.durationSeconds(),), poller.error_sleeps);
+        assertEq(3, poller.accepted.size());
+        assertEq(poller.accepted[0], poller.accepted[1]);
+        assertEq(("a.txt", "b.txt"), sort(poller.accepted[1..]));
+    }
+
+    #! module-ssh2 issue #116: stop() ends the wait before a poll is retried after a refusal at once; the wait
+    #! (one hour) is far longer than the hang guards of the test
+    sftpPollerStopDuringErrorDelayTest() {
+        SFTPClient setup = getClient();
+        string nd = makeOneFileDir(setup, "refused.txt");
+        on_exit {
+            setup.removeFile(nd + "refused.txt");
+            setup.rmdir(nd);
+        }
+
+        Counter refused(1);
+        list<string> msgs();
+        Mutex mm();
+        Condition mcond();
+        AlwaysRefusingSftpPoller poller(getClient(), {
+            "path": nd,
+            "mask": "*.txt",
+            "poll_interval": 3600,
+            "error_delay": 3600,
+            "log_info": sub (string msg) {
+                AutoLock al(mm);
+                msgs += msg;
+                mcond.broadcast();
+            },
+        }, refused);
+        poller.start();
+        on_exit poller.stopNoWait();
+
+        # only a guard against a hang
+        assertEq(0, refused.waitForZero(30s), "the file was refused");
+        # the poller logs the refusal right before it starts to wait the error delay; only a guard against a hang
+        {
+            int start = clock_get_monotonic_us();
+            AutoLock al(mm);
+            while (!(select msgs, $1 =~ /waiting 3600s for next try/)) {
+                int left_ms = 30000 - (clock_get_monotonic_us() - start) / 1000;
+                if (left_ms <= 0) {
+                    throw "ERROR", sprintf("the refusal was not logged in 30s: %y", msgs);
+                }
+                mcond.wait(mm, left_ms);
+            }
+        }
+
+        # stop() returns while the poller waits the error delay
+        Counter stopped(1);
+        background sub () {
+            on_exit stopped.dec();
+            poller.stop();
+        }();
+        # only a guard against a hang; the error delay is one hour
+        assertEq(0, stopped.waitForZero(30s), "stop() returned before the end of the error delay");
+
+        AutoLock al(mm);
+        assertTrue((select msgs, $1 =~ /event handler error .*REFUSED.*waiting 3600s for next try/).size() == 1,
+            sprintf("the refusal was logged with the error delay: %y", msgs));
+    }
+
+    #! the "error_delay" option is checked and used
+    sftpPollerErrorDelayOptionTest() {
+        assertThrows("SFTPPOLLER-CONSTRUCTOR-ARG-ERROR", "error_delay cannot be <= 0", sub () {
+            new NameSftpPoller(getClient(), {"error_delay": 0});
+        });
+        assertEq(60, SftpPoller::ErrorDelaySeconds);
+        assertEq(SftpPoller::ErrorDelay.durationSeconds(), SftpPoller::ErrorDelaySeconds);
+
+        # a retry waits the delay of the option
+        SFTPClient setup = getClient();
+        string nd = makeOneFileDir(setup, "refused.txt");
+        on_exit {
+            setup.removeFile(nd + "refused.txt");
+            setup.rmdir(nd);
+        }
+        RefusingSftpPoller poller(getClient(), {
+            "path": nd,
+            "mask": "*.txt",
+            "error_delay": 5,
+        }, 1);
+        *hash<ExceptionInfo> ex = runInline(poller);
+        assertEq(NOTHING, ex, "polling ended without an error");
+        assertEq((5,), poller.error_sleeps);
+    }
+
+    #! issue #3377: an empty "regex_mask" matches every file with both constructors
+    sftpPollerRegexMaskTest() {
+        # a client of its own, so that the directory is relative to the login directory
+        SFTPClient setup = getClient();
+        string nd = sprintf("%s/", get_random_string());
+        if (m_options.dir) {
+            nd = sprintf("%s/%s/", m_options.dir, get_random_string());
+        }
+        setup.mkdir(nd);
+        map setup.putFile($1.value, nd + $1.key), Files.pairIterator();
+        on_exit {
+            map setup.removeFile(nd + $1), Files.keyIterator();
+            setup.rmdir(nd);
+        }
+
+        list<string> all = sort(keys Files);
+
+        # runs one poll with the SFTPClient constructor and returns the names of the files found
+        code poll_client = list<string> sub (hash<auto> opts) {
+            NameSftpPoller poller(getClient(), {"path": nd, "skip_file_content_retrieval": True} + opts);
+            poller.runOnce();
+            return sort(poller.names);
+        };
+
+        # runs one poll with the hash-only constructor and returns the names of the files found
+        hash<auto> info = sc.info();
+        code poll_host = list<string> sub (hash<auto> opts) {
+            hash<auto> conf = {
+                "host": info.ssh2host,
+                "path": nd,
+                "skip_file_content_retrieval": True,
+            };
+            if (info.ssh2port) {
+                conf.port = info.ssh2port;
+            }
+            if (info.ssh2user) {
+                conf.user = info.ssh2user;
+            }
+            if (keyfile) {
+                conf.keyfile = keyfile;
+            }
+            NameSftpPoller poller(conf + opts);
+            poller.runOnce();
+            return sort(poller.names);
+        };
+
+        foreach code poll in ((poll_client, poll_host)) {
+            # an empty regex mask matches every file, also when it overrides a glob mask
+            assertEq(all, poll({"regex_mask": ""}));
+            assertEq(all, poll({"regex_mask": "", "mask": "*.txt"}));
+            # a regex mask overrides the glob mask
+            assertEq(("d.php",), poll({"regex_mask": "\\.php$", "mask": "*.txt"}));
+            # without a regex mask, the glob mask is used
+            assertEq(("d.php",), poll({"regex_mask": NOTHING, "mask": "*.php"}));
+            assertEq(all, poll({}));
+        }
     }
 
     private usageIntern() {

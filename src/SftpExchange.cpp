@@ -38,6 +38,99 @@ bool absolutePath(const std::string& path) {
 bool isDigest(const std::string& value) {
     return value.size() == 64 && value.find_first_not_of("0123456789abcdef") == value.npos;
 }
+
+bool supportedProfile(const std::string& profile) {
+    if (LIBSSH2_VERSION_NUM < 0x010b01 || !libssh2_version(0x010b01)) {
+        return false;
+    }
+#ifdef HAVE_LIBSSH2_POSIX_RENAME
+    if (profile == "openssh-posix") {
+        return true;
+    }
+#endif
+    return profile == "hosted-immutable";
+}
+
+bool qualifiedServer(LIBSSH2_SESSION* session, const std::string& profile) {
+#ifdef HAVE_LIBSSH2_SERVER_BANNER
+    const char* id = libssh2_session_banner_get(session);
+    if (id) {
+        std::string banner(id);
+        banner.erase(banner.find_last_not_of("\r\n") + 1);
+        if (profile == "openssh-posix") {
+            return banner.compare(0, 16, "SSH-2.0-OpenSSH_") == 0;
+        }
+        auto pos = banner.find_last_of(" -");
+        return pos != banner.npos && banner.substr(pos + 1) == "QoreStagedSFTP_1";
+    }
+#endif
+    return false;
+}
+}
+
+SFTPClient::ExchangePeerStatus SFTPClient::prepareExchangeUnlocked(const std::string& profile,
+        const std::string& pin, int timeout, std::string& fingerprint, ExceptionSink& err) {
+    if (!supportedProfile(profile) || (profile == "hosted-immutable" && !isDigest(pin))) {
+        err.raiseException("SFTP-EXCHANGE-UNSUPPORTED", "no qualified agreement for this endpoint profile");
+        return ExchangePeerStatus::Unsupported;
+    }
+    if (exchange_reader || checkPollOpUnlocked("SFTP exchange", &err)) {
+        if (!err) {
+            err.raiseException("SFTP-EXCHANGE-BUSY", "a stream callback owns this client");
+        }
+        return ExchangePeerStatus::Failed;
+    }
+    auto status = ExchangePeerStatus::Failed;
+    auto check_peer = [&]() {
+        size_t size;
+        int type;
+        const char* key = libssh2_session_hostkey(ssh_session, &size, &type);
+        unsigned char digest[EVP_MAX_MD_SIZE];
+        unsigned length;
+        if (!key || !EVP_Digest(key, size, digest, &length, EVP_sha256(), nullptr)) {
+            err.raiseException("SFTP-EXCHANGE-HOST", "could not fingerprint the negotiated host key");
+            return false;
+        }
+        fingerprint = hex(digest, length);
+        if ((!pin.empty() && pin != fingerprint) || (pin.empty() && !verify_host_key)
+                || !qualifiedServer(ssh_session, profile)) {
+            status = ExchangePeerStatus::Unsupported;
+            err.raiseException("SFTP-EXCHANGE-UNSUPPORTED", "host key or listener does not match the endpoint agreement");
+            return false;
+        }
+        return true;
+    };
+    if (sftp_session) {
+        if (!check_peer()) {
+            return status;
+        }
+    } else if (sftpConnectUnlocked(timeout, &err, check_peer, pin.empty())) {
+        return status;
+    }
+    if (pin.empty() && !known_host_key_matched) {
+        err.raiseException("SFTP-EXCHANGE-UNSUPPORTED", "the endpoint requires an enrolled host key or a pin");
+        return ExchangePeerStatus::Unsupported;
+    }
+    return ExchangePeerStatus::Ready;
+}
+
+QoreListNode* SFTPClient::listExchangeDirectory(const QoreStringNode* path, const QoreStringNode* profile,
+        const QoreStringNode* pin, int64 timeout, ExceptionSink* xsink) {
+    std::string dir(path->c_str(), path->size());
+    std::string agreement(profile->c_str(), profile->size());
+    std::string fingerprint;
+    std::string expected = pin ? std::string(pin->c_str(), pin->size()) : std::string();
+    if (timeout <= 0 || timeout > INT_MAX || !absolutePath(dir) || (dir != "/" && dir.back() == '/')
+            || (agreement == "hosted-immutable" && dir != "/inbound") || (pin && !isDigest(expected))) {
+        xsink->raiseException("SFTP-EXCHANGE-ARG", "invalid exchange directory, host key pin or timeout");
+        return nullptr;
+    }
+    AutoLocker lock(m);
+    if (prepareExchangeUnlocked(agreement, expected, static_cast<int>(timeout), fingerprint, *xsink)
+            != ExchangePeerStatus::Ready) {
+        return nullptr;
+    }
+    return sftpListFullUnlocked(dir.c_str(), static_cast<int>(timeout), xsink);
 }
 
 class SftpExchange {
@@ -48,6 +141,7 @@ public:
           remote(field(spec, "remote_path")), directory(field(spec, "staging_dir")), profile(field(spec, "profile")),
           policy(field(spec, "collision_policy")), pin(field(spec, "host_key_sha256")),
           expected(spec->existsKeyValue("length") ? spec->getKeyValue("length").getAsBigInt() : -1),
+          pin_given(!spec->getKeyValue("host_key_sha256").isNothing()),
           digest_given(!spec->getKeyValue("sha256").isNothing()), expected_digest(field(spec, "sha256")),
           timeout(timeout), receipt(receipt), err(err),
           handle(&client, "SFTP-EXCHANGE-ERROR", "SFTP exchange", timeout, &err) {
@@ -70,12 +164,13 @@ public:
         if (!absolutePath(remote) || remote.back() == '/' || expected < 0
                 || remote.compare(remote.find_last_of('/') + 1, 12, ".qore-stage-") == 0
                 || (digest_given && !isDigest(expected_digest))
+                || (pin_given && !isDigest(pin))
                 || (input && (!absolutePath(directory) || (directory != "/" && directory.back() == '/')))
                 || (!input && (!q_absolute_path(local.c_str()) || local.find('\0') != local.npos))) {
             err.raiseException("SFTP-EXCHANGE-ARG", "invalid path, length or SHA-256 in exchange agreement");
             return;
         }
-        if (!qualified()) {
+        if (!supportedProfile(profile) || !qualified()) {
             outcome = "unsupported";
             err.raiseException("SFTP-EXCHANGE-UNSUPPORTED", "no qualified commit contract for this profile and policy");
             return;
@@ -84,22 +179,15 @@ public:
             err.raiseException("SFTP-EXCHANGE-ARG", "a replaceable path requires a producer SHA-256");
             return;
         }
-        if (client.exchange_reader || client.checkPollOpUnlocked("SFTP exchange", &err)) {
-            if (!err) {
-                err.raiseException("SFTP-EXCHANGE-BUSY", "a stream callback owns this client");
-            }
-            return;
+        std::string fingerprint;
+        auto peer = client.prepareExchangeUnlocked(profile, pin, timeout, fingerprint, err);
+        if (!fingerprint.empty()) {
+            set("host_key_sha256", fingerprint);
         }
-        if (client.sftp_session) {
-            if (!checkPeer()) {
-                return;
+        if (peer != SFTPClient::ExchangePeerStatus::Ready) {
+            if (peer == SFTPClient::ExchangePeerStatus::Unsupported) {
+                outcome = "unsupported";
             }
-        } else if (client.sftpConnectUnlocked(timeout, &err, [this]() { return checkPeer(); }, pin.empty())) {
-            return;
-        }
-        if (pin.empty() && !client.known_host_key_matched) {
-            outcome = "unsupported";
-            err.raiseException("SFTP-EXCHANGE-UNSUPPORTED", "the endpoint requires an enrolled host key or a pin");
             return;
         }
         if (!digest || !EVP_DigestInit_ex(digest.get(), EVP_sha256(), nullptr)) {
@@ -146,6 +234,7 @@ private:
     InputStream* input;
     const std::string local, remote, directory, profile, policy, pin;
     const int64 expected;
+    const bool pin_given;
     const bool digest_given;
     const std::string expected_digest;
     const int timeout;
@@ -160,65 +249,12 @@ private:
     }
 
     bool qualified() const {
-        // These guarantees were qualified with the 1.11.1 close and rename implementations.
-        if (LIBSSH2_VERSION_NUM < 0x010b01 || !libssh2_version(0x010b01)) {
-            return false;
-        }
         if (profile == "hosted-immutable" && policy == "no-replace") {
             // This selects the operator-qualified staged backend, scoped to the configured principal and roots.
             return isDigest(pin) && remote.compare(0, 9, "/inbound/") == 0
                 && remote.find('/', 9) == remote.npos && (!input || directory == "/staging");
         }
-#ifdef HAVE_LIBSSH2_POSIX_RENAME
         return profile == "openssh-posix" && policy == "replace";
-#else
-        return false;
-#endif
-    }
-
-    bool qualifiedServer() const {
-#ifdef HAVE_LIBSSH2_SERVER_BANNER
-        const char* id = libssh2_session_banner_get(client.ssh_session);
-        if (!id) {
-            return false;
-        }
-        std::string banner(id);
-        banner.erase(banner.find_last_not_of("\r\n") + 1);
-        if (profile == "openssh-posix") {
-            return banner.compare(0, 16, "SSH-2.0-OpenSSH_") == 0;
-        }
-        // The listener administrator advertises this exact token only for a staged exchange.
-        // It is authenticated by the key exchange and must match the independently pinned key.
-        auto pos = banner.find_last_of(" -");
-        return pos != banner.npos && banner.substr(pos + 1) == "QoreStagedSFTP_1";
-#else
-        return false;
-#endif
-    }
-
-    bool checkPeer() {
-        size_t key_size;
-        int key_type;
-        const char* key = libssh2_session_hostkey(client.ssh_session, &key_size, &key_type);
-        unsigned char key_digest[EVP_MAX_MD_SIZE];
-        unsigned key_digest_size;
-        if (!key || !EVP_Digest(key, key_size, key_digest, &key_digest_size, EVP_sha256(), nullptr)) {
-            err.raiseException("SFTP-EXCHANGE-HOST", "could not fingerprint the negotiated host key");
-            return false;
-        }
-        std::string actual_pin = hex(key_digest, key_digest_size);
-        set("host_key_sha256", actual_pin);
-        if ((!pin.empty() && actual_pin != pin) || (pin.empty() && !client.verify_host_key)) {
-            outcome = "unsupported";
-            err.raiseException("SFTP-EXCHANGE-UNSUPPORTED", "endpoint does not match the qualified host key agreement");
-            return false;
-        }
-        if (!qualifiedServer()) {
-            outcome = "unsupported";
-            err.raiseException("SFTP-EXCHANGE-UNSUPPORTED", "the authenticated listener does not advertise the agreed profile");
-            return false;
-        }
-        return true;
     }
 
     void protocolError(const char* operation, int rc) {

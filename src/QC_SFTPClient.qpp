@@ -368,6 +368,24 @@ list<hash<SftpFileInfo>> SFTPClient::listFull(*string path, timeout timeout = 60
     return myself->sftpListFull(path ? path->c_str() : nullptr, (int)timeout, xsink);
 }
 
+//! Lists candidate files under the same authenticated endpoint agreement used for verified acquisition.
+/** @param path absolute committed directory, or \c /inbound for the hosted profile
+    @param profile endpoint profile from SftpExchangeSpec
+    @param host_key_sha256 optional lowercase hex host key pin, required for the hosted profile
+    @param timeout positive network timeout
+    @return directory metadata supplied by the qualified endpoint
+    @throw SFTP-EXCHANGE-ARG invalid path, pin or timeout
+    @throw SFTP-EXCHANGE-UNSUPPORTED unsupported profile or mismatched endpoint
+    @throw SSH2-ERROR the connection or directory read failed
+    @note Use acquireVerified() to verify a candidate before emitting a readiness event.
+    @par Example
+    @code{.py} auto entries = client.listExchangeDirectory("/inbound", "hosted-immutable", pin); @endcode
+    @since ssh2 2.1
+*/
+list<hash<SftpFileInfo>> SFTPClient::listExchangeDirectory(string path, string profile, *string host_key_sha256, timeout timeout = 60s) [flags=RET_VALUE_ONLY,NAMED_ARGS] {
+    return myself->listExchangeDirectory(path, profile, host_key_sha256, timeout, xsink);
+}
+
 //! Returns a hash of information about a file or \c NOTHING if the file cannot be found
 /** @par Example:
     @code{.py} *hash<Ssh2StatInfo> h = sftpclient.stat(path); @endcode

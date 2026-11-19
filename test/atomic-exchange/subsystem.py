@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: MIT
 """Forward SFTP v3 requests to OpenSSH; inject faults at acknowledged protocol boundaries."""
 from pathlib import Path
+import hashlib
 import os
 import struct
 import subprocess
@@ -76,7 +77,12 @@ def serve(server):
             reply = status(request, 4)
         else:
             reply = forward(server, request)
-            if operation == 1 and fault == "no-extension":
+            if operation == 12 and reply[0] == 104 and fault == "missing-size":
+                # A valid SFTP v3 NAME entry with permissions but no size attribute.
+                name = hashlib.sha256(b"abc").hexdigest().encode() + b".member"
+                reply = (reply[:5] + struct.pack(">II", 1, len(name)) + name
+                         + struct.pack(">III", 0, 4, 0o100600))
+            elif operation == 1 and fault == "no-extension":
                 reply = reply[:5]
             elif operation == 4 and fault == "stall-close":
                 # Wait for the client to abandon the transport after the missing acknowledgement.

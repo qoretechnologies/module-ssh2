@@ -134,6 +134,10 @@ protected:
         return rv;
     }
 
+    enum class ExchangePeerStatus { Ready, Unsupported, Failed };
+    DLLLOCAL ExchangePeerStatus prepareExchangeUnlocked(const std::string& profile, const std::string& pin,
+        int timeout, std::string& fingerprint, ExceptionSink& err);
+    DLLLOCAL QoreListNode* sftpListFullUnlocked(const char* path, int timeout_ms, ExceptionSink* xsink);
     DLLLOCAL QoreStringNode* sftpPathUnlocked();
     DLLLOCAL int sftpConnectUnlocked(int timeout_ms, ExceptionSink* xsink,
         const std::function<bool()>& check_peer = {}, bool require_known = false);
@@ -188,6 +192,34 @@ public:
     DLLLOCAL QoreStringNode* sftpPath();
     DLLLOCAL QoreStringNode* sftpChdir(const char* nwd, int timeout_ms, ExceptionSink* xsink);
     DLLLOCAL QoreHashNode* sftpList(const char* path, int timeout_ms, ExceptionSink* xsink);
+    //! Reserves the client for a non-blocking poll operation
+    /** A poll operation drives the session from the caller's thread between waits, so no other
+        operation may use the client while one is in progress.
+
+        @return 0 for OK, -1 if an exception was raised
+    */
+    DLLLOCAL int reservePollOperation(ExceptionSink* xsink) {
+        AutoLocker al(m);
+        if (exchange_reader) {
+            xsink->raiseException("SFTP-EXCHANGE-BUSY", "a stream callback owns this client");
+            return -1;
+        }
+        if (poll_op_in_progress) {
+            xsink->raiseException("SSH2-POLL-IN-PROGRESS",
+                "a non-blocking poll operation is already in progress on this object");
+            return -1;
+        }
+        if (connect_in_progress) {
+            xsink->raiseException("SSH2-CONNECT-IN-PROGRESS",
+                "cannot start a non-blocking poll operation while SSH2Base::connect() is in progress");
+            return -1;
+        }
+        poll_op_in_progress = true;
+        return 0;
+    }
+
+    DLLLOCAL QoreListNode* listExchangeDirectory(const QoreStringNode* path, const QoreStringNode* profile,
+        const QoreStringNode* pin, int64 timeout, ExceptionSink* xsink);
     DLLLOCAL QoreListNode* sftpListFull(const char* path, int timeout_ms, ExceptionSink* xsink);
     DLLLOCAL int sftpMkdir(const char* dir, const int mode, int timeout_ms, ExceptionSink* xsink);
     DLLLOCAL int sftpRmdir(const char* dir, int timeout_ms, ExceptionSink* xsink);

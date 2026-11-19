@@ -250,6 +250,102 @@
         "app.U0ZUUA.short_desc": {
           "source": "Generic SFTP server for exchanging files with SFTP",
           "message": "Універсальний сервер SFTP для обміну файлами через SFTP"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.a25vd25faG9zdHM.display_name": {
+          "source": "Known Hosts File",
+          "message": "Файл відомих хостів"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.a25vd25faG9zdHM.short_desc": {
+          "source": "A path to an OpenSSH known_hosts file for host key verification",
+          "message": "Шлях до файлу known_hosts OpenSSH для перевірки ключів хоста"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.a25vd25faG9zdHM.desc": {
+          "source": "A path to an OpenSSH known_hosts file for host key verification; environment variables can be prefixed with '$' in the path; if set to an empty string, no known_hosts file is configured; if not set, the ssh2 module default applies (normally the local user's ~/.ssh/known_hosts file, unless the embedding application has changed or disabled the module default)",
+          "message": "Шлях до файлу known_hosts OpenSSH для перевірки ключів хоста; змінні середовища можуть мати префікс '$' у шляху; якщо встановлено порожній рядок, файл known_hosts не конфігурується; якщо не встановлено, застосовується значення за замовчуванням модуля ssh2 (зазвичай файл ~/.ssh/known_hosts користувача, якщо вкладене застосування не змінило або не вимкнуло значення за замовчуванням)"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfcG9saWN5.display_name": {
+          "source": "Host Key Policy",
+          "message": "Політика ключів хостів"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfcG9saWN5.short_desc": {
+          "source": "Policy for unknown host keys",
+          "message": "Політика для невідомих ключів хостів"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfcG9saWN5.desc": {
+          "source": "Policy for unknown host keys when host-key verification is enabled: `reject` rejects unknown keys, `tofu` persists first-use keys to the configured known_hosts file, and `tofu-session` trusts unknown keys for the current connection only if no known_hosts file is configured",
+          "message": "Політика для невідомих ключів хостів, коли перевірка ключів хостів увімкнена: `reject` відхиляє невідомі ключі, `tofu` зберігає ключі першого використання у налаштованому файлі known_hosts, а `tofu-session` надає довіру невідомим ключам хостів лише для поточного з’єднання, якщо не налаштовано файл known_hosts"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfcG9saWN5.allowed-value.c3RyaW5nOnJlamVjdA.display_name": {
+          "source": "Reject",
+          "message": "Відхилити"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfcG9saWN5.allowed-value.c3RyaW5nOnJlamVjdA.short_desc": {
+          "source": "Reject unknown host keys",
+          "message": "Відхиляти невідомі ключі хоста"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfcG9saWN5.allowed-value.c3RyaW5nOnJlamVjdA.desc": {
+          "source": "Reject unknown host keys",
+          "message": "Відхиляти невідомі ключі хоста"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfcG9saWN5.allowed-value.c3RyaW5nOnRvZnU.display_name": {
+          "source": "Trust On First Use",
+          "message": "Надійність при першому використанні"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfcG9saWN5.allowed-value.c3RyaW5nOnRvZnU.short_desc": {
+          "source": "Trust unknown host keys on first use and persist them",
+          "message": "Надійність невідомих ключів хостів при першому використанні та їх збереження"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfcG9saWN5.allowed-value.c3RyaW5nOnRvZnU.desc": {
+          "source": "Trust unknown host keys on first use and persist them to the configured known_hosts file",
+          "message": "Надавати довіру невідомим ключам хоста при першому використанні та зберігати їх у конфігурованому файлі known_hosts"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfcG9saWN5.allowed-value.c3RyaW5nOnRvZnUtc2Vzc2lvbg.display_name": {
+          "source": "Session Trust On First Use",
+          "message": "Надійність сеансу при першому використанні"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfcG9saWN5.allowed-value.c3RyaW5nOnRvZnUtc2Vzc2lvbg.short_desc": {
+          "source": "Trust unknown host keys for the current connection only when needed",
+          "message": "Trust unknown host keys only for current connection when needed"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfcG9saWN5.allowed-value.c3RyaW5nOnRvZnUtc2Vzc2lvbg.desc": {
+          "source": "Trust unknown host keys for the current connection only if no known_hosts file is configured",
+          "message": "Надійність невідомих ключів хостів лише для поточного з’єднання, якщо не налаштовано файл known_hosts"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.dmVyaWZ5X2hvc3Rfa2V5.display_name": {
+          "source": "Verify Host Key",
+          "message": "Перевірити ключ хоста"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.dmVyaWZ5X2hvc3Rfa2V5.short_desc": {
+          "source": "Enable host key verification against the known_hosts file",
+          "message": "Увімкнути перевірку ключа хоста проти файлу known_hosts"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.dmVyaWZ5X2hvc3Rfa2V5.desc": {
+          "source": "Enable host key verification against the known_hosts file",
+          "message": "Увімкнути перевірку ключа хоста проти файлу known_hosts"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.dXNlX2FnZW50.display_name": {
+          "source": "Use SSH Agent",
+          "message": "Використовувати SSH-агент"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.dXNlX2FnZW50.short_desc": {
+          "source": "Enable SSH agent authentication",
+          "message": "Увімкнути автентифікацію через SSH-агент"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.dXNlX2FnZW50.desc": {
+          "source": "Enable SSH agent authentication; when enabled, the client will attempt to authenticate using keys from the running SSH agent before other methods",
+          "message": "Увімкнути автентифікацію через SSH-агент; коли увімкнено, клієнт спробує автентифікуватися за допомогою ключів із запущеного SSH-агента перед іншими методами"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.a2VlcGFsaXZlX2ludGVydmFs.display_name": {
+          "source": "Keepalive Interval",
+          "message": "Інтервал keepalive"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.a2VlcGFsaXZlX2ludGVydmFs.short_desc": {
+          "source": "Keepalive interval in seconds",
+          "message": "Інтервал keepalive в секундах"
+        },
+        "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.a2VlcGFsaXZlX2ludGVydmFs.desc": {
+          "source": "Keepalive interval in seconds; 0 disables keepalive; default: 60",
+          "message": "Інтервал keepalive в секундах; 0 вимикає keepalive; за замовчуванням: 60"
         }
       }
     }

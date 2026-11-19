@@ -126,7 +126,10 @@ class ExchangeTest inherits QUnit::Test {
         assertEq("INPUT-CANCELLED", interrupted.error);
         assertEq("prior", ReadOnlyFile::readTextFile(remote));
         interrupted = c.publishVerified(new GeneratedInput(1, nothing sub() {
+            assertThrows("SFTP-EXCHANGE-BUSY", sub() { c.startPollGetFile(remote); });
             c.disconnect();
+            assertThrows("SFTP-EXCHANGE-BUSY", sub() { c.startPollGetFile(remote); });
+            assertEq("SFTP-EXCHANGE-BUSY", c.publishVerified(new BinaryInputStream(<01>), spec(1)).error);
         }), spec(1));
         assertEq("failed", interrupted.outcome);
         assertEq("prior", ReadOnlyFile::readTextFile(remote));

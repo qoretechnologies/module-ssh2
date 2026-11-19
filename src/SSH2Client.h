@@ -188,6 +188,7 @@ class SSH2Client : public AbstractPollableIoObjectBase {
     friend class SSH2Channel;
     friend class SSH2Listener;
     friend class BlockingHelper;
+    friend class SFTPClient;
     friend class SftpExchange;
     friend class SftpPollOperationPriv;
 
@@ -600,28 +601,6 @@ public:
     DLLLOCAL int sshConnect(int timeout_ms, ExceptionSink *xsink);
 
     DLLLOCAL int sshConnected();
-
-    //! Reserves the client for a non-blocking poll operation
-    /** A poll operation drives the session from the caller's thread between waits, so no other
-        operation may use the client while one is in progress.
-
-        @return 0 for OK, -1 if an exception was raised
-    */
-    DLLLOCAL int reservePollOperation(ExceptionSink* xsink) {
-        AutoLocker al(m);
-        if (poll_op_in_progress) {
-            xsink->raiseException("SSH2-POLL-IN-PROGRESS",
-                "a non-blocking poll operation is already in progress on this object");
-            return -1;
-        }
-        if (connect_in_progress) {
-            xsink->raiseException("SSH2-CONNECT-IN-PROGRESS",
-                "cannot start a non-blocking poll operation while SSH2Base::connect() is in progress");
-            return -1;
-        }
-        poll_op_in_progress = true;
-        return 0;
-    }
 
     //! Returns the file descriptor of the underlying socket or -1 if not connected
     /** The async I/O controller calls this on its I/O thread, so the object's lock is not taken: a blocking

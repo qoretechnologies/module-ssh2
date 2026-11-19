@@ -12,7 +12,7 @@
 class ReceiptPoller inherits SftpPoller {
     public {
         list<hash<SftpPollerFileEventInfo>> events = ();
-        int batches;
+        int batches = 0;
     }
     constructor(SFTPClient c, hash<auto> opts) : SftpPoller(c, opts) {
     }
@@ -30,6 +30,28 @@ class ReceiptPoller inherits SftpPoller {
     }
 }
 
+class RetryPoller inherits ReceiptPoller {
+    public {
+        int attempts;
+        list<int> delays = ();
+    }
+    constructor(SFTPClient c, hash<auto> opts) : ReceiptPoller(c, opts) {
+    }
+    nothing singleFileEvent(hash<SftpPollerFileEventInfo> event) {
+        if (++attempts == 1) {
+            throw "REFUSED", "observer is unavailable";
+        }
+        ReceiptPoller::singleFileEvent(event);
+        stopNoWait();
+    }
+    private sftpSleep(softint secs) {
+        delays += secs;
+        if (delays.size() > 1) {
+            stopNoWait();
+        }
+    }
+}
+
 class ProviderTest inherits QUnit::Test {
     private {
         string root = ENV.EXCHANGE_ROOT;
@@ -37,6 +59,8 @@ class ProviderTest inherits QUnit::Test {
     constructor() : Test("SFTP exchange actions and polling", "1.0", \ARGV) {
         addTestCase("scheme actions publish and acquire a manifest member", \actions());
         addTestCase("strict polling emits only verified committed versions", \poller());
+        addTestCase("strict discovery verifies the endpoint before listing", \discovery());
+        addTestCase("strict observer refusal retries the verified member", \retry());
         set_return_value(main());
     }
     private SFTPClient client() {
@@ -46,6 +70,48 @@ class ProviderTest inherits QUnit::Test {
         c.setKeys(root + "/client");
         c.setUseAgent(False);
         return c;
+    }
+    private discovery() {
+        hash<auto> opts = {"path": root + "/stage", "local_dir": root + "/local",
+            "commit_profile": "openssh-sha256-name", "host_key_sha256": strmul("0", 64)};
+        SFTPClient c = client();
+        string trust = root + "/discovery-known-hosts";
+        c.setKnownHostsFile(trust);
+        c.setHostKeyPolicy(Ssh2HostKeyPolicy::TrustOnFirstUse);
+        ReceiptPoller p(c, opts);
+        assertThrows("SFTP-EXCHANGE-UNSUPPORTED", sub() { p.runOnce(); });
+        assertFalse(is_file(trust));
+        assertFalse(c.info().connected);
+        assertEq(0, p.batches);
+        p.updateOptions(c);
+        assertFalse(c.info().connected);
+        assertFalse(is_file(trust));
+        opts.host_key_sha256 = ENV.EXCHANGE_PIN;
+        p = new ReceiptPoller(c, opts);
+        assertFalse(p.runOnce());
+        assertTrue(c.info().connected);
+        c.disconnect();
+        assertFalse(p.runOnce());
+        c.disconnect();
+        c.setKnownHostsFile(root + "/discovery-unknown");
+        remove opts.host_key_sha256;
+        p = new ReceiptPoller(c, opts);
+        assertThrows("SSH2-HOSTKEY-UNKNOWN", sub() { p.getFiles(); });
+        assertFalse(is_file(root + "/discovery-unknown"));
+    }
+    private retry() {
+        string dir = root + "/retry";
+        SFTPClient c = client();
+        c.mkdir(dir);
+        string name = digest("sha256", "ready").toHex() + ".retry";
+        c.putFile("ready", dir + "/" + name);
+        RetryPoller p(c, {"path": dir, "local_dir": root + "/local", "commit_profile": "openssh-sha256-name",
+            "host_key_sha256": ENV.EXCHANGE_PIN, "error_delay": 7});
+        p.startInline();
+        assertEq(2, p.attempts);
+        assertEq((7,), p.delays);
+        assertEq(name, p.events[0].name);
+        assertEq("ready", ReadOnlyFile::readTextFile(p.events[0].local_path));
     }
     private actions() {
         SftpClientDataProvider dp(client());
@@ -88,6 +154,13 @@ class ProviderTest inherits QUnit::Test {
         assertEq(filename, p.events[0].name);
         assertEq(p.events[0].receipt, p.events[1].receipt);
         assertEq("abc", ReadOnlyFile::readTextFile(p.events[1].local_path));
+        FileOutputStream fault(root + "/fault");
+        fault.write(binary("missing-size"));
+        fault.close();
+        assertThrows("SFTPPOLLER-ACQUISITION-ERROR", sub() { p.runOnce(); });
+        assertEq(2, p.batches);
+        FileOutputStream clear(root + "/fault");
+        clear.close();
         c.putFile("xyz", root + "/in/" + filename);
         assertThrows("SFTPPOLLER-ACQUISITION-ERROR", sub() { p.runOnce(); });
         assertEq(2, p.batches);

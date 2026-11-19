@@ -112,7 +112,8 @@ binary data = op.getOutput();@endcode
     Set the poller's <tt>commit_profile</tt>, absolute remote <tt>path</tt>, and absolute writable <tt>local_dir</tt> for
     verified events. Use <tt>hosted-immutable</tt> with <tt>/inbound</tt> and <tt>host_key_sha256</tt>, or
     <tt>openssh-sha256-name</tt> with a committed directory containing names of the form
-    <tt>lowercase-sha256.logical-name</tt>. Each file event carries the receipt after local publication. Repeated
+    <tt>lowercase-sha256.logical-name</tt>. The first discovery and each reconnection qualify the listener before listing the directory. Directory entries
+    need a declared byte length. Each file event carries the receipt after local publication. Repeated
     discovery yields the same identity for the same committed version. Keep legacy integration settings to retain
     the existing polling behavior.
 

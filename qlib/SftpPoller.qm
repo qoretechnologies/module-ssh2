@@ -135,6 +135,20 @@ hash opts = (
 
     A useful poller class would implement the @ref SftpPoller::SftpPoller::singleFileEvent() "SftpPoller::singleFileEvent()" method which process already-transferred files and the @ref SftpPoller::SftpPoller::postSingleFileEvent() "SftpPoller::postSingleFileEvent()" by deleting / moving / renaming the files so that they would not be acquired on the next poll.
 
+    @section sftppollererrors SftpPoller Errors and Retries
+
+    An @ref SftpPoller::SftpPoller "SftpPoller" handles errors while polling as follows:
+    - an SFTP error while files are listed or transferred is logged, and the poll is retried after the
+      \c "error_delay" option's delay (default: one minute)
+    - an error raised while a polled file is handled, by
+      @ref SftpPoller::SftpPoller::singleFileEvent() "SftpPoller::singleFileEvent()" or by an observer of an
+      @ref SftpPoller::SftpPollerDataProvider "SftpPollerDataProvider" that refuses or fails to handle the file event,
+      is logged, the remote file is kept, and the poll is retried after the \c "error_delay" option's delay, so the
+      file is handled again
+    - an error after a file was handled, in
+      @ref SftpPoller::SftpPoller::postSingleFileEvent() "SftpPoller::postSingleFileEvent()" or while the remote file
+      is deleted or moved, stops polling, as continuing could handle the file more than once
+
     @section sftpollersandbox SftpPoller Module in Sandboxed Programs
 
     The @ref SftpPoller::SftpPoller "SftpPoller" class includes support for running in sandboxed Program objects with the following parse options set:
@@ -147,10 +161,24 @@ hash opts = (
     - Added opt-in verified acquisition from dedicated publication directories.
 
     @section sftppollerv1_5 Version 1.5
+    - an error raised while a polled file is handled (ex: an observer that refuses the file event) is logged, the
+      remote file is kept, and the poll is retried after the \c "error_delay" option's delay; previously polling
+      stopped (see @ref sftppollererrors;
+      <a href="https://github.com/qoretechnologies/qore/issues/6400">qore issue 6400</a>)
+    - an SFTP error transferring a file after the first file of a poll is retried after the \c "error_delay"
+      option's delay like any other SFTP error; it stopped polling
+    - added the \c "error_delay" option for the delay before a poll is retried after an error (default: one minute,
+      the previous fixed delay), and @ref SftpPoller::SftpPoller::stop() "stop()" and
+      @ref SftpPoller::SftpPoller::stopNoWait() "stopNoWait()" end a wait between polls at once (without a
+      \c "sleep" closure); a stop waited for the end of the wait
+      (<a href="https://github.com/qoretechnologies/module-ssh2/issues/116">issue 116</a>)
     - added data provider and app action support
     - corrected the source-owned provider presentation catalog so it contains the SFTP poller action without
       duplicating actions contributed by the SFTP client module
     - requires Qore 3.0 (module domains)
+    - an empty \c "regex_mask" option matches every file; it caused the constructor to throw an
+      \c INVALID-MEMBER exception
+      (<a href="https://github.com/qoretechnologies/qore/issues/3377">issue 3377</a>)
 
     @section sftppollerv1_4_1 Version 1.4.1
     - fixed a bug registering the sftp event type
@@ -218,11 +246,13 @@ public class SftpPoller {
             "check_file": "qore-sftp-check-file",
             "tempfile_template": ".tmp.%s.part",
             "atomic_transfer": False,
+            "error_delay": ErrorDelaySeconds,
         };
 
         #! optional constructor hash keys
         const OptionalKeys = (
             "path", "user", "pass", "keyfile", "regex_mask", "minage", "encoding", "log_info", "log_detail",
+            "known_hosts", "host_key_policy", "verify_host_key", "use_agent", "keepalive_interval",
             "log_debug", "binary", "delete_remote_file", "move_remote_file",
 %ifndef PO_NO_PROCESS_CONTROL
             "sleep",
@@ -236,8 +266,11 @@ public class SftpPoller {
         #! all keys
         const AllKeys = RequiredKeysWithHost + Defaults.keys() + OptionalKeys;
 
-        #! pause when SFTP errors are detected
+        #! the default delay before a poll is retried after an error (see the \c "error_delay" option)
         const ErrorDelay = 1m;
+
+        #! the default delay in seconds before a poll is retried after an error (see the \c "error_delay" option)
+        const ErrorDelaySeconds = 60;
     }
 
     private {
@@ -259,6 +292,21 @@ public class SftpPoller {
         #! path to the ssh private key in PEM format; one of \c "pass" or \c "keyfile" *must* be set
         *string keyfile;
 
+        #! path to an OpenSSH known_hosts file for host key verification
+        *string known_hosts;
+
+        #! the policy for unknown host keys (\c "reject", \c "tofu" or \c "tofu-session")
+        *string host_key_policy;
+
+        #! enables host key verification against the known_hosts file
+        *bool verify_host_key;
+
+        #! enables SSH agent authentication
+        *bool use_agent;
+
+        #! keepalive interval in seconds; 0 disables keepalive
+        *int keepalive_interval;
+
         #! path(s) to poll
         softlist<string> path = ".";
 
@@ -270,6 +318,15 @@ public class SftpPoller {
 
         #! poll interval in seconds
         int poll_interval;
+
+        #! the delay in seconds before a poll is retried after an error (see @ref sftppollererrors)
+        int error_delay = ErrorDelaySeconds;
+
+        #! sleep mutex for the condition-based wait between polls
+        Qore::Thread::Mutex sleep_m();
+
+        #! sleep condition, signaled when polling is stopped
+        Qore::Thread::Condition sleep_cond();
 
         #! Local directory to transfer file
         string local_dir;
@@ -297,6 +354,9 @@ public class SftpPoller {
 
         #! internal "get files" flag
         bool get_files;
+
+        #! internal flag: True while singleFileEvent() handles a file (see @ref sftppollererrors)
+        bool in_event;
 
         #! internal fatal error flag
         bool fatal = False;
@@ -381,6 +441,8 @@ public class SftpPoller {
           information; must accept a single string giving the log message
         - \c log_debug: a @ref closure "closure" or @ref call_reference "call reference" for logging verbose
           debgugging information; must accept a single string giving the log message
+        - \c error_delay: the delay in seconds before the poll is retried after an SFTP error or an error handling
+          a polled file (see @ref sftppollererrors; default: 60 seconds; must be > 0 if given)
         - \c poll_interval: the integer polling interval in seconds (default: 10 seconds; must be > 0 if given)
         - \c mask: the file glob mask to use (default: \c "*", ignored if \c "regex_mask" is also present)
         - \c minage: the minimum file age in seconds before a file will be acquired (default: 0)
@@ -388,7 +450,8 @@ public class SftpPoller {
           processing; cannot be set if \c delete_remote_file is also set
         - \c path: the remote path(s) for retrieving the files; if a list of strings is given then each path will be
           polled for matching files according to the \c "mask" or \c "regex_mask" option
-        - \c regex_mask: a regular expression to use as a mask (overrides any \c "mask" value)
+        - \c regex_mask: a regular expression to use as a mask (overrides any \c "mask" value); an empty string
+          matches every file
         - \c reopts: regular expression match options (ex RE_Caseless for case-insensitive matches)
         - \c skip_file_content_retrieval: if True then @ref SftpPoller::SftpPoller::singleFileEvent and
           @ref SftpPoller::SftpPoller::postSingleFileEvent methods won't get 'data' member of the input hash, i.e. the
@@ -400,7 +463,8 @@ public class SftpPoller {
           thread ID (if not set then @ref background will be used)
         - \c sleep: (required when the module is loaded by its path into a context where @ref Qore::PO_NO_PROCESS_CONTROL is set; the installed module declares \c PROCESS_CONTROL) a
           @ref closure "closure" or @ref call_reference "call reference" to use instead of @ref Qore::sleep() (if not
-          set then @ref Qore::sleep() will be used)
+          set then a wait that a stop ends at once is used); it is called with 1 (second) at a time until the wait
+          ends or polling is stopped, so it must really sleep (since SftpPoller 1.5)
         - \c timeout: connection timeout (default \c 30s)
         - \c writable: check if path(s) is/are writable  (default: False see also the \c "check_file" option)
         - \c tempfile_template: (used when \c local_dir and \c atomic_transfer are set) the temporary filename prefix
@@ -411,7 +475,8 @@ public class SftpPoller {
         they are in the remote SFTP server, unless they are removed or moved during polling processing. Only one of
         these options may be set at one time; setting both will result in an error
 
-        @throw SFTPPOLLER-CONSTRUCTOR-ARG-ERROR missing required key, invalid port or poll_interval given
+        @throw SFTPPOLLER-CONSTRUCTOR-ARG-ERROR missing required key, invalid port, poll_interval or error_delay
+        given
         @throw SFTPCLIENT-PARAMETER-ERROR empty hostname passed
         @throw SOCKET-CONNECT-ERROR error establishing socket connection (no listener, port blocked, etc); timeout
         establishing socket connection
@@ -446,16 +511,26 @@ public class SftpPoller {
                 conf.poll_interval);
         }
 
+        conf.error_delay = int(conf.error_delay);
+        if (conf.error_delay <= 0) {
+            throw "SFTPPOLLER-CONSTRUCTOR-ARG-ERROR", sprintf("error_delay cannot be <= 0 (val: %d)",
+                conf.error_delay);
+        }
+
         if (conf.delete_remote_file && conf.move_remote_file.val()) {
             throw "SFTPPOLLER-CONSTRUCTOR-ARG-ERROR", sprintf("delete_remote_file is set along with move_remote_file "
                 "(%y); only one of these can be set at one time", conf.move_remote_file);
         }
 
         bool re = False;
-        if (conf.regex_mask) {
-            mask = remove conf.regex_mask;
-            re = True;
-            conf -= "mask";
+        # an empty regex_mask is a regex that matches every file; it must be removed from the options in any case
+        if (conf.hasKey("regex_mask")) {
+            *string regex_mask = remove conf.regex_mask;
+            if (exists regex_mask) {
+                mask = regex_mask;
+                re = True;
+                conf -= "mask";
+            }
         }
 
         # set options
@@ -494,7 +569,11 @@ public class SftpPoller {
           Cannot be set if \c move_remote_file is also set
         - \c encoding: the encoding for any text files received
         - \c host: (required) the hostname or address to connect to
+        - \c host_key_policy: the policy for unknown host keys: \c "reject", \c "tofu" or \c "tofu-session" (see
+          @ref applyClientOptions())
+        - \c keepalive_interval: the keepalive interval in seconds; 0 disables keepalive
         - \c keyfile: the SSH key (file and path to it)
+        - \c known_hosts: the path to an OpenSSH known_hosts file for host key verification
         - \c local_dir: a local directory to use to transfer remote files so large file data does not appear in events
         - \c log_info: a @ref closure "closure" or @ref call_reference "call reference" for logging important
           information; must accept a single string giving the log message
@@ -502,6 +581,8 @@ public class SftpPoller {
           information; must accept a single string giving the log message
         - \c log_debug: a @ref closure "closure" or @ref call_reference "call reference" for logging verbose
           debgugging information; must accept a single string giving the log message
+        - \c error_delay: the delay in seconds before the poll is retried after an SFTP error or an error handling
+          a polled file (see @ref sftppollererrors; default: 60 seconds; must be > 0 if given)
         - \c poll_interval: the integer polling interval in seconds (default: 10 seconds; must be > 0 if given)
         - \c mask: the file glob mask to use (default: \c "*", ignored if \c "regex_mask" is also present)
         - \c minage: the minimum file age in seconds before a file will be acquired (default: 0)
@@ -511,7 +592,8 @@ public class SftpPoller {
         - \c path: the remote path(s) for retrieving the files; if a list of strings is given then each path will be
           polled for matching files according to the \c "mask" or \c "regex_mask" option
         - \c port: the integer port number to connect to (default 22; must be > 0 if given)
-        - \c regex_mask: a regular expression to use as a mask (overrides any \c "mask" value)
+        - \c regex_mask: a regular expression to use as a mask (overrides any \c "mask" value); an empty string
+          matches every file
         - \c reopts: regular expression match options (ex RE_Caseless for case-insensitive matches)
         - \c skip_file_content_retrieval: if True then @ref SftpPoller::SftpPoller::singleFileEvent and
           @ref SftpPoller::SftpPoller::postSingleFileEvent methods won't get 'data' member of the input hash, i.e. the
@@ -520,18 +602,23 @@ public class SftpPoller {
           @ref SftpPoller::SftpPoller::postSingleFileEvent (default: False); (since ssh2 1.1)
         - \c sleep: (required when the module is loaded by its path into a context where @ref Qore::PO_NO_PROCESS_CONTROL is set; the installed module declares \c PROCESS_CONTROL) a
           @ref closure "closure" or @ref call_reference "call reference" to use instead of @ref Qore::sleep() (if not
-          set then @ref Qore::sleep() will be used)
+          set then a wait that a stop ends at once is used); it is called with 1 (second) at a time until the wait
+          ends or polling is stopped, so it must really sleep (since SftpPoller 1.5)
         - \c start_thread: (required when imported into a context where @ref Qore::PO_NO_THREAD_CONTROL is set) a
           @ref closure "closure" or @ref call_reference "call reference" for starting threads; must return the integer
           thread ID (if not set then @ref background will be used)
         - \c timeout: connection timeout (default \c 30s)
+        - \c use_agent: enables SSH agent authentication (see @ref applyClientOptions())
+        - \c verify_host_key: enables host key verification against the known_hosts file (see
+          @ref applyClientOptions())
         - \c user: the username to use for the connection
         - \c writable: check if path(s) is/are writable  (default: False see also the \c "check_file" option)
         - \c tempfile_template: (used when \c local_dir and \c atomic_transfer are set) the temporary filename prefix
           to use when transferring files to the local directory specified by \c local_dir; use \c "%s" as the
           placeholder for the target filename
 
-        @throw SFTPPOLLER-CONSTRUCTOR-ARG-ERROR missing required key, invalid port or poll_interval given
+        @throw SFTPPOLLER-CONSTRUCTOR-ARG-ERROR missing required key, invalid port, poll_interval or error_delay
+        given
         @throw SFTPCLIENT-PARAMETER-ERROR empty hostname passed
         @throw SOCKET-CONNECT-ERROR error establishing socket connection (no listener, port blocked, etc); timeout
         establishing socket connection
@@ -560,6 +647,11 @@ public class SftpPoller {
         if (conf.poll_interval <= 0)
             throw "SFTPPOLLER-CONSTRUCTOR-ARG-ERROR", sprintf("poll_interval cannot be <= 0 (val: %d)",
                 conf.poll_interval);
+        conf.error_delay = int(conf.error_delay);
+        if (conf.error_delay <= 0) {
+            throw "SFTPPOLLER-CONSTRUCTOR-ARG-ERROR", sprintf("error_delay cannot be <= 0 (val: %d)",
+                conf.error_delay);
+        }
         if (conf.port <= 0)
             throw "SFTPPOLLER-CONSTRUCTOR-ARG-ERROR", sprintf("port cannot be <= 0 (val: %d)", conf.port);
 
@@ -569,10 +661,14 @@ public class SftpPoller {
         }
 
         bool re = False;
-        if (conf.regex_mask) {
-            mask = remove conf.regex_mask;
-            re = True;
-            conf -= "mask";
+        # an empty regex_mask is a regex that matches every file; it must be removed from the options in any case
+        if (conf.hasKey("regex_mask")) {
+            *string regex_mask = remove conf.regex_mask;
+            if (exists regex_mask) {
+                mask = regex_mask;
+                re = True;
+                conf -= "mask";
+            }
         }
 
         # set options
@@ -594,6 +690,7 @@ public class SftpPoller {
         if (keyfile) {
             sftp.setKeys(keyfile);
         }
+        applyClientOptions(sftp, conf);
 
         url = sprintf("%s@%s:%d", user ? user : "<none>", host, port);
 
@@ -642,6 +739,56 @@ public class SftpPoller {
         stop();
     }
 
+    #! applies the host key, agent and keepalive options to an SFTP client
+    /** The options are the ones of the connection that the poller connects with: the client is configured as a
+        client of an SFTP connection or of the SFTP client data provider is, so host keys are verified (or not) on the
+        poller path as the connection says
+
+        @param sftp the client to configure
+        @param options a hash that can have the following keys (the others are ignored):
+        - \c known_hosts: the path to an OpenSSH known_hosts file (environment variables can be prefixed with \c '$');
+          an empty string configures no known_hosts file; if not set, the default of the \c ssh2 module applies
+        - \c host_key_policy: the policy for unknown host keys: \c "reject", \c "tofu" or \c "tofu-session"
+        - \c verify_host_key: enables host key verification against the known_hosts file
+        - \c use_agent: enables SSH agent authentication
+        - \c keepalive_interval: the keepalive interval in seconds; 0 disables keepalive
+
+        @throw OPTION-VALUE-ERROR invalid \c host_key_policy value
+    */
+    static applyClientOptions(SFTPClient sftp, hash<auto> options) {
+        if (exists options.known_hosts) {
+            sftp.setKnownHostsFile(substitute_env_vars(options.known_hosts));
+        }
+        if (exists options.host_key_policy) {
+            sftp.setHostKeyPolicy(SftpPoller::getHostKeyPolicy(options.host_key_policy));
+        }
+        if (exists options.verify_host_key) {
+            sftp.setVerifyHostKey(options.verify_host_key);
+        }
+        if (exists options.use_agent) {
+            sftp.setUseAgent(options.use_agent);
+        }
+        if (exists options.keepalive_interval) {
+            sftp.setKeepalive(options.keepalive_interval);
+        }
+    }
+
+    #! returns the host key policy for the value of a \c host_key_policy option
+    /** @throw OPTION-VALUE-ERROR invalid \c host_key_policy value
+    */
+    static enum<Ssh2HostKeyPolicy> getHostKeyPolicy(string policy) {
+        switch (policy) {
+            case "reject":
+                return Ssh2HostKeyPolicy::Reject;
+            case "tofu":
+                return Ssh2HostKeyPolicy::TrustOnFirstUse;
+            case "tofu-session":
+                return Ssh2HostKeyPolicy::TrustOnFirstUseSession;
+        }
+        throw "OPTION-VALUE-ERROR", sprintf("invalid host_key_policy option value %y; expected one of %y", policy,
+            ("reject", "tofu", "tofu-session"));
+    }
+
     updateOptions(SFTPClient sftp) {
         hash<auto> info += sftp.info();
 
@@ -649,9 +796,10 @@ public class SftpPoller {
         if (info.ssh2port) {
             url += sprintf(":%d", info.ssh2port);
         }
-        logDetail("%s: logging in (timeout %y)", url, timeout);
-        # connect to the remote system
-        sftp.connect(timeout);
+        if (!commit_profile) {
+            logDetail("%s: logging in (timeout %y)", url, timeout);
+            sftp.connect(timeout);
+        }
 
         self.url = url;
 
@@ -800,7 +948,8 @@ public class SftpPoller {
     list<hash<SftpPollerFileEventInfo>> getFiles(int sort = SftpPoller::SortNone, int order = SftpPoller::OrderAsc) {
         list<hash<SftpPollerFileEventInfo>> l =
             map cast<hash<SftpPollerFileEventInfo>>($1),
-                sftp.listFull(commit_profile ? path[0] : NOTHING, timeout),
+                (commit_profile ? sftp.listExchangeDirectory(path[0], commit_profile == "hosted-immutable"
+                    ? "hosted-immutable" : "openssh-posix", host_key_sha256, timeout) : sftp.listFull(NOTHING, timeout)),
                 $1.type == "REGULAR";
 
         if (commit_profile) {
@@ -886,7 +1035,7 @@ public class SftpPoller {
         m.lock();
         on_exit m.unlock();
 
-        runflag = False;
+        stopIntern();
     }
 
     #! stops the polling operation, returns when the polling operation has been stopped
@@ -902,9 +1051,16 @@ public class SftpPoller {
         m.lock();
         on_exit m.unlock();
 
-        runflag = False;
+        stopIntern();
 
         sc.waitForZero();
+    }
+
+    #! clears the run flag and wakes the polling thread from a wait between polls
+    private stopIntern() {
+        AutoLock al(sleep_m);
+        runflag = False;
+        sleep_cond.broadcast();
     }
 
     #! waits indefinitely for the polling operation to stop; if polling was not in progress then this method returns immediately
@@ -945,6 +1101,7 @@ public class SftpPoller {
         bool ret = False;
         foreach string subdir in (path) {
             get_files = True;
+            in_event = False;
             if (path.size() != 1) {
                 sftp.chdir(rootSftpPath);
                 sftp.chdir(subdir);
@@ -957,6 +1114,8 @@ public class SftpPoller {
 
                 if (fileEvent(files)) {
                     foreach hash<SftpPollerFileEventInfo> fh in (files) {
+                        # an error transferring any file is an SFTP error, after which the poll is retried
+                        get_files = True;
                         fh.filepath = subdir == "." ? fh.name : (subdir + "/" + fh.name);
                         if (skip_file_content_retrieval) {
                             logInfo("%y: skipping retrieval of file data based on the poller configuration", fh.name);
@@ -972,9 +1131,15 @@ public class SftpPoller {
                             }
                         }
 
-                        # make sure any errors after this point cause the polling operation to stop
                         get_files = False;
+
+                        # an error raised by the event handler (ex: an observer that refuses the event) leaves the
+                        # remote file in place, and the poll is retried after the error delay
+                        # (qoretechnologies/qore#6400)
+                        in_event = True;
                         singleFileEvent(fh);
+                        # make sure any errors after this point cause the polling operation to stop
+                        in_event = False;
 
                         # set the "fatal" flag if an exception is thrown in postSingleFileEvent()
                         on_error fatal = True;
@@ -1009,8 +1174,12 @@ public class SftpPoller {
 
     private bool pollCommitted() {
         get_files = True;
+        in_event = False;
         bool emitted = False;
         foreach hash<SftpPollerFileEventInfo> event in (getFiles()) {
+            if (!exists event.size) {
+                throw "SFTPPOLLER-ACQUISITION-ERROR", sprintf("Endpoint omitted the byte length of %y", event.name);
+            }
             bool hosted = commit_profile == "hosted-immutable";
             string remote = (path[0] == "/" ? "" : path[0]) + "/" + event.name;
             string target = local_dir + DirSep + event.name;
@@ -1028,8 +1197,13 @@ public class SftpPoller {
                 "receipt": receipt, "remote_status": RS_NONE};
             if (fileEvent((event,))) {
                 get_files = False;
+                in_event = True;
                 singleFileEvent(event);
-                postSingleFileEvent(event);
+                in_event = False;
+                {
+                    on_error fatal = True;
+                    postSingleFileEvent(event);
+                }
                 emitted = True;
                 get_files = True;
             }
@@ -1118,12 +1292,41 @@ public class SftpPoller {
         return event;
     }
 
-    #! sleeps for the specificed number of seconds
+    #! waits for the given number of seconds, or until polling is stopped
+    /** With a \c "sleep" closure, the closure is called with one second at a time, so that a stop takes effect
+        within a second; otherwise the wait is on a condition that stop() and stopNoWait() signal, so that a stop
+        takes effect at once
+    */
     private sftpSleep(softint secs) {
 %ifdef PO_NO_PROCESS_CONTROL
-        call_function(sleep, secs);
+        date end = now_us() + seconds(secs);
+        while (runflag) {
+            call_function(sleep, 1);
+            if (now_us() >= end) {
+                break;
+            }
+        }
 %else
-        sleep ? call_function(sleep, secs) : Qore::sleep(secs);
+        if (sleep) {
+            date end = now_us() + seconds(secs);
+            while (runflag) {
+                call_function(sleep, 1);
+                if (now_us() >= end) {
+                    break;
+                }
+            }
+        } else {
+            # a wait can end before its timeout without a signal, so the deadline is checked
+            date end = now_us() + seconds(secs);
+            AutoLock al(sleep_m);
+            while (runflag) {
+                date left = end - now_us();
+                if (left <= 0s) {
+                    break;
+                }
+                sleep_cond.wait(sleep_m, left);
+            }
+        }
 %endif
     }
 
@@ -1134,15 +1337,15 @@ public class SftpPoller {
         if (!url) {
             url = sprintf("%s@%s:%d", ih.ssh2user ? ih.ssh2user : "<none>", ih.ssh2host, ih.ssh2port);
         }
+        if (commit_profile) {
+            self.sftp = sftp;
+            return;
+        }
         if (!ih.connected) {
             logDetail("%s: logging in (timeout %y)", url, timeout);
             sftp.connect(timeout);
         } else {
             logDetail("%s: already connected: %y", url, ih);
-        }
-        if (commit_profile) {
-            self.sftp = sftp;
-            return;
         }
         rootSftpPath = sftp.path();
 
@@ -1166,6 +1369,7 @@ public class SftpPoller {
 
         while (runflag) {
             try {
+                in_event = False;
                 if (new_sftp) {
                     logInfo("Continuing polling with an updated SFTP connection");
                     setup(remove new_sftp);
@@ -1176,9 +1380,17 @@ public class SftpPoller {
                 }
             } catch (hash<ExceptionInfo> ex) {
                 if (get_files) {
-                    logInfo("SFTP error in %y: %s: %s; waiting %y for next try", path, ex.err, ex.desc, ErrorDelay);
+                    logInfo("SFTP error in %y: %s: %s; waiting %ds for next try", path, ex.err, ex.desc,
+                        error_delay);
                     if (runflag)
-                        sftpSleep(ErrorDelay);
+                        sftpSleep(error_delay);
+                } else if (in_event) {
+                    # the event handler refused or failed to handle the file, which is left in place
+                    in_event = False;
+                    logInfo("event handler error in %y: %s: %s; the remote file is kept; waiting %ds for next try",
+                        path, ex.err, ex.desc, error_delay);
+                    if (runflag)
+                        sftpSleep(error_delay);
                 } else {
                     # error thrown in "post transfer" code
                     logInfo("error in post transfer code; polling terminated: %s: %s", ex.err, ex.desc);
@@ -1195,7 +1407,7 @@ public class SftpPoller {
         return True;
     }
 
-    #! called for each matching file individually whenever matching files are polled with the list of matching file names; if any error occurs here, the error is logged and the polling operation is retried
+    #! called for each matching file individually whenever matching files are polled with the list of matching file names; if any error occurs here, the error is logged, the remote file is kept, and the poll is retried after the \c "error_delay" option's delay (see @ref sftppollererrors)
     /** @param fih a hash of file data and information with the following keys:
         - \c name: the name of the file, link, or directory
         - \c size: the size of the file in bytes
@@ -1292,6 +1504,75 @@ public class SftpPollerDataProviderBase inherits DataProvider::AbstractDataProvi
                 "short_desc": "A path to an SSH private key file in PEM format",
                 "type": AbstractDataProviderTypeMap."string",
                 "desc": "A path to an SSH private key file in PEM format to use for key-based authentication",
+            },
+
+            "known_hosts": <DataProviderOptionInfo>{
+                "display_name": "Known Hosts File",
+                "short_desc": "A path to an OpenSSH known_hosts file for host key verification",
+                "type": AbstractDataProviderTypeMap."string",
+                "desc": "A path to an OpenSSH known_hosts file for host key verification; environment variables "
+                    "can be prefixed with '$' in the path; if set to an empty string, no known_hosts file is "
+                    "configured; if not set, the ssh2 module default applies (normally the local user's "
+                    "~/.ssh/known_hosts file, unless the embedding application has changed or disabled the "
+                    "module default)",
+            },
+
+            "host_key_policy": <DataProviderOptionInfo>{
+                "display_name": "Host Key Policy",
+                "short_desc": "Policy for unknown host keys",
+                "type": AbstractDataProviderTypeMap."string",
+                "desc": "Policy for unknown host keys when host-key verification is enabled: `reject` rejects "
+                    "unknown keys, `tofu` persists first-use keys to the configured known_hosts file, and "
+                    "`tofu-session` trusts unknown keys for the current connection only if no known_hosts file is "
+                    "configured",
+                "allowed_values": (
+                    <AllowedValueInfo>{
+                        "display_name": "Reject",
+                        "short_desc": "Reject unknown host keys",
+                        "desc": "Reject unknown host keys",
+                        "value": "reject",
+                    },
+                    <AllowedValueInfo>{
+                        "display_name": "Trust On First Use",
+                        "short_desc": "Trust unknown host keys on first use and persist them",
+                        "desc": "Trust unknown host keys on first use and persist them to the configured known_hosts "
+                            "file",
+                        "value": "tofu",
+                    },
+                    <AllowedValueInfo>{
+                        "display_name": "Session Trust On First Use",
+                        "short_desc": "Trust unknown host keys for the current connection only when needed",
+                        "desc": "Trust unknown host keys for the current connection only if no known_hosts file is "
+                            "configured",
+                        "value": "tofu-session",
+                    },
+                ),
+                "default_value": "tofu",
+            },
+
+            "verify_host_key": <DataProviderOptionInfo>{
+                "display_name": "Verify Host Key",
+                "short_desc": "Enable host key verification against the known_hosts file",
+                "type": AbstractDataProviderTypeMap."bool",
+                "desc": "Enable host key verification against the known_hosts file",
+                "default_value": True,
+            },
+
+            "use_agent": <DataProviderOptionInfo>{
+                "display_name": "Use SSH Agent",
+                "short_desc": "Enable SSH agent authentication",
+                "type": AbstractDataProviderTypeMap."bool",
+                "desc": "Enable SSH agent authentication; when enabled, the client will attempt to authenticate "
+                    "using keys from the running SSH agent before other methods",
+                "default_value": True,
+            },
+
+            "keepalive_interval": <DataProviderOptionInfo>{
+                "display_name": "Keepalive Interval",
+                "short_desc": "Keepalive interval in seconds",
+                "type": AbstractDataProviderTypeMap."int",
+                "desc": "Keepalive interval in seconds; 0 disables keepalive; default: 60",
+                "default_value": 60,
             },
 
             "local_dir": <DataProviderOptionInfo>{

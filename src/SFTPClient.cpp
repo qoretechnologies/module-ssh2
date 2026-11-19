@@ -194,8 +194,8 @@ int SFTPClient::disconnectUnlocked(bool force, int timeout_ms, AbstractDisconnec
         adh->preDisconnect();
 
     if (exchange_reader) {
-        auto* reader = std::exchange(exchange_reader, nullptr);
-        reader->tryClose();
+        // The callback still owns the reservation until its read returns, even after disconnect.
+        exchange_reader->tryClose();
     }
 
     // close sftp session if not null
@@ -296,6 +296,10 @@ QoreListNode* SFTPClient::sftpListFull(const char* path, int timeout_ms, Excepti
     if (!sftpConnectedUnlocked() && sftpConnectUnlocked(timeout_ms, xsink))
         return nullptr;
 
+    return sftpListFullUnlocked(path, timeout_ms, xsink);
+}
+
+QoreListNode* SFTPClient::sftpListFullUnlocked(const char* path, int timeout_ms, ExceptionSink* xsink) {
     std::string pstr;
     if (!path) // there is no path given so we use the sftpPath
         pstr = sftppath;
@@ -332,6 +336,9 @@ QoreListNode* SFTPClient::sftpListFull(const char* path, int timeout_ms, Excepti
     LIBSSH2_SFTP_ATTRIBUTES attrs;
 
     while (true) {
+        if (qore_check_cancel(xsink, "SFTP list directory")) {
+            return nullptr;
+        }
         int rc;
         while ((rc = libssh2_sftp_readdir(*qh, buff, sizeof(buff), &attrs)) == LIBSSH2_ERROR_EAGAIN) {
             if (qh.waitSocket())
@@ -345,17 +352,22 @@ QoreListNode* SFTPClient::sftpListFull(const char* path, int timeout_ms, Excepti
         }
 
         ReferenceHolder<QoreHashNode> h(new QoreHashNode(hashdeclSftpFileInfo, xsink), xsink);
-        h->setKeyValue("name", new QoreStringNode(buff), xsink);
+        h->setKeyValue("name", new QoreStringNode(buff, static_cast<size_t>(rc)), xsink);
 
+        if (attrs.flags & LIBSSH2_SFTP_ATTR_SIZE) {
+            h->setKeyValue("size", attrs.filesize, xsink);
+        }
+        if (attrs.flags & LIBSSH2_SFTP_ATTR_ACMODTIME) {
+            h->setKeyValue("atime", DateTimeNode::makeAbsolute(currentTZ(), attrs.atime), xsink);
+            h->setKeyValue("mtime", DateTimeNode::makeAbsolute(currentTZ(), attrs.mtime), xsink);
+        }
+        if (attrs.flags & LIBSSH2_SFTP_ATTR_UIDGID) {
+            h->setKeyValue("uid", attrs.uid, xsink);
+            h->setKeyValue("gid", attrs.gid, xsink);
+        }
         if (attrs.flags & LIBSSH2_SFTP_ATTR_PERMISSIONS) {
             SimpleRefHolder<QoreStringNode> perm(new QoreStringNode);
             const char* type = ssh2_mode_to_perm(attrs.permissions, **perm);
-
-            h->setKeyValue("size", attrs.filesize, xsink);
-            h->setKeyValue("atime", DateTimeNode::makeAbsolute(currentTZ(), (int64)attrs.atime), xsink);
-            h->setKeyValue("mtime", DateTimeNode::makeAbsolute(currentTZ(), (int64)attrs.mtime), xsink);
-            h->setKeyValue("uid", attrs.uid, xsink);
-            h->setKeyValue("gid", attrs.gid, xsink);
             h->setKeyValue("mode", attrs.permissions, xsink);
             h->setKeyValue("type", new QoreStringNode(type), xsink);
             h->setKeyValue("perm", perm.release(), xsink);
@@ -727,8 +739,14 @@ int SFTPClient::sftpConnectUnlocked(int timeout_ms, ExceptionSink* xsink, const 
         return -1;
     }
 
-    if (sftp_session)
+    if (connect_in_progress) {
+        xsink->raiseException("SSH2-CONNECT-IN-PROGRESS", "an SFTP connection is already being established");
+        return -1;
+    }
+    ConnectInProgressHelper connecting(*this);
+    if (sftp_session) {
         disconnectUnlocked(true);
+    }
 
     int rc;
 
