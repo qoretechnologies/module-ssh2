@@ -2,15 +2,18 @@
 
     @tableofcontents
 
-    @section ssh2intro Introduction to the ssh2 Module
+    @section ssh2intro ssh2 Module Introduction
 
-    The ssh2 module provides Qore the possibility to communicate with sshd servers via the <a href="http://en.wikipedia.org/wiki/Secure_Shell#Version_2.x">ssh2 protocol</a>; the underlying functionality is provided by <a href="http://www.libssh2.org">libssh2</a>.
+    <img src="sftp-logo.svg" width="96" alt="SFTP module logo"/>
+
+    The ssh2 module connects to SSH servers using <a href="https://www.libssh2.org/">libssh2</a>.
+    It supports <a href="https://www.rfc-editor.org/rfc/rfc4253">SSH version 2</a>, SFTP and SCP.
 
     This module is released under a choice of two licenses:
     - <a href="http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html">LGPL 2.1</a>
     - MIT (see COPYING.MIT in the source distribution for more information)
     .
-    The module is tagged as such in the module's header (meaning it can be loaded unconditionally regardless of how the %Qore library was initialized).  This version of the module requires Qore 2.3+ and the @c sshutil module to compile and run.
+    The module is tagged as such in the module's header (meaning it can be loaded unconditionally regardless of how the %Qore library was initialized).  This version of the module requires Qore 3.0+ and the @c sshutil module to compile and run.
 
     To use the module in a %Qore script, use the \c %%requires directive as follows:
     @code{.py}

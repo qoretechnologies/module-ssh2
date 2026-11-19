@@ -5,19 +5,10 @@
     @tableofcontents
 
     @section ssh2v210 ssh2 Module Version 2.1.0
-
     - Added SFTPClient::publishVerified() and SFTPClient::acquireVerified(), typed agreements and reconciliation receipts.
     - Added the Publish Verified File and Acquire Verified File provider actions and opt-in verified SFTP polling.
-    - Existing send, retrieve, rename and polling configurations keep their existing behavior. Strict exchange requires
-      libssh2 1.11.1 or later and an explicit endpoint agreement. See @ref ssh2verifiedexchange for setup and examples.
 
-    @section ssh2v200 ssh2 Module Version 2.0.0
-    Major feature release closing all client-side feature gaps in the libssh2 wrapper.
-
-    <b>Build and test support:</b>
-    - documentation includes DataProvider and ConnectionProvider cross-references and corrected parameter names
-    - SSH/SFTP test suites accept a named \c --uri option for isolated qualification servers
-    - \c QORE_SSH2_STRICT_DOCS makes documentation warnings fail the build
+    See @ref ssh2verifiedexchange for the endpoint agreement, version requirements, and recovery procedure.
 
     <b>Authentication Enhancements:</b>
     - added SSH agent authentication support; tried automatically before other methods
@@ -39,13 +30,6 @@
       TOFU), @ref Qore::SSH2::Ssh2HostKeyPolicy::Reject "Reject", or
       @ref Qore::SSH2::Ssh2HostKeyPolicy::TrustOnFirstUseSession "TrustOnFirstUseSession"
       (@ref Qore::SSH2::SSH2Base::setHostKeyPolicy() "SSH2Base::setHostKeyPolicy()")
-    - a configured known_hosts file that exists but cannot be read or parsed now causes the
-      connection to fail with \c SSH2-HOSTKEY-ERROR instead of silently connecting without
-      verification (fail closed)
-    - verification-enabled persistent TOFU connections with no configured known_hosts file fail
-      closed with \c SSH2-HOSTKEY-ERROR; set
-      @ref Qore::SSH2::Ssh2HostKeyPolicy::TrustOnFirstUseSession "TrustOnFirstUseSession"
-      explicitly for legacy session-only trust
     - the plaintext authentication password is no longer written to debug output
     - added process-global default controls for embedding applications where the OS user differs
       from the logical user and the OS user's <tt>~/.ssh/known_hosts</tt> must not be used:
@@ -148,17 +132,6 @@
       default), consistent with the underlying client classes
 
     <b>Bug Fixes:</b>
-    - worked around a libssh2 defect that made
-      @ref Qore::SSH2::SFTPClient::symlink() "SFTPClient::symlink()" report every successful call as
-      an error: libssh2 commit \c 2dae302 (the fix for \c CVE-2025-15661) reads the status code of
-      the \c SSH_FXP_SYMLINK response at the offset of the request id, so a status of \c SSH_FX_OK
-      is reported as \c LIBSSH2_ERROR_SFTP_PROTOCOL with the request id as the SFTP status code;
-      the real status is unavailable on such a build, so the link is now verified against the server
-      when libssh2 reports an SFTP protocol error, and the exception is raised only if the link does
-      not resolve to the requested target.  Upstream fixed the defect in commit \c 4ed26f5, which is
-      in no libssh2 release yet, while distributions have backported the CVE fix alone into 1.11.1;
-      patched and unpatched builds report the same \c LIBSSH2_VERSION_NUM, so an affected library
-      cannot be recognized from its version
     - fixed crashes from channels and listeners outliving their state: a channel destroyed after its client
       disconnected was used again by the client's next connect or disconnect, and a channel or listener used after
       its client object had been destroyed used freed memory; channels and listeners now keep their client's state
@@ -190,9 +163,6 @@
     - @ref SftpPoller::SftpPoller "SftpPoller" has an \c "error_delay" option for the delay before a poll is
       retried after an error (default: one minute), and a stop ends a wait between polls at once
       (<a href="https://github.com/qoretechnologies/module-ssh2/issues/116">issue 116</a>)
-    - removed stale TODO in mkdir implementation
-    - documented known memory leak in sftp_shutdown timeout (libssh2 limitation)
-    - updated copyright years to 2026
 
     @section ssh2v150 ssh Module Version 1.5.0
     - added support for interruptible I/O for graceful termination of sandboxed programs; interrupt
@@ -203,26 +173,26 @@
 
     @section ssh2v142 ssh Module Version 1.4.2
     - fixed a bug where the \c sftp connection scheme was unusable
-      (<a href="https://github.com/qorelanguage/qore/issues/4755">issue 4755</a>)
+      (<a href="https://github.com/qoretechnologies/qore/issues/4755">issue 4755</a>)
 
     @section ssh2v141 ssh Module Version 1.4.1
     - fixed a bug where the sftp event type was registered twice
-      (<a href="https://github.com/qorelanguage/qore/issues/4389">issue 4389</a>)
+      (<a href="https://github.com/qoretechnologies/qore/issues/4389">issue 4389</a>)
 
     @section ssh2v14 ssh Module Version 1.4
     - added support for the data provider API
     - fixed a core dump when a @ref Qore::SSH2::SFTPClient "SFTPClient" disconnection occurs with open
       @ref Qore::SSH2::SSH2Channel "SSH2Channel" objects
-      (<a href="https://github.com/qorelanguage/qore/issues/3943">issue 3943</a>)
+      (<a href="https://github.com/qoretechnologies/qore/issues/3943">issue 3943</a>)
     - implemented support for serializing connection objects
-      (<a href="https://github.com/qorelanguage/qore/issues/3696">issue 3696</a>)
+      (<a href="https://github.com/qoretechnologies/qore/issues/3696">issue 3696</a>)
     - implemented support for auto-reconnecting lost connections in the
       @ref sftppollerintro "SftpPoller" module
-      (<a href="https://github.com/qorelanguage/qore/issues/1846">issue 1846</a>)
+      (<a href="https://github.com/qoretechnologies/qore/issues/1846">issue 1846</a>)
 
     @section ssh2v13 ssh Module Version 1.3
     - added support for complex types in public APIs
-      (<a href="https://github.com/qorelanguage/qore/issues/3540">issue 3540</a>)
+      (<a href="https://github.com/qoretechnologies/qore/issues/3540">issue 3540</a>)
     - added the following base class APIs:
       - @ref Qore::SSH2::SSH2Base::getAuthenticatedWith() "SSH2Base::getAuthenticatedWith()"
       - @ref Qore::SSH2::SSH2Base::getHost() "SSH2Base::getHost()"
@@ -231,28 +201,28 @@
       - @ref Qore::SSH2::SSH2Base::getPassword() "SSH2Base::getPassword()"
       - @ref Qore::SSH2::SSH2Base::getPort() "SSH2Base::getPort()"
       - @ref Qore::SSH2::SSH2Base::getUser() "SSH2Base::getUser()"
-      (<a href="https://github.com/qorelanguage/qore/issues/3445">issue 3445</a>)
+      (<a href="https://github.com/qoretechnologies/qore/issues/3445">issue 3445</a>)
     - updated the @ref ssh2connectionsintro "Ssh2Connections" module to support the updated
-      abstract connection API (<a href="https://github.com/qorelanguage/qore/issues/2628">issue 2628</a>)
+      abstract connection API (<a href="https://github.com/qoretechnologies/qore/issues/2628">issue 2628</a>)
 
     @section ssh2v12 ssh Module Version 1.2
     - added the @ref ssh2connectionsintro "Ssh2Connections" user module
     - added the following @ref Qore::SSH2::SFTPClient "SFTPClient" methods supporting streams:
       - @ref Qore::SSH2::SFTPClient::get() "SFTPClient::get()"
       - @ref Qore::SSH2::SFTPClient::put() "SFTPClient::put()"
-    - fixed bugs retrieving zero-length text files with @ref Qore::SSH2::SFTPClient::getFile() "SFTPClient::getFile()", @ref Qore::SSH2::SFTPClient::getTextFile() "SFTPClient::getTextFile()", @ref Qore::SSH2::SFTPClient::get() "SFTPClient::get()", and @ref Qore::SSH2::SFTPClient::retrieveFile() "SFTPClient::retrieveFile()" (<a href="https://github.com/qorelanguage/qore/issues/2549">issue 2549</a>)
-    - fixed bugs streaming data with @ref Qore::SSH2::SFTPClient::transferFile() "SFTPClient::transferFile()" and @ref Qore::SSH2::SFTPClient::put() "SFTPClient::put()" (<a href="https://github.com/qorelanguage/qore/issues/2633">issue 2633</a>)
+    - fixed bugs retrieving zero-length text files with @ref Qore::SSH2::SFTPClient::getFile() "SFTPClient::getFile()", @ref Qore::SSH2::SFTPClient::getTextFile() "SFTPClient::getTextFile()", @ref Qore::SSH2::SFTPClient::get() "SFTPClient::get()", and @ref Qore::SSH2::SFTPClient::retrieveFile() "SFTPClient::retrieveFile()" (<a href="https://github.com/qoretechnologies/qore/issues/2549">issue 2549</a>)
+    - fixed bugs streaming data with @ref Qore::SSH2::SFTPClient::transferFile() "SFTPClient::transferFile()" and @ref Qore::SSH2::SFTPClient::put() "SFTPClient::put()" (<a href="https://github.com/qoretechnologies/qore/issues/2633">issue 2633</a>)
 
     @section ssh2v11 ssh Module Version 1.1
-    - argument error in @ref Qore::SSH2::SFTPClient "SFTPClient" disconnection with socket errors causes a crash (<a href="https://github.com/qorelanguage/qore/issues/714">issue 765</a>)
-    - infinite loop in @ref sftppollerintro "SftpPoller" polling when PO_NO_PROCESS_CONTROL is not set and no sleep option is given (<a href="https://github.com/qorelanguage/qore/issues/773">issue 773</a>)
-    - implement support for additional directories in @ref sftppollerintro "SftpPoller" (<a href="https://github.com/qorelanguage/qore/issues/753">issue 753</a>)
-    - SftpPoller::run() cannot be synchronized (<a href="https://github.com/qorelanguage/qore/issues/798">issue 798</a>)
-    - compile fixes for Solaris 10 g++ (<a href="https://github.com/qorelanguage/qore/issues/861">issue 861</a>)
-    - add constructor option to @ref sftppollerintro "SftpPoller" for checking if polled directories are writable (<a href="https://github.com/qorelanguage/qore/issues/888">issue 888</a>)
-    - fixed a bug that could cause a crash when an error occurs in the @ref Qore::SSH2::SFTPClient "SFTPClient" class (<a href="https://github.com/qorelanguage/qore/issues/1040">issue 1040</a>)
-    - streaming from SFTP server impossible without user re-implementing @ref sftppollerintro "SftpPoller" methods (<a href="https://github.com/qorelanguage/qore/issues/1557">issue 1557</a>)
-    - fixed a bug in libssh2 library initialization error reporting (<a href="https://github.com/qorelanguage/qore/issues/1696">issue 1696</a>)
+    - argument error in @ref Qore::SSH2::SFTPClient "SFTPClient" disconnection with socket errors causes a crash (<a href="https://github.com/qoretechnologies/qore/issues/714">issue 765</a>)
+    - infinite loop in @ref sftppollerintro "SftpPoller" polling when PO_NO_PROCESS_CONTROL is not set and no sleep option is given (<a href="https://github.com/qoretechnologies/qore/issues/773">issue 773</a>)
+    - implement support for additional directories in @ref sftppollerintro "SftpPoller" (<a href="https://github.com/qoretechnologies/qore/issues/753">issue 753</a>)
+    - SftpPoller::run() cannot be synchronized (<a href="https://github.com/qoretechnologies/qore/issues/798">issue 798</a>)
+    - compile fixes for Solaris 10 g++ (<a href="https://github.com/qoretechnologies/qore/issues/861">issue 861</a>)
+    - add constructor option to @ref sftppollerintro "SftpPoller" for checking if polled directories are writable (<a href="https://github.com/qoretechnologies/qore/issues/888">issue 888</a>)
+    - fixed a bug that could cause a crash when an error occurs in the @ref Qore::SSH2::SFTPClient "SFTPClient" class (<a href="https://github.com/qoretechnologies/qore/issues/1040">issue 1040</a>)
+    - streaming from SFTP server impossible without user re-implementing @ref sftppollerintro "SftpPoller" methods (<a href="https://github.com/qoretechnologies/qore/issues/1557">issue 1557</a>)
+    - fixed a bug in libssh2 library initialization error reporting (<a href="https://github.com/qoretechnologies/qore/issues/1696">issue 1696</a>)
 
     @section ssh2v10 ssh Module Version 1.0
     - fixed crashing bugs handling errors and handle scope in the @ref Qore::SSH2::SFTPClient "SFTPClient" class
@@ -266,7 +236,7 @@
     - implemented the @ref Qore::SSH2::SFTPClient::retrieveFile() "SFTPClient::retrieveFile()" and @ref Qore::SSH2::SFTPClient::transferFile() "SFTPClient::transferFile()" methods
     - ported the @ref Qore::SSH2::SFTPClient "SFTPClient" class tests to QUnit and added tests for the new methods
     - ported test/sftp-poller.q to QUnit
-    - fixed a bug in socket handling related to asyncronous socket event polling and select(2) and lack of socket descriptor bounds checking (<a href="https://github.com/qorelanguage/qore/issues/714">issue 714</a>)
+    - fixed a bug in socket handling related to asyncronous socket event polling and select(2) and lack of socket descriptor bounds checking (<a href="https://github.com/qoretechnologies/qore/issues/714">issue 714</a>)
     - requires %Qore 0.8.12+ to build (uses the new QoreValue API)
 
     @section ssh2v099 Version 0.9.9
@@ -286,7 +256,7 @@
     - @ref Qore::SSH2::SFTPClient::getTextFile() "SFTPClient::getTextFile()" has a new optional parameter: encoding
 
     @section ssh2v097 Version 0.9.7
-    - an exception will be thrown if a key file is set and either the public or private key is not available or readable; previously such errors would cause hard-to-debug connection problems (for instance, see: http://comments.gmane.org/gmane.network.ssh.libssh2.devel/5873; note that the patch mentioned in the linked thread was subsequently reverted)
+    - an exception will be thrown if a key file is set and either the public or private key is not available or readable; previously such errors would cause hard-to-debug connection problems
     - fixed another deadlock in the @ref Qore::SSH2::SFTPClient::disconnect() "SFTPClient::disconnect()" method
     - minor doc updates
     - requires qore 0.8.5+ to build and run

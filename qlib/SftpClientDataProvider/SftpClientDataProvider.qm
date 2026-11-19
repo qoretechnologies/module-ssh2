@@ -195,7 +195,9 @@ module SftpClientDataProvider {
 
     @tableofcontents
 
-    @section sftpclientdataproviderintro Introduction to the SftpClientDataProvider Module
+    @section sftpclientdataproviderintro SftpClientDataProvider Module Introduction
+
+    <img src="sftp-logo.svg" width="96" alt="SFTP module logo"/>
 
     The %SftpClientDataProvider module provides a data provider API for SFTP servers through the
     @ref dataproviderintro "DataProvider" API.
@@ -222,24 +224,25 @@ module SftpClientDataProvider {
     - @ref SftpClientDataProvider::SftpClientStatDataProvider "SftpClientStatDataProvider"
     - @ref SftpClientDataProvider::SftpClientStatResponseDataType "SftpClientStatResponseDataType"
 
-    @section sftpclientdataprovider_relnotes Release Notes
+    @anchor sftpclientdataprovider_relnotes
 
-    @subsection sftpclientdataprovider_v2_1 SftpClientDataProvider v2.1
+    @subpage sftpclientdataproviderreleasenotes
+*/
+
+/** @page sftpclientdataproviderreleasenotes SftpClientDataProvider Release Notes
+
+    @section sftpclientdataprovider_v2_1 SftpClientDataProvider v2.1
     - Added publish-verified and acquire-verified actions with typed commit receipts.
-
-    @subsection sftpclientdataprovider_v2_0 SftpClientDataProvider v2.0
     - added host-key verification constructor options: \c known_hosts, \c host_key_policy,
       \c verify_host_key, \c use_agent, and \c keepalive_interval
     - corrected the source-owned provider presentation catalog so it contains the SFTP client actions without
       duplicating actions contributed by the SFTP poller module
-
-    @subsection sftpclientdataprovider_v1_1 SftpClientDataProvider v1.1
     - added chmod, exists, and rmdir actions
     - improved documentation with display_name, short_desc, and example_value fields
     - fixed bug in SftpClientMoveDataProvider where getResponseTypeImpl() returned RequestType
     - fixed bug in SftpClientListDataProvider where path was not normalized
 
-    @subsection sftpclientdataprovider_v1_0 SftpClientDataProvider v1.0
+    @section sftpclientdataprovider_v1_0 SftpClientDataProvider v1.0
     - initial release
 */
 

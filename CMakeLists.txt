@@ -127,6 +127,7 @@ list(APPEND MODULE_DOX_INPUT
     ${CMAKE_CURRENT_BINARY_DIR}/guide-ssh2releasenotes.dox
     ${CMAKE_CURRENT_BINARY_DIR}/guide-thread_safety.dox
 )
+set(QORE_DOXYGEN_IMAGES "${CMAKE_CURRENT_SOURCE_DIR}/qlib/SftpClientDataProvider/sftp-logo.svg")
 qore_external_binary_module(${module_name} ${PROJECT_VERSION} ${LIBSSH2_LDFLAGS} OpenSSL::Crypto)
 
 qore_external_user_module("qlib/SftpClientDataProvider" "")
