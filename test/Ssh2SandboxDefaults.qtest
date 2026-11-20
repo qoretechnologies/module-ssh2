@@ -1,0 +1,147 @@
+#!/usr/bin/env qore
+# -*- mode: qore; indent-tabs-mode: nil -*-
+
+%modern
+%requires ssh2 >= 2.0
+%requires QUnit
+
+%exec-class Ssh2SandboxDefaultsTest
+
+#! The process-wide host key defaults of SSH2 clients cannot be weakened by sandboxed code (qore#6846)
+/** Every SSH2Client and SFTPClient that the code of any Program creates takes the process-wide defaults of host key
+    verification, the host key policy and the known_hosts file.  Tenant A, sandboxed, must not weaken them for the
+    clients that tenant B, sandboxed in another sandbox, creates afterwards: a change that would accept more host keys
+    raises \c SANDBOX-REGISTRATION-ERROR and leaves the default as it was, while A can still make a default stricter.
+    Trusted code is not affected.
+*/
+class Ssh2SandboxDefaultsTest inherits QUnit::Test {
+    public {
+        #! the code of each tenant
+        const TenantCode = "
+auto sub run(string code) {
+    switch (code) {
+        case \"verify-off\": SSH2Base::setDefaultVerifyHostKey(False); break;
+        case \"verify-on\": SSH2Base::setDefaultVerifyHostKey(True); break;
+        case \"policy-session\": SSH2Base::setDefaultHostKeyPolicy(Ssh2HostKeyPolicy::TrustOnFirstUseSession); break;
+        case \"policy-session-int\": SSH2Base::setDefaultHostKeyPolicy(SSH2_HOSTKEY_TOFU_SESSION); break;
+        case \"policy-tofu\": SSH2Base::setDefaultHostKeyPolicy(Ssh2HostKeyPolicy::TrustOnFirstUse); break;
+        case \"policy-reject\": SSH2Base::setDefaultHostKeyPolicy(Ssh2HostKeyPolicy::Reject); break;
+        case \"known-hosts-file\": SSH2Base::setDefaultKnownHostsFile(\"/tmp/tenant-a-known-hosts\"); break;
+        case \"known-hosts-none\": SSH2Base::setDefaultKnownHostsFile(\"\"); break;
+        case \"known-hosts-default\": SSH2Base::setDefaultKnownHostsFile(); break;
+    }
+}
+
+hash<auto> sub client_defaults() {
+    SSH2Client sc(\"ssh://127.0.0.1:1\");
+    return {
+        \"verify\": sc.getVerifyHostKey(),
+        \"policy\": sc.getHostKeyPolicy(),
+    };
+}
+";
+    }
+
+    private {
+        #! the process-wide defaults when the test starts, restored after each case
+        bool verify;
+        #! the default host key policy (an Ssh2HostKeyPolicy value)
+        int policy;
+        *string known_hosts;
+    }
+
+    constructor() : Test("Ssh2SandboxDefaultsTest", "1.0", \ARGV) {
+        addTestCase("sandboxed code cannot disable host key verification", \verifyTest());
+        addTestCase("sandboxed code cannot make the host key policy less strict", \policyTest());
+        addTestCase("sandboxed code can make the defaults stricter", \stricterTest());
+        addTestCase("sandboxed code cannot change the known_hosts file", \knownHostsTest());
+        addTestCase("trusted code can change the defaults", \trustedTest());
+        set_return_value(main());
+    }
+
+    globalSetUp() {
+        verify = SSH2Base::getDefaultVerifyHostKey();
+        policy = SSH2Base::getDefaultHostKeyPolicy();
+        known_hosts = SSH2Base::getDefaultKnownHostsFile();
+    }
+
+    setUp() {
+        SSH2Base::setDefaultVerifyHostKey(True);
+        SSH2Base::setDefaultHostKeyPolicy(Ssh2HostKeyPolicy::TrustOnFirstUse);
+    }
+
+    globalTearDown() {
+        SSH2Base::setDefaultVerifyHostKey(verify);
+        SSH2Base::setDefaultHostKeyPolicy(policy);
+        SSH2Base::setDefaultKnownHostsFile(known_hosts);
+    }
+
+    verifyTest() {
+        Program a = tenant("a");
+        Program b = tenant("b");
+        assertThrows("SANDBOX-REGISTRATION-ERROR", \a.callFunction(), ("run", "verify-off"));
+        assertTrue(SSH2Base::getDefaultVerifyHostKey(), "the default is unchanged");
+        assertTrue(b.callFunction("client_defaults").verify, "tenant B's new client verifies host keys");
+    }
+
+    policyTest() {
+        Program a = tenant("a");
+        Program b = tenant("b");
+        assertThrows("SANDBOX-REGISTRATION-ERROR", \a.callFunction(), ("run", "policy-session"));
+        assertThrows("SANDBOX-REGISTRATION-ERROR", \a.callFunction(), ("run", "policy-session-int"));
+        assertEq(Ssh2HostKeyPolicy::TrustOnFirstUse, SSH2Base::getDefaultHostKeyPolicy(), "the default is unchanged");
+        assertEq(Ssh2HostKeyPolicy::TrustOnFirstUse, b.callFunction("client_defaults").policy,
+            "tenant B's new client has the policy that trusted code set");
+        # from Reject, TrustOnFirstUse is less strict too
+        SSH2Base::setDefaultHostKeyPolicy(Ssh2HostKeyPolicy::Reject);
+        assertThrows("SANDBOX-REGISTRATION-ERROR", \a.callFunction(), ("run", "policy-tofu"));
+        assertEq(Ssh2HostKeyPolicy::Reject, b.callFunction("client_defaults").policy,
+            "tenant B's new client rejects unknown host keys");
+    }
+
+    stricterTest() {
+        Program a = tenant("a");
+        Program b = tenant("b");
+        # setting the current value changes nothing
+        a.callFunction("run", "verify-on");
+        a.callFunction("run", "policy-tofu");
+        SSH2Base::setDefaultVerifyHostKey(False);
+        SSH2Base::setDefaultHostKeyPolicy(Ssh2HostKeyPolicy::TrustOnFirstUseSession);
+        a.callFunction("run", "verify-on");
+        assertTrue(SSH2Base::getDefaultVerifyHostKey(), "tenant A enabled the verification");
+        a.callFunction("run", "policy-tofu");
+        assertEq(Ssh2HostKeyPolicy::TrustOnFirstUse, SSH2Base::getDefaultHostKeyPolicy());
+        a.callFunction("run", "policy-reject");
+        assertEq(Ssh2HostKeyPolicy::Reject, SSH2Base::getDefaultHostKeyPolicy());
+        hash<auto> h = b.callFunction("client_defaults");
+        assertTrue(h.verify);
+        assertEq(Ssh2HostKeyPolicy::Reject, h.policy);
+    }
+
+    knownHostsTest() {
+        Program a = tenant("a");
+        foreach string code in (("known-hosts-file", "known-hosts-none", "known-hosts-default")) {
+            assertThrows("SANDBOX-REGISTRATION-ERROR", \a.callFunction(), ("run", code), code);
+            assertEq(known_hosts, SSH2Base::getDefaultKnownHostsFile(), code + ": the default is unchanged");
+        }
+    }
+
+    trustedTest() {
+        SSH2Base::setDefaultVerifyHostKey(False);
+        assertFalse(SSH2Base::getDefaultVerifyHostKey());
+        SSH2Base::setDefaultHostKeyPolicy(Ssh2HostKeyPolicy::TrustOnFirstUseSession);
+        assertEq(Ssh2HostKeyPolicy::TrustOnFirstUseSession, SSH2Base::getDefaultHostKeyPolicy());
+        SSH2Base::setDefaultKnownHostsFile("");
+        assertEq("", SSH2Base::getDefaultKnownHostsFile());
+        SSH2Base::setDefaultKnownHostsFile(known_hosts);
+        assertEq(known_hosts, SSH2Base::getDefaultKnownHostsFile());
+    }
+
+    #! returns a sandboxed Program for a tenant, with a sandbox of its own
+    private static Program tenant(string name) {
+        Program p(PO_NEW_STYLE | PO_NO_CHILD_PO_RESTRICTIONS, True);
+        p.parse("%requires ssh2\n" + TenantCode, "tenant-" + name);
+        p.setSandboxManager(new SandboxManager());
+        return p;
+    }
+}

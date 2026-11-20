@@ -124,9 +124,54 @@ bool ssh2_get_default_verify_host_key() {
     return ssh2_defaults.verify;
 }
 
-void ssh2_set_default_verify_host_key(bool verify) {
-    AutoLocker al(ssh2_defaults_lock);
-    ssh2_defaults.verify = verify;
+//! returns true if the caller is sandboxed, with the error that a change it is refused raises in \a refused
+/** The defaults are process-wide: every client created afterwards by the code of any Program takes them, so sandboxed
+    code, or code acting for it, cannot make them less strict (qore#6846).  The caller is checked before the lock of the
+    defaults is taken, which is a leaf lock.
+*/
+static bool ssh2_caller_is_sandboxed(const char* what, ExceptionSink& refused) {
+#ifdef QORE_HAVE_CHECK_PROCESS_WIDE_REGISTRATION
+    return qore_check_process_wide_registration(what, &refused) != 0;
+#else
+    // a Qore library without the check: the sandbox that governs the caller's policy decides, which honors a policy
+    // barrier of trusted code
+    QoreSandboxManagerHelper smh(QoreSandboxManagerHelper::Policy);
+    if (!smh) {
+        return false;
+    }
+    refused.raiseException("SANDBOX-REGISTRATION-ERROR", "code that is sandboxed or acts for sandboxed code cannot "
+        "%s: a process-wide registry or setting is shared by the code of every Program in the process", what);
+    return true;
+#endif
+}
+
+//! returns the strictness of a host key policy: the higher, the fewer host keys are accepted
+static int ssh2_host_key_policy_rank(int policy) {
+    switch (policy) {
+        // no unknown key is accepted
+        case SSH2_HOSTKEY_REJECT: return 2;
+        // an unknown key is accepted once and recorded, so that a later change is refused
+        case SSH2_HOSTKEY_TOFU: return 1;
+        // an unknown key is accepted for the session only, so every session accepts a new key
+        default: return 0;
+    }
+}
+
+int ssh2_set_default_verify_host_key(bool verify, ExceptionSink* xsink) {
+    ExceptionSink refused;
+    bool sandboxed = ssh2_caller_is_sandboxed("disable the process-wide default host key verification of SSH2 "
+        "clients", refused);
+    {
+        AutoLocker al(ssh2_defaults_lock);
+        // sandboxed code can make the default stricter, never weaker (qore#6846)
+        if (!sandboxed || verify || !ssh2_defaults.verify) {
+            ssh2_defaults.verify = verify;
+            refused.clear();
+            return 0;
+        }
+    }
+    xsink->assimilate(refused);
+    return -1;
 }
 
 int ssh2_get_default_host_key_policy() {
@@ -134,14 +179,29 @@ int ssh2_get_default_host_key_policy() {
     return ssh2_defaults.policy;
 }
 
-int ssh2_set_default_host_key_policy(int policy) {
+int ssh2_set_default_host_key_policy(int policy, ExceptionSink* xsink) {
     if (policy != SSH2_HOSTKEY_REJECT && policy != SSH2_HOSTKEY_TOFU
         && policy != SSH2_HOSTKEY_TOFU_SESSION) {
+        xsink->raiseException("SSH2-HOSTKEY-POLICY-ERROR",
+            "invalid host key policy %d; expected SSH2_HOSTKEY_REJECT (%d), SSH2_HOSTKEY_TOFU "
+            "(%d), or SSH2_HOSTKEY_TOFU_SESSION (%d)", policy, SSH2_HOSTKEY_REJECT, SSH2_HOSTKEY_TOFU,
+            SSH2_HOSTKEY_TOFU_SESSION);
         return -1;
     }
-    AutoLocker al(ssh2_defaults_lock);
-    ssh2_defaults.policy = policy;
-    return 0;
+    ExceptionSink refused;
+    bool sandboxed = ssh2_caller_is_sandboxed("make the process-wide default host key policy of SSH2 clients less "
+        "strict", refused);
+    {
+        AutoLocker al(ssh2_defaults_lock);
+        // sandboxed code can make the default stricter, never weaker (qore#6846)
+        if (!sandboxed || ssh2_host_key_policy_rank(policy) >= ssh2_host_key_policy_rank(ssh2_defaults.policy)) {
+            ssh2_defaults.policy = policy;
+            refused.clear();
+            return 0;
+        }
+    }
+    xsink->assimilate(refused);
+    return -1;
 }
 
 int ssh2_get_default_known_hosts(std::string& path) {
@@ -152,7 +212,14 @@ int ssh2_get_default_known_hosts(std::string& path) {
     return ssh2_defaults.kh_mode;
 }
 
-void ssh2_set_default_known_hosts(int mode, const char* path) {
+int ssh2_set_default_known_hosts(int mode, const char* path, ExceptionSink* xsink) {
+    // the default known_hosts file decides which host keys every later client of every Program accepts: another
+    // file can hold keys that the caller chose, so sandboxed code cannot change it (qore#6846)
+    ExceptionSink refused;
+    if (ssh2_caller_is_sandboxed("change the process-wide default known_hosts file of SSH2 clients", refused)) {
+        xsink->assimilate(refused);
+        return -1;
+    }
     AutoLocker al(ssh2_defaults_lock);
     ssh2_defaults.kh_mode = mode;
     if (mode == SSH2_KH_DEFAULT_EXPLICIT && path) {
@@ -160,6 +227,7 @@ void ssh2_set_default_known_hosts(int mode, const char* path) {
     } else {
         ssh2_defaults.kh_path.clear();
     }
+    return 0;
 }
 
 static QoreNamespace ssh2ns("Qore::SSH2"); // namespace

@@ -38,7 +38,10 @@
       @ref Qore::SSH2::SSH2Base::setDefaultKnownHostsFile() "SSH2Base::setDefaultKnownHostsFile()"
       (and corresponding \c getDefault*() methods), plus the \c QORE_SSH2_DEFAULT_VERIFY_HOST_KEY,
       \c QORE_SSH2_DEFAULT_HOST_KEY_POLICY, and \c QORE_SSH2_DEFAULT_KNOWN_HOSTS environment
-      variables; see @ref embedding_multitenant
+      variables; see @ref embedding_multitenant.  As the defaults apply to the clients of every Program in the
+      process, code that is sandboxed or acts for sandboxed code can only make them stricter, and cannot change the
+      default known_hosts file (\c SANDBOX-REGISTRATION-ERROR,
+      <a href="https://github.com/qoretechnologies/qore/issues/6846">qore#6846</a>)
     - added @ref Qore::SSH2::SSH2Base::getHostKey() "SSH2Base::getHostKey()" returning MD5/SHA1/SHA256 fingerprints
     - added @ref Qore::SSH2::SSH2Base::addKnownHost() "SSH2Base::addKnownHost()" for manual host key management
     - added the @ref Qore::SSH2::Ssh2HostKeyPolicy "Ssh2HostKeyPolicy" enum and legacy

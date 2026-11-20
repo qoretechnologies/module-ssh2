@@ -658,6 +658,10 @@ enum<Ssh2ClientIdentityFallbackPolicy> SSH2Base::getClientIdentityFallbackPolicy
 
     @param verify @ref Qore::True "True" to verify host keys by default, @ref Qore::False "False" to disable
 
+    @throw SANDBOX-REGISTRATION-ERROR code that is sandboxed or acts for sandboxed code tried to disable the
+    verification: the default is shared by the clients of every Program in the process, so sandboxed code can only
+    enable it
+
     @note this affects only objects created after this call; existing objects are unaffected
 
     @see
@@ -667,7 +671,7 @@ enum<Ssh2ClientIdentityFallbackPolicy> SSH2Base::getClientIdentityFallbackPolicy
     @since ssh2 2.0
 */
 static nothing SSH2Base::setDefaultVerifyHostKey(bool verify) [flags=NAMED_ARGS] {
-    ssh2_set_default_verify_host_key(verify);
+    ssh2_set_default_verify_host_key(verify, xsink);
 }
 
 //! Returns the process-global default for host key verification
@@ -698,6 +702,12 @@ static bool SSH2Base::getDefaultVerifyHostKey() [flags=CONSTANT] {
     @param policy the host key policy
 
     @throw SSH2-HOSTKEY-POLICY-ERROR invalid policy value
+    @throw SANDBOX-REGISTRATION-ERROR code that is sandboxed or acts for sandboxed code tried to set a policy that
+    accepts more host keys than the current default
+    (@ref Qore::SSH2::Ssh2HostKeyPolicy::Reject "Reject" accepts the fewest, then
+    @ref Qore::SSH2::Ssh2HostKeyPolicy::TrustOnFirstUse "TrustOnFirstUse", then
+    @ref Qore::SSH2::Ssh2HostKeyPolicy::TrustOnFirstUseSession "TrustOnFirstUseSession"): the default is shared by
+    the clients of every Program in the process, so sandboxed code can only make it stricter
 
     @note this affects only objects created after this call; existing objects are unaffected
 
@@ -708,26 +718,20 @@ static bool SSH2Base::getDefaultVerifyHostKey() [flags=CONSTANT] {
     @since ssh2 2.0
 */
 static nothing SSH2Base::setDefaultHostKeyPolicy(enum<Ssh2HostKeyPolicy> policy) [flags=NAMED_ARGS] {
-    if (ssh2_set_default_host_key_policy((int)policy)) {
-        xsink->raiseException("SSH2-HOSTKEY-POLICY-ERROR",
-            "invalid host key policy %d; expected SSH2_HOSTKEY_REJECT (%d), SSH2_HOSTKEY_TOFU "
-            "(%d), or SSH2_HOSTKEY_TOFU_SESSION (%d)", (int)policy,
-            SSH2_HOSTKEY_REJECT, SSH2_HOSTKEY_TOFU, SSH2_HOSTKEY_TOFU_SESSION);
-    }
+    ssh2_set_default_host_key_policy((int)policy, xsink);
 }
 
 //! Sets the process-global default host key policy using legacy integer constants
-/** @see setDefaultHostKeyPolicy()
+/** @throw SSH2-HOSTKEY-POLICY-ERROR invalid policy value
+    @throw SANDBOX-REGISTRATION-ERROR code that is sandboxed or acts for sandboxed code tried to make the policy less
+    strict
+
+    @see setDefaultHostKeyPolicy()
 
     @since ssh2 2.0
 */
 static nothing SSH2Base::setDefaultHostKeyPolicy(int policy) {
-    if (ssh2_set_default_host_key_policy((int)policy)) {
-        xsink->raiseException("SSH2-HOSTKEY-POLICY-ERROR",
-            "invalid host key policy %d; expected SSH2_HOSTKEY_REJECT (%d), SSH2_HOSTKEY_TOFU "
-            "(%d), or SSH2_HOSTKEY_TOFU_SESSION (%d)", (int)policy, SSH2_HOSTKEY_REJECT,
-            SSH2_HOSTKEY_TOFU, SSH2_HOSTKEY_TOFU_SESSION);
-    }
+    ssh2_set_default_host_key_policy((int)policy, xsink);
 }
 
 //! Returns the process-global default host key policy
@@ -774,6 +778,10 @@ SSH2Base::setDefaultKnownHostsFile("");
     @param path @ref nothing "NOTHING" for the built-in default, an empty string to disable any
     implicit known_hosts file, or a path to use as the default
 
+    @throw SANDBOX-REGISTRATION-ERROR the caller is code that is sandboxed or acts for sandboxed code: the default
+    known_hosts file decides which host keys the clients of every Program in the process accept, so sandboxed code
+    cannot change it
+
     @note this affects only objects created after this call; existing objects are unaffected
 
     @see
@@ -784,11 +792,11 @@ SSH2Base::setDefaultKnownHostsFile("");
 */
 static nothing SSH2Base::setDefaultKnownHostsFile(*string path) [dom=FILESYSTEM;flags=NAMED_ARGS] {
     if (!path) {
-        ssh2_set_default_known_hosts(SSH2_KH_DEFAULT_AUTO, nullptr);
+        ssh2_set_default_known_hosts(SSH2_KH_DEFAULT_AUTO, nullptr, xsink);
     } else if (path->empty()) {
-        ssh2_set_default_known_hosts(SSH2_KH_DEFAULT_DISABLED, nullptr);
+        ssh2_set_default_known_hosts(SSH2_KH_DEFAULT_DISABLED, nullptr, xsink);
     } else {
-        ssh2_set_default_known_hosts(SSH2_KH_DEFAULT_EXPLICIT, path->c_str());
+        ssh2_set_default_known_hosts(SSH2_KH_DEFAULT_EXPLICIT, path->c_str(), xsink);
     }
 }
 

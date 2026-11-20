@@ -64,4 +64,13 @@
     "setKnownHostsFile()") > a process-global \c setDefault*() call > the \c QORE_SSH2_DEFAULT_*
     environment variable > the built-in secure default. Process-global defaults affect only
     objects created after they are set.
+
+    The process-global defaults are shared by the code of every Program in the process, so they are set by trusted
+    code: code that is sandboxed (see \c SandboxManager) or acts for sandboxed code can only make them stricter
+    (enable host key verification, or choose a policy that accepts fewer host keys:
+    @ref Qore::SSH2::Ssh2HostKeyPolicy::Reject "Reject", then
+    @ref Qore::SSH2::Ssh2HostKeyPolicy::TrustOnFirstUse "TrustOnFirstUse", then
+    @ref Qore::SSH2::Ssh2HostKeyPolicy::TrustOnFirstUseSession "TrustOnFirstUseSession"), and cannot change the
+    default known_hosts file; any other change raises \c SANDBOX-REGISTRATION-ERROR.  Sandboxed code sets its own
+    trust on its objects with the per-object setters.
 */
