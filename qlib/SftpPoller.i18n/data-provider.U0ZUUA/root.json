@@ -24,8 +24,8 @@
           "message": "A file is uploaded to an SFTP server"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.desc": {
-          "source": "React to files uploaded to an SFTP server; the action configuration determines if the event contains the file data itself or a link to the location of the file on the local filesystem. In any case, the event indicates that the file data has already been downloaded and is available locally",
-          "message": "React to files uploaded to an SFTP server; the action configuration determines if the event contains the file data itself or a link to the location of the file on the local filesystem. In any case, the event indicates that the file data has already been downloaded and is available locally"
+          "source": "React to files uploaded to an SFTP server; the action configuration determines if the event contains the file data itself or a link to the location of the file on the local filesystem. In any case, the event indicates that the file data has already been downloaded and is available locally. Set remote_file_disposition to DELETE or MOVE to remove the remote file after processing. With NONE, the handler must move, rename or delete the file, or it will be delivered again on the next poll.",
+          "message": "React to files uploaded to an SFTP server; the action configuration determines if the event contains the file data itself or a link to the location of the file on the local filesystem. In any case, the event indicates that the file data has already been downloaded and is available locally. Set remote_file_disposition to DELETE or MOVE to remove the remote file after processing. With NONE, the handler must move, rename or delete the file, or it will be delivered again on the next poll."
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.bWFzaw.display_name": {
           "source": "Glob Mask",
