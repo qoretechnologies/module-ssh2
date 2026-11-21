@@ -7,6 +7,8 @@
     @section ssh2v210 ssh2 Module Version 2.1.0
     - Added SFTPClient::publishVerified() and SFTPClient::acquireVerified(), typed agreements and reconciliation receipts.
     - Added the Publish Verified File and Acquire Verified File provider actions and opt-in verified SFTP polling.
+    - The connection classes of the Ssh2Connections module declare the functional domains of their clients, so
+      code restricted only from other domains can create them (qore#7099).
 
     See @ref ssh2verifiedexchange for the endpoint agreement, version requirements, and recovery procedure.
 

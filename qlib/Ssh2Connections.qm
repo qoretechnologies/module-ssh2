@@ -83,6 +83,9 @@ module Ssh2Connections {
 /** @page ssh2connectionsreleasenotes Ssh2Connections Release Notes
 
     @section ssh2connections_v2_0 Ssh2Connections v2.0
+    - the connection classes declare the functional domains of their clients (\c NETWORK and \c FILESYSTEM), so
+      code restricted only from other domains, such as \c DATABASE, can create them
+      (<a href="https://github.com/qoretechnologies/qore/issues/7099">issue 7099</a>)
     - added source-owned connection option catalogs in all twelve standard locales; unchanged inherited
       presentation keeps its original producer identity, including HTTP/REST options and allowed values
     - added the \c host_key_policy connection option with readable values \c reject, \c tofu, and
@@ -201,6 +204,14 @@ enum<Ssh2HostKeyPolicy> sub getHostKeyPolicyFromOption(string policy) {
     - \c "keyfile": a path to a private key file in PEM format to use for key-based authentication
 */
 public class AbstractSsh2Connection inherits ConnectionProvider::AbstractConnectionWithInfo {
+    #! Returns the functional domains of the connection's clients (qoretechnologies/qore#7099)
+    /** The clients connect to an SSH server and read the \c keyfile and \c known_hosts files, which trust-on-first-use
+        host key verification also writes
+    */
+    private final int getConnectionDomainsImpl() {
+        return DOM_NETWORK | DOM_FILESYSTEM;
+    }
+
     #! creates the AbstractSsh2Connection object
     /** @param name the name of the connection
         @param description connection description
