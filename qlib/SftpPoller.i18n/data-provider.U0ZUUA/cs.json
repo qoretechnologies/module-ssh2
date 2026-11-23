@@ -4,8 +4,8 @@
     "cs": {
       "messages": {
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.desc": {
-          "source": "React to files uploaded to an SFTP server; the action configuration determines if the event contains the file data itself or a link to the location of the file on the local filesystem. In any case, the event indicates that the file data has already been downloaded and is available locally",
-          "message": "Reagovat na soubory nahranné na SFTP server; konfigurace akce určuje, zda událost obsahuje samotná data souboru nebo odkaz na umístění souboru v místním souborovém systému. V každém případě událost indikuje, že data souboru již byla stažena a jsou k dispozici místně"
+          "source": "React to files uploaded to an SFTP server; the action configuration determines if the event contains the file data itself or a link to the location of the file on the local filesystem. In any case, the event indicates that the file data has already been downloaded and is available locally. Set remote_file_disposition to DELETE or MOVE to remove the remote file after processing. With NONE, the handler must move, rename or delete the file, or it will be delivered again on the next poll.",
+          "message": "Reagovat na soubory nahranné na SFTP server; konfigurace akce určuje, zda událost obsahuje samotná data souboru nebo odkaz na umístění souboru v místním souborovém systému. V každém případě událost indikuje, že data souboru již byla stažena a jsou k dispozici místně. Nastavením remote_file_disposition na DELETE nebo MOVE po zpracování odstraníte vzdálený soubor z adresáře. Při nastavení NONE platí následující pravidlo. Obsluha události musí soubor přesunout, přejmenovat nebo odstranit, jinak bude při příští kontrole doručen znovu."
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.display_name": {
           "source": "SFTP File Received",
