@@ -31,7 +31,7 @@
 
 %allow-weak-references
 
-%requires DataProvider
+%requires DataProvider >= 3.13
 
 module SftpPoller {
     version = "1.6";
@@ -1821,6 +1821,7 @@ public class SftpPollerDataProvider inherits SftpPollerDataProviderBase, DataPro
         const ProviderInfo = <DataProviderInfo>{
             "type": "SftpPollerDataProvider",
             "supports_observable": True,
+            "supports_refusal_redelivery": True,
             "constructor_options": ConstructorOptions,
         };
     }
@@ -1846,6 +1847,7 @@ public class SftpDelayedPollerDataProvider inherits SftpPollerDataProviderBase, 
         const ProviderInfo = <DataProviderInfo>{
             "type": "SftpDelayedPollerDataProvider",
             "supports_observable": True,
+            "supports_refusal_redelivery": True,
             "constructor_options": ConstructorOptions,
         };
     }
