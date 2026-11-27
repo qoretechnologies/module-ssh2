@@ -545,6 +545,14 @@ public class SftpConnection inherits AbstractSsh2Connection {
                 "subtypes: %y", subtype, keys getDataProviderSubtypes());
         }
         checkSubtypeInfo();
+        # the local paths in the constructor options are the caller's input, also for the code that the connection was
+        # lent to: refused before the data provider is created
+        foreach string opt in (("keyfile", "known_hosts", "local_dir")) {
+            if (constructor_options{opt}.val() && SandboxManager::isLentToRestricted(DOM_FILESYSTEM)) {
+                throw "PERMISSION-DENIED", sprintf("the %y data provider option cannot be used: the calling code is "
+                    "restricted from the FILESYSTEM functional domain", opt);
+            }
+        }
         # the connection's options are the members of this object (self.opts); a local variable named opts would
         # shadow them in its own initialization expression
         hash<auto> dp_opts = {

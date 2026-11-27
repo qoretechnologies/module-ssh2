@@ -204,7 +204,17 @@ public class SftpClientDataProvider inherits AbstractDataProvider {
     }
 
     #! Returns an SFTP connection from constructor options
+    /** @throw PERMISSION-DENIED a \c keyfile or \c known_hosts path is given and the code that creates the object
+        is restricted from the file system
+    */
     static SFTPClient getSftpClientConnection(hash<auto> options) {
+        # the paths are the creator's: refused before the client is created or anything is read
+        if (options.keyfile.val()) {
+            sftp_check_creator_file_access("the 'keyfile' option");
+        }
+        if (options.known_hosts.val()) {
+            sftp_check_creator_file_access("the 'known_hosts' option");
+        }
         SFTPClient sftp(options.url);
         if (options.keyfile.val()) {
             sftp.setKeys(substitute_env_vars(options.keyfile));
@@ -266,6 +276,82 @@ public class SftpClientDataProvider inherits AbstractDataProvider {
     #! Returns data provider static info
     private hash<DataProviderInfo> getStaticInfoImpl() {
         return ProviderInfo;
+    }
+}
+#! Refuses a local path that the calling code gives in a request if that code is restricted from the file system
+/** Library code runs with its own %Program's options, so the calling code is judged as by
+    @ref Qore::SandboxManager::isLentToRestricted() "SandboxManager::isLentToRestricted()": in a method of an object
+    that the host lent to restricted code, the code that the object was lent to counts, as the path is that code's
+    input.  A sandbox's file-system policy applies when the path is opened.
+
+    @param what a description of the path for the error message
+
+    @throw PERMISSION-DENIED the calling code is restricted from the \c FILESYSTEM functional domain
+*/
+sub sftp_check_caller_file_access(string what) {
+    if (SandboxManager::isLentToRestricted(DOM_FILESYSTEM)) {
+        throw "PERMISSION-DENIED", sprintf("%s cannot be used: the calling code is restricted from the FILESYSTEM "
+            "functional domain", what);
+    }
+}
+
+#! Refuses a local path given when an object is created if the creating code is restricted from the file system
+/** The creating code is judged as by @ref Qore::SandboxManager::isCallerRestricted()
+    "SandboxManager::isCallerRestricted()", so an object that a method of an object that the host lent creates with
+    the paths that the host gave keeps working.  A sandbox's file-system policy applies when the path is opened.
+
+    @param what a description of the path for the error message
+
+    @throw PERMISSION-DENIED the creating code is restricted from the \c FILESYSTEM functional domain
+*/
+sub sftp_check_creator_file_access(string what) {
+    if (SandboxManager::isCallerRestricted(DOM_FILESYSTEM)) {
+        throw "PERMISSION-DENIED", sprintf("%s cannot be used: the calling code is restricted from the FILESYSTEM "
+            "functional domain", what);
+    }
+}
+
+#! Refuses a file location given in a request if the calling code is restricted from a domain of its handler
+/** The handler of the location's scheme decides the domains (see
+    @ref FileLocationHandler::AbstractFileLocationHandler::getCallerDomains()
+    "AbstractFileLocationHandler::getCallerDomains()"); the calling code is judged as by
+    @ref Qore::SandboxManager::isLentToRestricted() "SandboxManager::isLentToRestricted()", so the code that a lent
+    object was lent to is refused too, which the read and write methods of FileLocationHandler do not do themselves.
+
+    @param location the location as given in the request
+
+    @throw LOCATION-ERROR the location's options cannot be parsed
+    @throw PERMISSION-DENIED the calling code is restricted from a functional domain of the location's handler
+*/
+sub sftp_check_caller_location(string location) {
+    string scheme = (location =~ x/^(\w+):\/\//)[0] ?? "file";
+    AbstractFileLocationHandler handler;
+    try {
+        handler = FileLocationHandler::getHandler(scheme);
+    } catch (hash<ExceptionInfo> ex) {
+        if (ex.err == "SCHEME-ERROR") {
+            # an unknown scheme is refused when the location is used, before anything is transferred
+            return;
+        }
+        rethrow;
+    }
+    # the options at the end of the location, as FileLocationHandler takes them
+    *hash<auto> opts;
+    *string opt_str = (location =~ x/((?:{).*(?:}))$/)[0];
+    if (opt_str) {
+        auto v = parse_to_qore_value(opt_str);
+        if (v.typeCode() == NT_HASH) {
+            opts = v;
+        } else if (v.strp()) {
+            opts = {v: True};
+        } else {
+            throw "LOCATION-ERROR", "the options of the location cannot be parsed";
+        }
+    }
+    int dom = handler.getCallerDomains(scheme, opts);
+    if (dom && SandboxManager::isLentToRestricted(dom)) {
+        throw "PERMISSION-DENIED", sprintf("the calling code may not use this %y location, as it is restricted from "
+            "a functional domain of its handler", scheme);
     }
 }
 }

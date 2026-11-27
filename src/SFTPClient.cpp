@@ -972,6 +972,14 @@ QoreStringNode* SFTPClient::sftpGetTextFile(const char* file, int timeout_ms, co
 }
 
 int64 SFTPClient::sftpRetrieveFile(const char* remote_file, const char* local_file, int timeout_ms, int mode, ExceptionSink* xsink) {
+    // check filesystem sandbox access for writing the local file before any connection is made
+    {
+        QoreSandboxManagerHelper smh(QoreSandboxManagerHelper::Policy);
+        if (smh && !smh->checkFilesystemAccess(local_file, QSEC_WRITE | QSEC_CREATE, xsink)) {
+            return -1;
+        }
+    }
+
     AutoLocker al(m);
 
     // try to make an implicit connection
@@ -1018,14 +1026,6 @@ int64 SFTPClient::sftpRetrieveFile(const char* remote_file, const char* local_fi
                 }
             }
         } while (!qh);
-    }
-
-    // check filesystem sandbox access for writing the local file
-    {
-        QoreSandboxManagerHelper smh(QoreSandboxManagerHelper::Policy);
-        if (smh && !smh->checkFilesystemAccess(local_file, QSEC_WRITE, xsink)) {
-            return -1;
-        }
     }
 
     // open output file

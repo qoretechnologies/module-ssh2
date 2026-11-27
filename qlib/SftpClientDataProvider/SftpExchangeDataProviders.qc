@@ -24,6 +24,8 @@ public class SftpClientPublishDataProvider inherits AbstractDataProvider {
     }
     private auto doRequestImpl(auto req, *hash<auto> request_options) {
         string local_path = remove req.local_path;
+        # the path is the caller's input: refused before it is read or anything is transferred
+        sftp_check_caller_file_access("the 'local_path' field of the request");
         hash<SftpExchangeSpec> spec = cast<hash<SftpExchangeSpec>>(req);
         return sftp.publishVerified(new FileInputStream(local_path), spec);
     }
@@ -60,6 +62,8 @@ public class SftpClientAcquireDataProvider inherits AbstractDataProvider {
     }
     private auto doRequestImpl(auto req, *hash<auto> request_options) {
         string local_path = remove req.local_path;
+        # the path is the caller's input: refused before anything is written or transferred
+        sftp_check_caller_file_access("the 'local_path' field of the request");
         hash<SftpExchangeSpec> spec = cast<hash<SftpExchangeSpec>>(req);
         return sftp.acquireVerified(spec, local_path);
     }

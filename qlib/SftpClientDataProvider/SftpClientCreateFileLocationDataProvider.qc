@@ -74,6 +74,8 @@ public class SftpClientCreateFileLocationDataProvider inherits AbstractDataProvi
         @return the response to the request
     */
     private auto doRequestImpl(auto req, *hash<auto> request_options) {
+        # the location is the caller's input: refused before it is read or anything is transferred
+        sftp_check_caller_location(req.location);
         string path = SftpClientDataProvider::getPath(sftp, req.path);
         InputStream stream = FileLocationHandler::getBinaryStreamFromLocation(req.location);
         sftp.put(stream, path);

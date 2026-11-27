@@ -1,0 +1,345 @@
+#!/usr/bin/env qore
+# -*- mode: qore; indent-tabs-mode: nil -*-
+
+# Copyright (C) 2026 Qore Technologies, s.r.o.
+
+%modern
+
+%requires qore >= 3.0
+%prepend-module-path "${SCRIPT_DIR}/../qlib"
+%requires ssh2
+%requires QUnit
+%requires FsUtil
+%requires DataProvider
+%requires SftpClientDataProvider
+%requires SftpPoller
+%requires Ssh2Connections
+
+%exec-class CallerFileAccessTest
+
+#! A poller that handles no events, created by the host for the lent tests
+class HostSftpPoller inherits SftpPoller::SftpPoller {
+    constructor(SFTPClient sftp, hash<auto> opts) : SftpPoller(sftp, opts) {}
+    singleFileEvent(hash<SftpPollerFileEventInfo> event) {}
+    postSingleFileEvent(hash<SftpPollerFileEventInfo> event) {}
+}
+
+#! Tests that local paths given by restricted callers are refused before they are used (module-ssh2#128)
+/** Library code runs with its own Program's options, so the SFTP data provider, the SFTP poller and the SSH
+    connections refuse a local path that code restricted from the file system gives: a path given when an object is
+    created (the \c keyfile, \c known_hosts and \c local_dir options), a path or file location given in a request (the
+    \c local_path of the \c publish-verified and \c acquire-verified actions, the \c location of the
+    \c get-file-location and \c create-file-location actions, the local path of SftpPoller::getStoreFile()), also by
+    the code that a host-created object was lent to.  A Program with PO_NO_FILESYSTEM is refused with
+    PERMISSION-DENIED, a Program whose sandbox denies the file system by default with PERMISSION-DENIED or
+    FILESYSTEM-ACCESS-DENIED; either is raised before any network connection (the endpoints are unreachable, so a
+    connection attempt would raise a socket error instead) and nothing is written.  The host's objects use the
+    host's paths for restricted code that they are lent to, and an unrestricted caller uses the paths.
+*/
+class CallerFileAccessTest inherits QUnit::Test {
+    private {
+        const Modes = {"ast": EM_AST, "ir": EM_IR, "jit": EM_JIT, "tiered": EM_TIERED};
+
+        #! an endpoint that refuses connections, so that a connection attempt fails at once with a socket error
+        const Url = "sftp://user@127.0.0.1:1";
+
+        #! makes a request with a data provider that the restricted code creates
+        const RequestDirect = "
+string sub request_direct(string child, hash<auto> req) {
+    try {
+        SftpClientDataProvider dp({\"url\": \"" + Url + "\"});
+        auto rv = dp.getChildProviderEx(child).doRequest(req);
+        return rv.error ?? \"ok\";
+    } catch (hash<ExceptionInfo> ex) {
+        return ex.err;
+    }
+}
+";
+
+        const Source = "%modern
+%requires SftpClientDataProvider
+%requires SftpPoller
+%requires Ssh2Connections
+
+class TestSftpPoller inherits SftpPoller::SftpPoller {
+    constructor(hash<auto> opts) : SftpPoller(opts) {}
+    constructor(SFTPClient sftp, hash<auto> opts) : SftpPoller(sftp, opts) {}
+    singleFileEvent(hash<SftpPollerFileEventInfo> event) {}
+    postSingleFileEvent(hash<SftpPollerFileEventInfo> event) {}
+}
+
+# creates an object with the given options
+string sub create(string what, hash<auto> opts) {
+    try {
+        switch (what) {
+            case \"provider\": new SftpClientDataProvider(opts); break;
+            case \"provider child\": new SftpClientGetFileDataProvider(opts); break;
+            case \"poller\": new TestSftpPoller(opts); break;
+            case \"poller with a client\": new TestSftpPoller(new SFTPClient(opts.url), opts - \"url\"); break;
+            case \"sftp connection\":
+                new SftpConnection(\"t\", \"\", opts.url, {\"monitor\": False}, opts - \"url\").get(False);
+                break;
+            case \"ssh2 connection\":
+                new Ssh2ClientConnection(\"t\", \"\", replace(opts.url, \"sftp:\", \"ssh:\"), {\"monitor\": False},
+                    opts - \"url\").get(False);
+                break;
+            default: throw \"TEST-ERROR\", what;
+        }
+        return \"ok\";
+    } catch (hash<ExceptionInfo> ex) {
+        return ex.err;
+    }
+}
+
+# makes a request with a data provider: the provider's child with the given name; a verified exchange returns the
+# error in its receipt
+string sub request(AbstractDataProvider dp, string child, hash<auto> req) {
+    try {
+        auto rv = dp.getChildProviderEx(child).doRequest(req);
+        return rv.error ?? \"ok\";
+    } catch (hash<ExceptionInfo> ex) {
+        return ex.err;
+    }
+}
+
+# retrieves a file with a poller
+string sub store(SftpPoller poller, string local_path) {
+    try {
+        poller.getStoreFile(\"remote.txt\", local_path);
+        return \"ok\";
+    } catch (hash<ExceptionInfo> ex) {
+        return ex.err;
+    }
+}
+
+# makes a request with an action data provider
+string sub request_child(AbstractDataProvider dp, hash<auto> req) {
+    try {
+        auto rv = dp.doRequest(req);
+        return rv.error ?? \"ok\";
+    } catch (hash<ExceptionInfo> ex) {
+        return ex.err;
+    }
+}
+
+# gets a client from a connection or a data provider from it, with the given data provider options
+string sub use_connection(AbstractConnection conn, bool provider, *hash<auto> opts) {
+    try {
+        if (opts) {
+            conn.getDataProvider(\"sftppoller\", opts);
+        } else if (provider) {
+            conn.getDataProvider();
+        } else {
+            conn.get(False);
+        }
+        return \"ok\";
+    } catch (hash<ExceptionInfo> ex) {
+        return ex.err;
+    }
+}
+";
+    }
+
+    private {
+        #! the directory of the test
+        string dir;
+        #! a key file (with its public key file) that every caller could read
+        string keyfile;
+        #! an input file
+        string input;
+        #! a system file
+        string system_file = "/etc/hostname";
+    }
+
+    constructor() : QUnit::Test("CallerFileAccess", "1.0", \ARGV) {
+        dir = make_tmp_dir("ssh2-caller-file-access-");
+        keyfile = dir + "/id_test";
+        input = dir + "/input.txt";
+        foreach string f in ((keyfile, keyfile + ".pub", input)) {
+            File file();
+            file.open2(f, O_CREAT | O_WRONLY | O_TRUNC);
+            file.write("test\n");
+        }
+
+        foreach string mode in (keys Modes) {
+            string m = mode;
+            addTestCase("creation options, " + m, sub () { testCreation(m); });
+            addTestCase("request paths, " + m, sub () { testRequests(m); });
+            addTestCase("lent connections, " + m, sub () { testLentConnections(m); });
+        }
+        set_return_value(main());
+    }
+
+    destructor() {
+        if (dir) {
+            remove_tree(dir);
+        }
+    }
+
+    private testCreation(string mode) {
+        list<string> what = ("provider", "provider child", "poller", "poller with a client", "sftp connection",
+            "ssh2 connection");
+        foreach string path in ((keyfile, system_file)) {
+            # the options whose paths are refused, by object
+            hash<string, list<string>> opts_by_object = {
+                "provider": ("keyfile", "known_hosts"),
+                "provider child": ("keyfile", "known_hosts"),
+                "poller": ("keyfile", "known_hosts", "local_dir"),
+                "poller with a client": ("local_dir",),
+                "sftp connection": ("keyfile", "known_hosts"),
+                "ssh2 connection": ("keyfile", "known_hosts"),
+            };
+            foreach string obj in (what) {
+                foreach string opt in (opts_by_object{obj}) {
+                    string val = opt == "local_dir" ? dirname(path) : path;
+                    hash<auto> opts = {};
+                    opts.url = Url;
+                    opts{opt} = val;
+                    if (obj =~ /^poller/) {
+                        opts += {"host": "127.0.0.1", "port": 1, "user": "user", "path": "."};
+                    }
+                    string desc = sprintf("%s %s %y %s", obj, opt, val, mode);
+                    assertEq("PERMISSION-DENIED", getProgram("nofs", mode).callFunction("create", obj, opts),
+                        "nofs " + desc);
+                    # a poller does not open its local directory when it is created, but only when it transfers a file,
+                    # where the sandbox's file-system policy applies; the sandbox refuses the connection first
+                    assertRegex(opt == "local_dir"
+                        ? "^NETWORK-ACCESS-DENIED$"
+                        : "^(PERMISSION|FILESYSTEM-ACCESS)-DENIED$",
+                        getProgram("sandbox", mode).callFunction("create", obj, opts), "sandbox " + desc);
+                    # an unrestricted creator: the path is used (a poller connects when it is created)
+                    string rv = getProgram("unrestricted", mode).callFunction("create", obj, opts);
+                    if (path == keyfile || opt != "keyfile") {
+                        if (obj =~ /^poller/) {
+                            assertRegex("^SOCKET-CONNECT-ERROR$", rv, "unrestricted " + desc);
+                        } else {
+                            assertEq("ok", rv, "unrestricted " + desc);
+                        }
+                    } else {
+                        # /etc/hostname has no public key file
+                        assertEq("SSH2-SETKEYS-ERROR", rv, "unrestricted " + desc);
+                    }
+                }
+            }
+        }
+    }
+
+    private testRequests(string mode) {
+        string out = dir + "/out.txt";
+        # child: request field, value, whether the path is written
+        list<list<auto>> uses = (
+            ("publish-verified", "local_path", input),
+            ("publish-verified", "local_path", system_file),
+            ("acquire-verified", "local_path", out),
+            ("get-file-location", "location", "file://" + out),
+            ("get-file-location", "location", out),
+            ("create-file-location", "location", "file://" + input),
+            ("create-file-location", "location", system_file),
+        );
+        hash<auto> common = {
+            "publish-verified": {"remote_path": "/inbound/x", "profile": "openssh-posix",
+                "collision_policy": "replace", "length": 5, "staging_dir": "/staging"},
+            "acquire-verified": {"remote_path": "/inbound/x", "profile": "openssh-posix",
+                "collision_policy": "replace", "length": 5, "sha256": strmul("a", 64)},
+            "get-file-location": {"path": "remote.txt"},
+            "create-file-location": {"path": "remote.txt"},
+        };
+        foreach list<auto> use in (uses) {
+            string child = use[0];
+            hash<auto> req = common{child} + {use[1]: use[2]};
+            string desc = sprintf("%s %s %y %s", child, use[1], use[2], mode);
+            foreach string kind in ("nofs", "sandbox") {
+                Program p = getProgram(kind, mode);
+                # the provider that the restricted code creates
+                string rv = p.callFunction("request_direct", child, req);
+                assertRegex(kind == "nofs" ? "^PERMISSION-DENIED$" : "^(PERMISSION|FILESYSTEM-ACCESS)-DENIED$", rv,
+                    kind + " direct " + desc);
+                # the provider that the host created and lent
+                SftpClientDataProvider dp({"url": Url});
+                rv = p.callFunction("request", dp, child, req);
+                assertRegex(kind == "nofs" ? "^PERMISSION-DENIED$" : "^(PERMISSION|FILESYSTEM-ACCESS)-DENIED$", rv,
+                    kind + " lent " + desc);
+                # the action provider that the host created and lent
+                rv = p.callFunction("request_child", dp.getChildProviderEx(child), req);
+                assertRegex(kind == "nofs" ? "^PERMISSION-DENIED$" : "^(PERMISSION|FILESYSTEM-ACCESS)-DENIED$", rv,
+                    kind + " lent child " + desc);
+                assertFalse(is_file(out), kind + " nothing written " + desc);
+            }
+            # an unrestricted caller uses the path: the request fails when it connects (a verified exchange returns
+            # the error in its receipt)
+            SftpClientDataProvider dp({"url": Url});
+            string rv = getProgram("unrestricted", mode).callFunction("request", dp, child, req);
+            assertEq("SOCKET-CONNECT-ERROR", rv, "unrestricted " + desc);
+            if (is_file(out)) {
+                unlink(out);
+            }
+        }
+
+        # the local path of SftpPoller::getStoreFile() of a poller that the host created and lent
+        # a poller with a commit profile does not connect when it is created
+        HostSftpPoller poller(new SFTPClient(Url), {"local_dir": dir, "commit_profile": "openssh-sha256-name",
+            "path": "/inbound"});
+        foreach string path in ((out, dir + "/sub/out.txt")) {
+            assertEq("PERMISSION-DENIED", getProgram("nofs", mode).callFunction("store", poller, path),
+                "nofs lent poller " + mode);
+            assertRegex("^(PERMISSION|FILESYSTEM-ACCESS)-DENIED$",
+                getProgram("sandbox", mode).callFunction("store", poller, path), "sandbox lent poller " + mode);
+            assertFalse(is_file(path), "lent poller, nothing written " + mode);
+        }
+        # an unrestricted caller: the poller is not connected, and the transfer fails when it connects
+        assertEq("SOCKET-CONNECT-ERROR", getProgram("unrestricted", mode).callFunction("store", poller, out),
+            "unrestricted poller " + mode);
+    }
+
+    #! the paths of a connection that the host created are the host's: its clients and data providers use them for
+    #! restricted code that it is lent to
+    private testLentConnections(string mode) {
+        foreach string cls in ("SftpConnection", "Ssh2ClientConnection") {
+            string url = cls == "SftpConnection" ? Url : replace(Url, "sftp:", "ssh:");
+            AbstractConnection conn = create_object("Ssh2Connections::" + cls, "t", "", url, {"monitor": False},
+                {"keyfile": keyfile, "known_hosts": dir + "/known_hosts"});
+            # code restricted from the file system by PO_NO_FILESYSTEM uses the host's paths
+            Program p = getProgram("nofs", mode);
+            assertEq("ok", p.callFunction("use_connection", conn, False), sprintf("nofs lent %s %s", cls, mode));
+            if (cls == "SftpConnection") {
+                # the data provider connects: the paths are accepted, and the connection fails
+                assertEq("SOCKET-CONNECT-ERROR", p.callFunction("use_connection", conn, True),
+                    sprintf("nofs lent %s data provider %s", cls, mode));
+                # the local paths that the borrower gives in the options of a data provider are its input
+                foreach string opt in ("keyfile", "known_hosts", "local_dir") {
+                    string val = opt == "local_dir" ? dir : system_file;
+                    assertEq("PERMISSION-DENIED", p.callFunction("use_connection", conn, True, {opt: val}),
+                        sprintf("nofs lent %s data provider option %s %s", cls, opt, mode));
+                }
+            }
+            # the file-system policy of a sandbox still applies when the host's paths are set for its code
+            p = getProgram("sandbox", mode);
+            assertEq("FILESYSTEM-ACCESS-DENIED", p.callFunction("use_connection", conn, False),
+                sprintf("sandbox lent %s %s", cls, mode));
+        }
+    }
+
+    #! returns a Program of the given kind
+    private Program getProgram(string kind, string mode) {
+        Program p;
+        switch (kind) {
+            case "nofs":
+                p = new Program(PO_NEW_STYLE | PO_NO_FILESYSTEM);
+                break;
+            case "sandbox": {
+                SandboxManager sm();
+                sm.setFilesystemDefaultPolicy(False);
+                p = new Program(PO_NEW_STYLE);
+                p.setSandboxManager(sm);
+                break;
+            }
+            default:
+                p = new Program(PO_NEW_STYLE);
+                break;
+        }
+        p.setExecMode(Modes{mode});
+        p.parse(Source + RequestDirect, kind);
+        return p;
+    }
+
+}
