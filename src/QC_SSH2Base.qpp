@@ -410,6 +410,10 @@ int SSH2Base::getPort() {
     @param path the path to the known_hosts file (OpenSSH format)
 
     @throw SSH2-CONNECTED this method cannot be called when a connection is established
+    @throw FILESYSTEM-ACCESS-DENIED the sandbox of the calling code does not allow the file to be read; the path is
+    checked when it is set (also when host key verification is disabled), before any connection is made, and again
+    when it is used
+    @throw ILLEGAL-FILESYSTEM-ACCESS the current %Program is restricted from the file system
 
     @since ssh2 2.0
 */

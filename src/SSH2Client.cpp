@@ -794,6 +794,22 @@ const char* SSH2Client::getPassword() {
     return sshpass.c_str();
 }
 
+int SSH2Client::setKnownHostsFile(const char* path, ExceptionSink* xsink) {
+    AutoLocker al(m);
+    if (sshSessionActiveUnlocked()) {
+        xsink->raiseException(SSH2_CONNECTED,
+            "usage of SSH2Base::setKnownHostsFile() is not allowed when connected or connecting");
+        return -1;
+    }
+    // the path is checked against the sandbox of the calling code when it is set, as the key files are, so that a
+    // path that the sandbox denies is refused before any connection is made; it is checked again when it is used
+    if (path && *path && ssh2_check_fs_access(path, QSEC_READ, "reading known_hosts file", xsink)) {
+        return -1;
+    }
+    known_hosts_file = path ? path : "";
+    return 0;
+}
+
 int SSH2Client::setKeys(const char *priv, const char *pub, ExceptionSink* xsink) {
     AutoLocker al(m);
 
