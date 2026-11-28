@@ -18,6 +18,10 @@
       (<a href="https://github.com/qoretechnologies/qore/issues/7563">qore#7563</a>).
     - The modules' action, option and field names are in sentence case
       (<a href="https://github.com/qoretechnologies/qore/issues/7749">qore#7749</a>).
+    - The \c "sftppoller" data provider of an \c SftpConnection uses the connection's server, directory, login, key
+      and host key checks: a caller's \c url, \c keyfile, \c known_hosts, \c host_key_policy, \c verify_host_key
+      or \c use_agent option with another value raises \c DATA-PROVIDER-ERROR
+      (<a href="https://github.com/qoretechnologies/module-ssh2/issues/133">issue 133</a>).
 
     See @ref ssh2verifiedexchange for the endpoint agreement, version requirements, and recovery procedure.
 
