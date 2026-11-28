@@ -13,6 +13,10 @@
       given by code restricted from the file system, also by the code that a host-created object was lent to, with
       \c PERMISSION-DENIED before the path is used or any connection is made
       (<a href="https://github.com/qoretechnologies/module-ssh2/issues/128">issue 128</a>).
+    - The \c "sftppoller" data provider of an \c SftpConnection uses the connection's server, directory, login, key
+      and host key checks: a caller's \c url, \c keyfile, \c known_hosts, \c host_key_policy, \c verify_host_key
+      or \c use_agent option with another value raises \c DATA-PROVIDER-ERROR
+      (<a href="https://github.com/qoretechnologies/module-ssh2/issues/133">issue 133</a>).
 
     See @ref ssh2verifiedexchange for the endpoint agreement, version requirements, and recovery procedure.
 

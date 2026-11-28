@@ -75,6 +75,24 @@ module Ssh2Connections {
     <tt>~/.ssh/known_hosts</tt>. An empty string disables the path for this connection.
     See @ref host_key_verification_bp for policy behavior and @ref embedding_multitenant for process defaults.
 
+    @section ssh2connectionssubtypetarget Data Provider Subtypes Use the Connection's Target and Checks
+
+    The \c "sftppoller" data provider of an @ref Ssh2Connections::SftpConnection "SftpConnection" polls the
+    connection's server and directory with its login, key and host key checks for any caller, also for code that the
+    connection is lent to.  These constructor options are accepted only if they give the connection's own value:
+    - \c url: the connection's scheme, host, port and directory, where scheme and host names are compared without
+      regard to case, a missing port is the default SSH port 22, empty and \c "." path segments and a trailing
+      \c "/" are ignored, and a user name or password, if given, must be the connection's
+    - \c keyfile, \c known_hosts, \c host_key_policy, \c verify_host_key and \c use_agent: the connection's
+      setting, with the same base type; an empty \c keyfile is accepted if the connection has no key file
+
+    Any other value raises \c DATA-PROVIDER-ERROR, which names the connection with its URL without the password and
+    the option, but not the option's value; the data provider is always created with the connection's values.  The
+    options that only tune the poller, such as \c keepalive_interval, \c mask, \c poll_interval and
+    \c host_key_sha256 (a host key pin, which only adds a check), are taken from the caller.  Code restricted from the
+    \c FILESYSTEM domain that is lent the connection still gets \c PERMISSION-DENIED for the \c keyfile,
+    \c known_hosts and \c local_dir options.
+
     @anchor ssh2connections_relnotes
 
     @subpage ssh2connectionsreleasenotes
@@ -83,6 +101,13 @@ module Ssh2Connections {
 /** @page ssh2connectionsreleasenotes Ssh2Connections Release Notes
 
     @section ssh2connections_v2_0 Ssh2Connections v2.0
+    - the \c "sftppoller" data provider of an @ref Ssh2Connections::SftpConnection "SftpConnection" uses the
+      connection's server, directory, login, key and host key checks: a \c url, \c keyfile, \c known_hosts,
+      \c host_key_policy, \c verify_host_key or \c use_agent constructor option with another value raises
+      \c DATA-PROVIDER-ERROR (see @ref ssh2connectionssubtypetarget;
+      <a href="https://github.com/qoretechnologies/module-ssh2/issues/133">issue 133</a>)
+    - the \c "sftppoller" data provider of an @ref Ssh2Connections::SftpConnection "SftpConnection" takes the
+      connection's \c keyfile with environment variables substituted, as the connection's client does
     - the connection classes declare the functional domains of their clients (\c NETWORK and \c FILESYSTEM), so
       code restricted only from other domains, such as \c DATABASE, can create them
       (<a href="https://github.com/qoretechnologies/qore/issues/7099">issue 7099</a>)
@@ -413,6 +438,15 @@ public class Ssh2ClientConnection inherits AbstractSsh2Connection {
     additionally, the following runtime options are supported in getImpl():
     - \c "path": overrides the path component in the URL at runtime
     - \c "path_add": appends the given string to the path component of the URL at runtime
+
+    The \c "sftppoller" data provider subtype polls the connection's server and directory with its login, key and
+    host key checks (see @ref ssh2connectionssubtypetarget): a \c "url" constructor option is accepted only if it
+    names the connection's scheme, host, port and directory (scheme and host names are compared without regard to
+    case, a missing port is the default SSH port 22, and empty and \c "." path segments and a trailing \c "/" are
+    ignored) and gives no user name or password other than the connection's, a \c "keyfile", \c "known_hosts",
+    \c "host_key_policy", \c "verify_host_key" or \c "use_agent" constructor option only if it is the connection's
+    setting, and any other value raises \c DATA-PROVIDER-ERROR; a caller that needs another server, directory, login,
+    key or host key check uses a connection with it
 */
 public class SftpConnection inherits AbstractSsh2Connection {
     public {
@@ -441,6 +475,15 @@ public class SftpConnection inherits AbstractSsh2Connection {
     }
 
     private {
+        #! The data provider subtype options that name the connection's server, directory, login, key and host key checks
+        /** The connection's values for them always win (module-ssh2 issue 133)
+        */
+        const SubtypeTargetOptions = ("url", "keyfile", "known_hosts", "host_key_policy", "verify_host_key",
+            "use_agent");
+
+        #! The default SSH port
+        const DefaultPort = 22;
+
         #! Data provider subtype info
         static hash<string, *hash<string, hash<DataProviderOptionInfo>>> subtype_info = {};
 
@@ -527,10 +570,15 @@ public class SftpConnection inherits AbstractSsh2Connection {
         providers
         @param constructor_options any additional constructor options required by the data provider
 
-        @return a data provider object for the connection and subtype passed as an argument
+        @return a data provider object for the connection and subtype passed as an argument, which uses the
+        connection's URL, key and host key checks
 
         @throw DATA-PROVIDER-ERROR this object does not support the data provider API or the given subtype is not
-        valid
+        valid; the \c "url", \c "keyfile", \c "known_hosts", \c "host_key_policy", \c "verify_host_key" or
+        \c "use_agent" constructor option names another server, directory, login, key or host key check than the
+        connection's
+        @throw PERMISSION-DENIED a \c "keyfile", \c "known_hosts" or \c "local_dir" constructor option is given by
+        code restricted from the \c FILESYSTEM functional domain that the connection was lent to
 
         @see
         - hasDataProvider()
@@ -553,18 +601,100 @@ public class SftpConnection inherits AbstractSsh2Connection {
                     "restricted from the FILESYSTEM functional domain", opt);
             }
         }
+        # the connection's server, directory, login, key and host key checks are the subtype's: a caller cannot
+        # point it at another target or weaken its checks, and is told so rather than having its option replaced, as
+        # the poller deletes or moves the files that it finds (module-ssh2 issue 133)
+        hash<auto> target = getSubtypeTargetOptions();
+        checkSubtypeTarget(subtype, constructor_options, target);
         # the connection's options are the members of this object (self.opts); a local variable named opts would
         # shadow them in its own initialization expression
         hash<auto> dp_opts = {
+            "keepalive_interval": self.opts.keepalive_interval,
+        } + getSubtypeOptions(subtype_info{subtype}, constructor_options - SubtypeTargetOptions) + target;
+        # the connection's client takes the key file with environment variables substituted, as the poller does
+        # with the known_hosts file; the poller takes the key file as it is given
+        if (dp_opts.keyfile) {
+            dp_opts.keyfile = substitute_env_vars(dp_opts.keyfile);
+        }
+        return create_object(conf."class", dp_opts);
+    }
+
+    #! Returns the connection's values of the data provider subtype options that name its target and checks
+    private:internal hash<auto> getSubtypeTargetOptions() {
+        return {
             "url": url,
             "keyfile": self.opts.keyfile,
             "known_hosts": self.opts.known_hosts,
             "host_key_policy": self.opts.host_key_policy,
             "verify_host_key": self.opts.verify_host_key,
             "use_agent": self.opts.use_agent,
-            "keepalive_interval": self.opts.keepalive_interval,
-        } + getSubtypeOptions(subtype_info{subtype}, constructor_options);
-        return create_object(conf."class", dp_opts);
+        };
+    }
+
+    #! Refuses data provider subtype options that name another target or check than the connection's
+    private:internal checkSubtypeTarget(string subtype, *hash<auto> constructor_options, hash<auto> target) {
+        foreach string key in (SubtypeTargetOptions) {
+            if (key == "url" || !constructor_options.hasKey(key)) {
+                continue;
+            }
+            auto v = constructor_options{key};
+            if (!exists v) {
+                continue;
+            }
+            auto conn_value = target{key};
+            # the base type of the value must be the connection's, so that no conversion can make another value
+            # equal; an option's default value can be an enum value, which has the base type string
+            if (exists conn_value ? (v.typeCode() == conn_value.typeCode() && v == conn_value)
+                # with no key file of the connection, an empty key file is no key file either
+                : (key == "keyfile" && v === "")) {
+                continue;
+            }
+            throwSubtypeTargetError(subtype, key);
+        }
+
+        auto v = constructor_options.url;
+        if (!exists v || v === "") {
+            return;
+        }
+        if (v.typeCode() != NT_STRING) {
+            throwSubtypeTargetError(subtype, "url");
+        }
+        hash<UrlInfo> u;
+        try {
+            u = parse_url(cast<string>(v));
+        } catch (hash<ExceptionInfo> ex) {
+            throwSubtypeTargetError(subtype, "url");
+        }
+        # the scheme, host and port are compared as the poller connects: scheme and host names without regard to
+        # case, and with the default port of SSH; the user name and password must be the connection's if given
+        if ((u.protocol ?? "sftp").lwr() != (urlh.protocol ?? "sftp").lwr()
+            || (u.host ?? "").lwr() != (urlh.host ?? "").lwr()
+            || (u.port ?? DefaultPort) != (urlh.port ?? DefaultPort)
+            || normalizeSubtypePath(u.path) != normalizeSubtypePath(urlh.path)
+            || (exists u.username && u.username !== urlh.username)
+            || (exists u.password && u.password !== urlh.password)) {
+            throwSubtypeTargetError(subtype, "url");
+        }
+    }
+
+    #! Returns the given URL path as the poller uses it: without empty and \c "." segments and a trailing \c "/"
+    /** No path (the login directory) differs from \c "/" (the root directory); \c ".." segments are kept, so that a
+        path with them names another directory than the connection's
+    */
+    private:internal static string normalizeSubtypePath(*string path) {
+        if (!path.val()) {
+            return "";
+        }
+        list<string> segments = select path.split("/"), $1 != "" && $1 != ".";
+        return "/" + segments.join("/");
+    }
+
+    #! Throws the exception for a data provider subtype option that names another target or check
+    private:internal throwSubtypeTargetError(string subtype, string option) {
+        # the value of the option is not given, as it can hold a password
+        throw "DATA-PROVIDER-ERROR", sprintf("sftp connection %y: the %y data provider uses the connection's server, "
+            "directory, login, key and host key checks (%s); the %y option names another value; use a connection "
+            "with that setting instead", name, subtype, safe_url, option);
     }
 
     #! Sets child data provider capabilities
