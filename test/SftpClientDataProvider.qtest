@@ -140,6 +140,8 @@ class SftpClientDataProviderTest inherits QUnit::Test {
         assertTrue(info.supports_children);
         assertTrue(info.children_can_support_apis);
         assertFalse(info.children_can_support_records);
+        # only the SFTP pollers handle a refused file again (qore#7563)
+        assertFalse(info.supports_refusal_redelivery, "the SFTP client provider has no events to redeliver");
     }
 
     negativeConstructorTests() {
