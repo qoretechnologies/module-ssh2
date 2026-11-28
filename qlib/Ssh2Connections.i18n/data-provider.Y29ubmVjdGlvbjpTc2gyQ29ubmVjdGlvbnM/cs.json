@@ -28,7 +28,7 @@
           "message": "Cesta k souboru known_hosts OpenSSH pro ověření klíče hostitele; proměnné prostředí mohou být v cestě předponovány znakem '$'; pokud je nastavena na prázdný řetězec, není soubor known_hosts nakonfigurován; pokud není nastavena, použije se výchozí hodnota modulu ssh2 (obvykle soubor ~/.ssh/known_hosts lokálního uživatele, pokud aplikace nezměnila nebo nevypnula výchozí hodnotu modulu)"
         },
         "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.a25vd25faG9zdHM.display_name": {
-          "source": "Known Hosts File",
+          "source": "Known hosts file",
           "message": "Soubor známých hostitelů"
         },
         "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.a25vd25faG9zdHM.short_desc": {
@@ -40,7 +40,7 @@
           "message": "Cesta k souboru s privátním klíčem SSH ve formátu PEM pro autentizaci pomocí klíče"
         },
         "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.a2V5ZmlsZQ.display_name": {
-          "source": "SSH Private Key",
+          "source": "SSH private key",
           "message": "Privátní klíč SSH"
         },
         "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.a2V5ZmlsZQ.short_desc": {
@@ -52,7 +52,7 @@
           "message": "Interval keepalive v sekundách; 0 vypne keepalive; výchozí: 60"
         },
         "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.a2VlcGFsaXZlX2ludGVydmFs.display_name": {
-          "source": "Keepalive Interval",
+          "source": "Keepalive interval",
           "message": "Interval mezi udržovacími zprávami"
         },
         "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.a2VlcGFsaXZlX2ludGVydmFs.short_desc": {
@@ -76,7 +76,7 @@
           "message": "Důvěřovat neznámým klíčům hostitele při prvním použití a uložit je do konfigurovaného souboru known_hosts"
         },
         "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.aG9zdF9rZXlfcG9saWN5.allowed_values.c3RyaW5nOnRvZnU.display_name": {
-          "source": "Trust On First Use",
+          "source": "Trust on first use",
           "message": "Důvěřovat při prvním použití"
         },
         "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.aG9zdF9rZXlfcG9saWN5.allowed_values.c3RyaW5nOnRvZnU.short_desc": {
@@ -88,7 +88,7 @@
           "message": "Důvěřovat neznámým klíčům hostitele pouze pro aktuální spojení, pokud není nakonfigurován soubor known_hosts"
         },
         "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.aG9zdF9rZXlfcG9saWN5.allowed_values.c3RyaW5nOnRvZnUtc2Vzc2lvbg.display_name": {
-          "source": "Session Trust On First Use",
+          "source": "Session trust on first use",
           "message": "Důvěra při prvním použití pro relaci"
         },
         "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.aG9zdF9rZXlfcG9saWN5.allowed_values.c3RyaW5nOnRvZnUtc2Vzc2lvbg.short_desc": {
@@ -100,7 +100,7 @@
           "message": "Pravidlo pro neznámé klíče hostitele při zapnuté kontrole klíče hostitele: `reject` zamítá neznámé klíče, `tofu` ukládá klíče použité poprvé do konfigurovaného souboru known_hosts a `tofu-session` důvěřuje neznámým klíčům hostitele pouze pro aktuální spojení, pokud není nakonfigurován soubor known_hosts"
         },
         "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.aG9zdF9rZXlfcG9saWN5.display_name": {
-          "source": "Host Key Policy",
+          "source": "Host key policy",
           "message": "Politika klíčů hostitele"
         },
         "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.aG9zdF9rZXlfcG9saWN5.short_desc": {
@@ -112,7 +112,7 @@
           "message": "Povolit ověřování pomocí SSH agenta; pokud je povoleno, klient se pokusí ověřit pomocí klíčů z běžícího SSH agenta před jinými metodami"
         },
         "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.dXNlX2FnZW50.display_name": {
-          "source": "Use SSH Agent",
+          "source": "Use SSH agent",
           "message": "Použít SSH agenta"
         },
         "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.dXNlX2FnZW50.short_desc": {
@@ -124,7 +124,7 @@
           "message": "Povolit ověření klíče hostitele proti souboru known_hosts; výchozí nastavení je zapnuté; efektivní výchozí hodnota následuje globální výchozí nastavení modulu ssh2, které může vložená aplikace změnit pomocí SSH2Base::setDefaultVerifyHostKey() nebo prostředí QORE_SSH2_DEFAULT_VERIFY_HOST_KEY"
         },
         "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.dmVyaWZ5X2hvc3Rfa2V5.display_name": {
-          "source": "Verify Host Key",
+          "source": "Verify host key",
           "message": "Ověřit klíč hostitele"
         },
         "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.dmVyaWZ5X2hvc3Rfa2V5.short_desc": {

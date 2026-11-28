@@ -8,7 +8,7 @@
           "message": "Zmienia uprawnienia do pliku lub katalogu na serwerze SFTP"
         },
         "app.U0ZUUA.action.Y2htb2Q.display_name": {
-          "source": "Change File Permissions With SFTP",
+          "source": "Change file permissions with SFTP",
           "message": "Zmień uprawnienia do pliku przez SFTP"
         },
         "app.U0ZUUA.action.Y2htb2Q.option.bW9kZQ.desc": {
@@ -44,11 +44,11 @@
           "message": "Zweryfikuj opublikowaną wersję przed udostępnieniem pliku lokalnego. Podaj skrót producenta dla ścieżki umożliwiającej zastąpienie. Wykrywaj duplikaty na podstawie punktu końcowego, tożsamości, ścieżki zdalnej i wersji z potwierdzenia."
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.display_name": {
-          "source": "Acquire Verified File",
+          "source": "Acquire verified file",
           "message": "Pobierz zweryfikowany plik"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.allowed-value.c3RyaW5nOm5vLXJlcGxhY2U.display_name": {
-          "source": "No Replace",
+          "source": "No replace",
           "message": "Zabroń zastępowania"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.allowed-value.c3RyaW5nOnJlcGxhY2U.display_name": {
@@ -60,7 +60,7 @@
           "message": "Wybierz sposób obsługi istniejącego pliku przez punkt końcowy"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.display_name": {
-          "source": "Collision Policy",
+          "source": "Collision policy",
           "message": "Zasady obsługi kolizji"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.short_desc": {
@@ -72,7 +72,7 @@
           "message": "Przypięty klucz hosta SSH zapisany szesnastkowo małymi literami, wymagany dla profilu hostowanego"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.aG9zdF9rZXlfc2hhMjU2.display_name": {
-          "source": "Host Key SHA-256",
+          "source": "Host key SHA-256",
           "message": "SHA-256 klucza hosta"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.aG9zdF9rZXlfc2hhMjU2.short_desc": {
@@ -84,7 +84,7 @@
           "message": "Plik lokalny do zastąpienia po weryfikacji"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.bG9jYWxfcGF0aA.display_name": {
-          "source": "Destination File",
+          "source": "Destination file",
           "message": "Plik docelowy"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.bG9jYWxfcGF0aA.short_desc": {
@@ -96,7 +96,7 @@
           "message": "Zadeklarowana długość pliku w bajtach"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.bGVuZ3Ro.display_name": {
-          "source": "Expected Length",
+          "source": "Expected length",
           "message": "Oczekiwana długość"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.bGVuZ3Ro.short_desc": {
@@ -120,7 +120,7 @@
           "message": "OpenSSH POSIX"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.cHJvZmlsZQ.allowed-value.c3RyaW5nOmhvc3RlZC1pbW11dGFibGU.display_name": {
-          "source": "Hosted Immutable",
+          "source": "Hosted immutable",
           "message": "Niezmienne pliki hostowane"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.cHJvZmlsZQ.desc": {
@@ -128,7 +128,7 @@
           "message": "Umowa publikacji dla tego punktu końcowego"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.cHJvZmlsZQ.display_name": {
-          "source": "Endpoint Profile",
+          "source": "Endpoint profile",
           "message": "Profil punktu końcowego"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.cHJvZmlsZQ.short_desc": {
@@ -140,7 +140,7 @@
           "message": "Ścieżka bezwzględna opublikowanego pliku"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.cmVtb3RlX3BhdGg.display_name": {
-          "source": "Remote Path",
+          "source": "Remote path",
           "message": "Ścieżka zdalna"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.cmVtb3RlX3BhdGg.short_desc": {
@@ -156,7 +156,7 @@
           "message": "Pobierz plik z serwera SFTP"
         },
         "app.U0ZUUA.action.Z2V0LWZpbGU.display_name": {
-          "source": "Retrieve File With SFTP",
+          "source": "Retrieve file with SFTP",
           "message": "Pobierz plik przez SFTP"
         },
         "app.U0ZUUA.action.Z2V0LWZpbGU.option.ZW5jb2Rpbmc.desc": {
@@ -188,7 +188,7 @@
           "message": "Jeśli `True`, plik zostanie zwrócony jako ciąg znaków, `False` (domyślnie) jako dane binarne"
         },
         "app.U0ZUUA.action.Z2V0LWZpbGU.option.dGV4dA.display_name": {
-          "source": "Text Mode",
+          "source": "Text mode",
           "message": "Tryb tekstowy"
         },
         "app.U0ZUUA.action.Z2V0LWZpbGU.option.dGV4dA.short_desc": {
@@ -204,7 +204,7 @@
           "message": "Usuwa plik na serwerze SFTP"
         },
         "app.U0ZUUA.action.ZGVsZXRlLWZpbGU.display_name": {
-          "source": "Delete File With SFTP",
+          "source": "Delete file with SFTP",
           "message": "Usuń plik przez SFTP"
         },
         "app.U0ZUUA.action.ZGVsZXRlLWZpbGU.option.cGF0aA.desc": {
@@ -228,7 +228,7 @@
           "message": "Sprawdza, czy plik lub katalog istnieje na serwerze SFTP"
         },
         "app.U0ZUUA.action.ZXhpc3Rz.display_name": {
-          "source": "Check If Path Exists With SFTP",
+          "source": "Check if path exists with SFTP",
           "message": "Sprawdź, czy ścieżka istnieje przez SFTP"
         },
         "app.U0ZUUA.action.ZXhpc3Rz.option.cGF0aA.desc": {
@@ -252,7 +252,7 @@
           "message": "Wysyła plik na serwer SFTP"
         },
         "app.U0ZUUA.action.c2VuZC1maWxl.display_name": {
-          "source": "Send File With SFTP",
+          "source": "Send file with SFTP",
           "message": "Wyślij plik przez SFTP"
         },
         "app.U0ZUUA.action.c2VuZC1maWxl.option.ZW5jb2Rpbmc.desc": {
@@ -284,7 +284,7 @@
           "message": "Jeśli `True`, plik zostanie zwrócony jako ciąg znaków, `False` (domyślnie) jako dane binarne"
         },
         "app.U0ZUUA.action.c2VuZC1maWxl.option.dGV4dA.display_name": {
-          "source": "Text Mode",
+          "source": "Text mode",
           "message": "Tryb tekstowy"
         },
         "app.U0ZUUA.action.c2VuZC1maWxl.option.dGV4dA.short_desc": {
@@ -300,11 +300,11 @@
           "message": "Przed opublikowaniem prywatnego pliku tymczasowego sprawdź długość i opcjonalny skrót producenta. Wybierz `openssh-posix`, aby zezwolić na zastąpienie, lub `hosted-immutable`, aby je zablokować. Przy wyniku `indeterminate` sprawdź stan przed ponowieniem."
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.display_name": {
-          "source": "Publish Verified File",
+          "source": "Publish verified file",
           "message": "Opublikuj zweryfikowany plik"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.allowed-value.c3RyaW5nOm5vLXJlcGxhY2U.display_name": {
-          "source": "No Replace",
+          "source": "No replace",
           "message": "Zabroń zastępowania"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.allowed-value.c3RyaW5nOnJlcGxhY2U.display_name": {
@@ -316,7 +316,7 @@
           "message": "Wybierz sposób obsługi istniejącego pliku przez punkt końcowy"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.display_name": {
-          "source": "Collision Policy",
+          "source": "Collision policy",
           "message": "Zasady obsługi kolizji"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.short_desc": {
@@ -328,7 +328,7 @@
           "message": "Przypięty klucz hosta SSH zapisany szesnastkowo małymi literami, wymagany dla profilu hostowanego"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.aG9zdF9rZXlfc2hhMjU2.display_name": {
-          "source": "Host Key SHA-256",
+          "source": "Host key SHA-256",
           "message": "SHA-256 klucza hosta"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.aG9zdF9rZXlfc2hhMjU2.short_desc": {
@@ -340,7 +340,7 @@
           "message": "Plik lokalny do opublikowania"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.bG9jYWxfcGF0aA.display_name": {
-          "source": "Source File",
+          "source": "Source file",
           "message": "Plik źródłowy"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.bG9jYWxfcGF0aA.short_desc": {
@@ -352,7 +352,7 @@
           "message": "Zadeklarowana długość pliku w bajtach"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.bGVuZ3Ro.display_name": {
-          "source": "Expected Length",
+          "source": "Expected length",
           "message": "Oczekiwana długość"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.bGVuZ3Ro.short_desc": {
@@ -376,7 +376,7 @@
           "message": "Prywatny katalog tymczasowy w zdalnym systemie plików"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.c3RhZ2luZ19kaXI.display_name": {
-          "source": "Staging Directory",
+          "source": "Staging directory",
           "message": "Katalog tymczasowy"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.c3RhZ2luZ19kaXI.short_desc": {
@@ -388,7 +388,7 @@
           "message": "OpenSSH POSIX"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.cHJvZmlsZQ.allowed-value.c3RyaW5nOmhvc3RlZC1pbW11dGFibGU.display_name": {
-          "source": "Hosted Immutable",
+          "source": "Hosted immutable",
           "message": "Niezmienne pliki hostowane"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.cHJvZmlsZQ.desc": {
@@ -396,7 +396,7 @@
           "message": "Umowa publikacji dla tego punktu końcowego"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.cHJvZmlsZQ.display_name": {
-          "source": "Endpoint Profile",
+          "source": "Endpoint profile",
           "message": "Profil punktu końcowego"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.cHJvZmlsZQ.short_desc": {
@@ -408,7 +408,7 @@
           "message": "Ścieżka bezwzględna opublikowanego pliku"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.cmVtb3RlX3BhdGg.display_name": {
-          "source": "Remote Path",
+          "source": "Remote path",
           "message": "Ścieżka zdalna"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.cmVtb3RlX3BhdGg.short_desc": {
@@ -424,7 +424,7 @@
           "message": "Usuwa pusty katalog na serwerze SFTP"
         },
         "app.U0ZUUA.action.cm1kaXI.display_name": {
-          "source": "Remove Directory With SFTP",
+          "source": "Remove directory with SFTP",
           "message": "Usuń katalog przez SFTP"
         },
         "app.U0ZUUA.action.cm1kaXI.option.cGF0aA.desc": {

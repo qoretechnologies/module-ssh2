@@ -47,13 +47,13 @@ public class SftpClientStatResponseDataType inherits HashDataType {
                 "example_value": 903,
             },
             "atime": {
-                "display_name": "Access Timestamp",
+                "display_name": "Access timestamp",
                 "short_desc": "The last accessed date/time of the file",
                 "desc": "The last accessed date/time of the file",
                 "example_value": now_us(),
             },
             "mtime": {
-                "display_name": "Modified Timestamp",
+                "display_name": "Modified timestamp",
                 "short_desc": "The last modified date/time of the file",
                 "desc": "The last modified date/time of the file",
                 "example_value": now_us(),

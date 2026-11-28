@@ -16,8 +16,8 @@
           "message": "Generic SFTP server for exchanging files with SFTP"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.display_name": {
-          "source": "Acquire Verified File",
-          "message": "Acquire Verified File"
+          "source": "Acquire verified file",
+          "message": "Acquire verified file"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.short_desc": {
           "source": "Acquire a committed file over SFTP",
@@ -28,8 +28,8 @@
           "message": "Verify a committed version before exposing the local file. Supply the producer digest for a replaceable path. Use the endpoint, principal, remote path and version in the receipt for deduplication."
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.cHJvZmlsZQ.display_name": {
-          "source": "Endpoint Profile",
-          "message": "Endpoint Profile"
+          "source": "Endpoint profile",
+          "message": "Endpoint profile"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.cHJvZmlsZQ.short_desc": {
           "source": "Publication agreement for this endpoint",
@@ -44,12 +44,12 @@
           "message": "OpenSSH POSIX"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.cHJvZmlsZQ.allowed-value.c3RyaW5nOmhvc3RlZC1pbW11dGFibGU.display_name": {
-          "source": "Hosted Immutable",
-          "message": "Hosted Immutable"
+          "source": "Hosted immutable",
+          "message": "Hosted immutable"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.display_name": {
-          "source": "Collision Policy",
-          "message": "Collision Policy"
+          "source": "Collision policy",
+          "message": "Collision policy"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.short_desc": {
           "source": "Select how the endpoint handles an existing file",
@@ -64,12 +64,12 @@
           "message": "Replace"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.allowed-value.c3RyaW5nOm5vLXJlcGxhY2U.display_name": {
-          "source": "No Replace",
-          "message": "No Replace"
+          "source": "No replace",
+          "message": "No replace"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.cmVtb3RlX3BhdGg.display_name": {
-          "source": "Remote Path",
-          "message": "Remote Path"
+          "source": "Remote path",
+          "message": "Remote path"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.cmVtb3RlX3BhdGg.short_desc": {
           "source": "Absolute path of the committed file",
@@ -80,8 +80,8 @@
           "message": "Absolute path of the committed file"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.bGVuZ3Ro.display_name": {
-          "source": "Expected Length",
-          "message": "Expected Length"
+          "source": "Expected length",
+          "message": "Expected length"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.bGVuZ3Ro.short_desc": {
           "source": "Declared file length in bytes",
@@ -104,8 +104,8 @@
           "message": "Expected lowercase SHA-256, required when acquiring a replaceable file"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.aG9zdF9rZXlfc2hhMjU2.display_name": {
-          "source": "Host Key SHA-256",
-          "message": "Host Key SHA-256"
+          "source": "Host key SHA-256",
+          "message": "Host key SHA-256"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.aG9zdF9rZXlfc2hhMjU2.short_desc": {
           "source": "Pinned SSH host key in lowercase hex, required for the hosted profile",
@@ -116,8 +116,8 @@
           "message": "Pinned SSH host key in lowercase hex, required for the hosted profile"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.bG9jYWxfcGF0aA.display_name": {
-          "source": "Destination File",
-          "message": "Destination File"
+          "source": "Destination file",
+          "message": "Destination file"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.bG9jYWxfcGF0aA.short_desc": {
           "source": "Local file to replace after verification",
@@ -128,8 +128,8 @@
           "message": "Local file to replace after verification"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.display_name": {
-          "source": "Publish Verified File",
-          "message": "Publish Verified File"
+          "source": "Publish verified file",
+          "message": "Publish verified file"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.short_desc": {
           "source": "Publish a complete file over SFTP",
@@ -140,8 +140,8 @@
           "message": "Verify the length and optional producer digest before committing a private stage. Select `openssh-posix` for replacement or `hosted-immutable` for enforced no-replace. Reconcile an `indeterminate` receipt before retrying."
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.cHJvZmlsZQ.display_name": {
-          "source": "Endpoint Profile",
-          "message": "Endpoint Profile"
+          "source": "Endpoint profile",
+          "message": "Endpoint profile"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.cHJvZmlsZQ.short_desc": {
           "source": "Publication agreement for this endpoint",
@@ -156,12 +156,12 @@
           "message": "OpenSSH POSIX"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.cHJvZmlsZQ.allowed-value.c3RyaW5nOmhvc3RlZC1pbW11dGFibGU.display_name": {
-          "source": "Hosted Immutable",
-          "message": "Hosted Immutable"
+          "source": "Hosted immutable",
+          "message": "Hosted immutable"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.display_name": {
-          "source": "Collision Policy",
-          "message": "Collision Policy"
+          "source": "Collision policy",
+          "message": "Collision policy"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.short_desc": {
           "source": "Select how the endpoint handles an existing file",
@@ -176,12 +176,12 @@
           "message": "Replace"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.allowed-value.c3RyaW5nOm5vLXJlcGxhY2U.display_name": {
-          "source": "No Replace",
-          "message": "No Replace"
+          "source": "No replace",
+          "message": "No replace"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.cmVtb3RlX3BhdGg.display_name": {
-          "source": "Remote Path",
-          "message": "Remote Path"
+          "source": "Remote path",
+          "message": "Remote path"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.cmVtb3RlX3BhdGg.short_desc": {
           "source": "Absolute path of the committed file",
@@ -192,8 +192,8 @@
           "message": "Absolute path of the committed file"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.bGVuZ3Ro.display_name": {
-          "source": "Expected Length",
-          "message": "Expected Length"
+          "source": "Expected length",
+          "message": "Expected length"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.bGVuZ3Ro.short_desc": {
           "source": "Declared file length in bytes",
@@ -216,8 +216,8 @@
           "message": "Expected lowercase SHA-256, required when acquiring a replaceable file"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.aG9zdF9rZXlfc2hhMjU2.display_name": {
-          "source": "Host Key SHA-256",
-          "message": "Host Key SHA-256"
+          "source": "Host key SHA-256",
+          "message": "Host key SHA-256"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.aG9zdF9rZXlfc2hhMjU2.short_desc": {
           "source": "Pinned SSH host key in lowercase hex, required for the hosted profile",
@@ -228,8 +228,8 @@
           "message": "Pinned SSH host key in lowercase hex, required for the hosted profile"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.bG9jYWxfcGF0aA.display_name": {
-          "source": "Source File",
-          "message": "Source File"
+          "source": "Source file",
+          "message": "Source file"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.bG9jYWxfcGF0aA.short_desc": {
           "source": "Local file to publish",
@@ -240,8 +240,8 @@
           "message": "Local file to publish"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.c3RhZ2luZ19kaXI.display_name": {
-          "source": "Staging Directory",
-          "message": "Staging Directory"
+          "source": "Staging directory",
+          "message": "Staging directory"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.c3RhZ2luZ19kaXI.short_desc": {
           "source": "Private staging directory on the remote filesystem",
@@ -252,8 +252,8 @@
           "message": "Private staging directory on the remote filesystem"
         },
         "app.U0ZUUA.action.Z2V0LWZpbGU.display_name": {
-          "source": "Retrieve File With SFTP",
-          "message": "Retrieve File With SFTP"
+          "source": "Retrieve file with SFTP",
+          "message": "Retrieve file with SFTP"
         },
         "app.U0ZUUA.action.Z2V0LWZpbGU.short_desc": {
           "source": "Get a file from an SFTP server",
@@ -276,8 +276,8 @@
           "message": "The remote path on the SFTP server to the file to retrieve"
         },
         "app.U0ZUUA.action.Z2V0LWZpbGU.option.dGV4dA.display_name": {
-          "source": "Text Mode",
-          "message": "Text Mode"
+          "source": "Text mode",
+          "message": "Text mode"
         },
         "app.U0ZUUA.action.Z2V0LWZpbGU.option.dGV4dA.short_desc": {
           "source": "Return file as text string",
@@ -300,8 +300,8 @@
           "message": "The string encoding to use if `text` = `True` (default: `UTF-8`)"
         },
         "app.U0ZUUA.action.c2VuZC1maWxl.display_name": {
-          "source": "Send File With SFTP",
-          "message": "Send File With SFTP"
+          "source": "Send file with SFTP",
+          "message": "Send file with SFTP"
         },
         "app.U0ZUUA.action.c2VuZC1maWxl.short_desc": {
           "source": "Sends a file to an SFTP server",
@@ -324,8 +324,8 @@
           "message": "The remote path on the SFTP server to the file to retrieve"
         },
         "app.U0ZUUA.action.c2VuZC1maWxl.option.dGV4dA.display_name": {
-          "source": "Text Mode",
-          "message": "Text Mode"
+          "source": "Text mode",
+          "message": "Text mode"
         },
         "app.U0ZUUA.action.c2VuZC1maWxl.option.dGV4dA.short_desc": {
           "source": "Return file as text string",
@@ -348,8 +348,8 @@
           "message": "The string encoding to use if `text` = `True` (default: `UTF-8`)"
         },
         "app.U0ZUUA.action.ZGVsZXRlLWZpbGU.display_name": {
-          "source": "Delete File With SFTP",
-          "message": "Delete File With SFTP"
+          "source": "Delete file with SFTP",
+          "message": "Delete file with SFTP"
         },
         "app.U0ZUUA.action.ZGVsZXRlLWZpbGU.short_desc": {
           "source": "Deletes a file on an SFTP server",
@@ -372,8 +372,8 @@
           "message": "The remote path on the SFTP server for the operation"
         },
         "app.U0ZUUA.action.Y2htb2Q.display_name": {
-          "source": "Change File Permissions With SFTP",
-          "message": "Change File Permissions With SFTP"
+          "source": "Change file permissions with SFTP",
+          "message": "Change file permissions with SFTP"
         },
         "app.U0ZUUA.action.Y2htb2Q.short_desc": {
           "source": "Changes file or directory permissions on an SFTP server",
@@ -408,8 +408,8 @@
           "message": "The file permission mode as an octal integer (e.g., 0755 for rwxr-xr-x). Only the lower 9 bits (owner/group/other permissions) are used; sticky bits and setuid/setgid bits are not supported."
         },
         "app.U0ZUUA.action.cm1kaXI.display_name": {
-          "source": "Remove Directory With SFTP",
-          "message": "Remove Directory With SFTP"
+          "source": "Remove directory with SFTP",
+          "message": "Remove directory with SFTP"
         },
         "app.U0ZUUA.action.cm1kaXI.short_desc": {
           "source": "Removes an empty directory on an SFTP server",
@@ -432,8 +432,8 @@
           "message": "The remote path on the SFTP server for the operation"
         },
         "app.U0ZUUA.action.ZXhpc3Rz.display_name": {
-          "source": "Check If Path Exists With SFTP",
-          "message": "Check If Path Exists With SFTP"
+          "source": "Check if path exists with SFTP",
+          "message": "Check if path exists with SFTP"
         },
         "app.U0ZUUA.action.ZXhpc3Rz.short_desc": {
           "source": "Checks if a file or directory exists on an SFTP server",

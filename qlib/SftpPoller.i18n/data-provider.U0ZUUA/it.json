@@ -8,15 +8,15 @@
           "message": "Reagisci ai file caricati su un server SFTP; la configurazione dell'azione determina se l'evento contiene i dati del file stessi o un collegamento alla posizione del file nel filesystem locale. In ogni caso, l'evento indica che i dati del file sono già stati scaricati e sono disponibili localmente. Impostare remote_file_disposition su DELETE o MOVE per rimuovere il file remoto dopo l’elaborazione. Con NONE vale la regola seguente. Il gestore dell’evento deve spostare, rinominare o eliminare il file, altrimenti il file verrà consegnato di nuovo al controllo successivo."
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.display_name": {
-          "source": "SFTP File Received",
+          "source": "SFTP file received",
           "message": "File SFTP ricevuto"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.Y29tbWl0X3Byb2ZpbGU.allowed-value.c3RyaW5nOm9wZW5zc2gtc2hhMjU2LW5hbWU.display_name": {
-          "source": "OpenSSH Digest Filename",
+          "source": "OpenSSH digest filename",
           "message": "Nome file OpenSSH con digest"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.Y29tbWl0X3Byb2ZpbGU.allowed-value.c3RyaW5nOmhvc3RlZC1pbW11dGFibGU.display_name": {
-          "source": "Hosted Immutable",
+          "source": "Hosted immutable",
           "message": "File ospitati immutabili"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.Y29tbWl0X3Byb2ZpbGU.desc": {
@@ -24,7 +24,7 @@
           "message": "Usa una directory dedicata ai file pubblicati e una directory locale scrivibile. I file ospitati sono immutabili. Con OpenSSH il nome pubblicato inizia con lo SHA-256 del produttore seguito da un punto."
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.Y29tbWl0X3Byb2ZpbGU.display_name": {
-          "source": "Publication Agreement",
+          "source": "Publication agreement",
           "message": "Accordo di pubblicazione"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.Y29tbWl0X3Byb2ZpbGU.short_desc": {
@@ -36,7 +36,7 @@
           "message": "Utilizza un meccanismo di trasferimento atomico con `local_dir` in cui i file remoti vengono prima spostati in una posizione temporanea e poi spostati nella posizione finale una volta che sono stati completamente trasferiti.\n\nQuesto garantisce che i file non verranno mai letti finché non saranno stati completamente trasferiti"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.YXRvbWljX3RyYW5zZmVy.display_name": {
-          "source": "Atomic File Transfer",
+          "source": "Atomic file transfer",
           "message": "Trasferimento file atomico"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.YXRvbWljX3RyYW5zZmVy.short_desc": {
@@ -48,7 +48,7 @@
           "message": "Un percorso verso un file di chiave privata SSH in formato PEM da utilizzare per l'autenticazione basata su chiavi"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.a2V5ZmlsZQ.display_name": {
-          "source": "SSH Private Key",
+          "source": "SSH private key",
           "message": "Chiave privata SSH"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.a2V5ZmlsZQ.short_desc": {
@@ -60,7 +60,7 @@
           "message": "Chiave host SSH fissata in esadecimale minuscolo, obbligatoria per il profilo ospitato"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfc2hhMjU2.display_name": {
-          "source": "Host Key SHA-256",
+          "source": "Host key SHA-256",
           "message": "SHA-256 della chiave host"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfc2hhMjU2.short_desc": {
@@ -72,7 +72,7 @@
           "message": "Una directory locale che verrà utilizzata per recuperare i file"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.bG9jYWxfZGly.display_name": {
-          "source": "Local Directory",
+          "source": "Local directory",
           "message": "Directory locale"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.bG9jYWxfZGly.short_desc": {
@@ -84,7 +84,7 @@
           "message": "La maschera glob da utilizzare per individuare i file da verificare; verrà trattata come regex se `regex` è `true`"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.bWFzaw.display_name": {
-          "source": "Glob Mask",
+          "source": "Glob mask",
           "message": "Maschera glob"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.bWFzaw.short_desc": {
@@ -96,7 +96,7 @@
           "message": "Un intero che indica l'età minima del file in secondi prima che venga verificato; serve a ovviare a operazioni di trasferimento file non atomiche.\n\nSe questa opzione è necessaria, impostarla su un valore superiore al tempo massimo previsto per il trasferimento di un file"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.bWluYWdl.display_name": {
-          "source": "Minimum Polling Age",
+          "source": "Minimum polling age",
           "message": "Età minima di polling"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.bWluYWdl.short_desc": {
@@ -108,7 +108,7 @@
           "message": "`name` o `date` per i dati da utilizzare per l'ordinamento"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.c29ydF90eXBl.display_name": {
-          "source": "Sort Type",
+          "source": "Sort type",
           "message": "Tipo di ordinamento"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.c29ydF90eXBl.short_desc": {
@@ -120,7 +120,7 @@
           "message": "Ordina in modo decrescente; se non specificato, si presuppone un ordinamento crescente se viene fornito un `sort_type`"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.c29ydF9kZXNj.display_name": {
-          "source": "Sort Descending",
+          "source": "Sort descending",
           "message": "Ordinamento decrescente"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.c29ydF9kZXNj.short_desc": {
@@ -132,7 +132,7 @@
           "message": "L'intervallo in secondi tra le verifiche dei file"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cG9sbF9pbnRlcnZhbA.display_name": {
-          "source": "Poll Interval",
+          "source": "Poll interval",
           "message": "Intervallo di polling"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cG9sbF9pbnRlcnZhbA.short_desc": {
@@ -144,7 +144,7 @@
           "message": "Se `true`, allora `mask` viene trattato come un'espressione regolare anziché come un modello glob"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cmVnZXg.display_name": {
-          "source": "Regular Expression Match",
+          "source": "Regular expression match",
           "message": "Corrispondenza espressione regolare"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cmVnZXg.short_desc": {
@@ -192,7 +192,7 @@
           "message": "Eliminare o spostare il file remoto dopo l'elaborazione? Se `MOVE`, occorre impostare anche `remote_file_move_target`"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cmVtb3RlX2ZpbGVfZGlzcG9zaXRpb24.display_name": {
-          "source": "Remote File Disposition",
+          "source": "Remote file disposition",
           "message": "Disposizione del file remoto"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cmVtb3RlX2ZpbGVfZGlzcG9zaXRpb24.short_desc": {
@@ -204,7 +204,7 @@
           "message": "Il modello di destinazione per il file remoto dopo l'elaborazione; utilizzare `%s` per il nome del file originale. Questa opzione viene utilizzata solo quando `remote_file_disposition` è `MOVE`, altrimenti viene ignorata"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cmVtb3RlX2ZpbGVfbW92ZV90YXJnZXQ.display_name": {
-          "source": "Remote File Move Target",
+          "source": "Remote file move target",
           "message": "Destinazione di spostamento del file remoto"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cmVtb3RlX2ZpbGVfbW92ZV90YXJnZXQ.short_desc": {
@@ -216,7 +216,7 @@
           "message": "Un campo di bit di opzioni di espressione regolare (`1` = ignora maiuscole/minuscole, `2` = tratta EOL come carattere normale); ignorato se `regex` non è `true`"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cmVvcHQ.display_name": {
-          "source": "Regular Expression Options",
+          "source": "Regular expression options",
           "message": "Opzioni espressione regolare"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cmVvcHQ.short_desc": {
@@ -228,7 +228,7 @@
           "message": "Il modello per i nomi dei file temporanei; utilizzare `%s` per il nome del file originale"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.dGVtcGZpbGVfdGVtcGxhdGU.display_name": {
-          "source": "Temporary Filename Template",
+          "source": "Temporary filename template",
           "message": "Modello nome file temporaneo"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.dGVtcGZpbGVfdGVtcGxhdGU.short_desc": {
@@ -252,7 +252,7 @@
           "message": "Server SFTP generico per lo scambio di file con SFTP"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.a25vd25faG9zdHM.display_name": {
-          "source": "Known Hosts File",
+          "source": "Known hosts file",
           "message": "File degli host noti"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.a25vd25faG9zdHM.short_desc": {
@@ -264,7 +264,7 @@
           "message": "Un percorso a un file known_hosts di OpenSSH per la verifica della chiave host; le variabili d'ambiente possono essere prefissate con '$' nel percorso; se impostato su una stringa vuota, non viene configurato alcun file known_hosts; se non impostato, viene applicato il valore predefinito del modulo ssh2 (normalmente il file ~/.ssh/known_hosts dell'utente locale, a meno che l'applicazione incorporante non abbia modificato o disabilitato il valore predefinito)"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfcG9saWN5.display_name": {
-          "source": "Host Key Policy",
+          "source": "Host key policy",
           "message": "Politica per le chiavi host"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfcG9saWN5.short_desc": {
@@ -288,7 +288,7 @@
           "message": "Rifiuta le chiavi dell'host sconosciute"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfcG9saWN5.allowed-value.c3RyaW5nOnRvZnU.display_name": {
-          "source": "Trust On First Use",
+          "source": "Trust on first use",
           "message": "Fidati al primo utilizzo"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfcG9saWN5.allowed-value.c3RyaW5nOnRvZnU.short_desc": {
@@ -300,7 +300,7 @@
           "message": "Fidati delle chiavi dell'host sconosciute al primo utilizzo e salvale nel file known_hosts configurato"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfcG9saWN5.allowed-value.c3RyaW5nOnRvZnUtc2Vzc2lvbg.display_name": {
-          "source": "Session Trust On First Use",
+          "source": "Session trust on first use",
           "message": "Fiducia in prima utilizzo per la sessione"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfcG9saWN5.allowed-value.c3RyaW5nOnRvZnUtc2Vzc2lvbg.short_desc": {
@@ -312,7 +312,7 @@
           "message": "Fidati delle chiavi host sconosciute solo per la connessione corrente se non è configurato alcun file known_hosts"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.dmVyaWZ5X2hvc3Rfa2V5.display_name": {
-          "source": "Verify Host Key",
+          "source": "Verify host key",
           "message": "Verifica chiave host"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.dmVyaWZ5X2hvc3Rfa2V5.short_desc": {
@@ -324,7 +324,7 @@
           "message": "Abilita la verifica della chiave host rispetto al file known_hosts"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.dXNlX2FnZW50.display_name": {
-          "source": "Use SSH Agent",
+          "source": "Use SSH agent",
           "message": "Usa l'agente SSH"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.dXNlX2FnZW50.short_desc": {
@@ -336,7 +336,7 @@
           "message": "Abilita l'autenticazione tramite agente SSH; quando abilitato, il client cercherà di autenticarsi usando le chiavi dall'agente SSH in esecuzione prima di altri metodi"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.a2VlcGFsaXZlX2ludGVydmFs.display_name": {
-          "source": "Keepalive Interval",
+          "source": "Keepalive interval",
           "message": "Intervallo keepalive"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.a2VlcGFsaXZlX2ludGVydmFs.short_desc": {

@@ -116,7 +116,7 @@ public class SftpClientSymlinkRequestDataType inherits HashDataType {
                 "example_value": "/home/user/file.txt",
             },
             "link_path": {
-                "display_name": "Link Path",
+                "display_name": "Link path",
                 "short_desc": "The path of the symbolic link to create",
                 "desc": "The remote path on the SFTP server where the symbolic link will be created",
                 "type": AbstractDataProviderTypeMap."string",

@@ -143,13 +143,13 @@ const HostKeyPolicyAllowedValues = (
         "value": Ssh2HostKeyPolicyOption::Reject,
     },
     <AllowedValueInfo>{
-        "display_name": "Trust On First Use",
+        "display_name": "Trust on first use",
         "short_desc": "Trust unknown host keys on first use and persist them",
         "desc": "Trust unknown host keys on first use and persist them to the configured known_hosts file",
         "value": Ssh2HostKeyPolicyOption::TrustOnFirstUse,
     },
     <AllowedValueInfo>{
-        "display_name": "Session Trust On First Use",
+        "display_name": "Session trust on first use",
         "short_desc": "Trust unknown host keys for the current connection only when needed",
         "desc": "Trust unknown host keys for the current connection only if no known_hosts file is configured",
         "value": Ssh2HostKeyPolicyOption::TrustOnFirstUseSession,
@@ -262,13 +262,13 @@ public class Ssh2ClientConnection inherits AbstractSsh2Connection {
             "cls": Class::forName("Ssh2ClientConnection"),
             "options": {
                 "keyfile": <ConnectionOptionInfo>{
-                    "display_name": "SSH Private Key",
+                    "display_name": "SSH private key",
                     "short_desc": "A path to an SSH private key file in PEM format",
                     "type": "string",
                     "desc": "A path to an SSH private key file in PEM format to use for key-based authentication",
                 },
                 "known_hosts": <ConnectionOptionInfo>{
-                    "display_name": "Known Hosts File",
+                    "display_name": "Known hosts file",
                     "short_desc": "A path to an OpenSSH known_hosts file for host key verification",
                     "type": "string",
                     "desc": "A path to an OpenSSH known_hosts file for host key verification; "
@@ -279,7 +279,7 @@ public class Ssh2ClientConnection inherits AbstractSsh2Connection {
                         "disabled the module default)",
                 },
                 "host_key_policy": <ConnectionOptionInfo>{
-                    "display_name": "Host Key Policy",
+                    "display_name": "Host key policy",
                     "short_desc": "Policy for unknown host keys",
                     "type": "string",
                     "desc": "Policy for unknown host keys when host-key verification is enabled: "
@@ -290,7 +290,7 @@ public class Ssh2ClientConnection inherits AbstractSsh2Connection {
                     "default_value": Ssh2HostKeyPolicyOption::TrustOnFirstUse,
                 },
                 "verify_host_key": <ConnectionOptionInfo>{
-                    "display_name": "Verify Host Key",
+                    "display_name": "Verify host key",
                     "short_desc": "Enable host key verification against the known_hosts file",
                     "type": "bool",
                     "desc": "Enable host key verification against the known_hosts file; enabled by "
@@ -301,7 +301,7 @@ public class Ssh2ClientConnection inherits AbstractSsh2Connection {
                     "default_value": True,
                 },
                 "use_agent": <ConnectionOptionInfo>{
-                    "display_name": "Use SSH Agent",
+                    "display_name": "Use SSH agent",
                     "short_desc": "Enable SSH agent authentication",
                     "type": "bool",
                     "desc": "Enable SSH agent authentication; when enabled, the client will attempt to "
@@ -309,7 +309,7 @@ public class Ssh2ClientConnection inherits AbstractSsh2Connection {
                     "default_value": True,
                 },
                 "keepalive_interval": <ConnectionOptionInfo>{
-                    "display_name": "Keepalive Interval",
+                    "display_name": "Keepalive interval",
                     "short_desc": "Keepalive interval in seconds",
                     "type": "int",
                     "desc": "Keepalive interval in seconds; 0 disables keepalive; default: 60",

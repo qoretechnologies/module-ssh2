@@ -8,7 +8,7 @@
           "message": "Ändert Datei- oder Verzeichnisberechtigungen auf einem SFTP-Server"
         },
         "app.U0ZUUA.action.Y2htb2Q.display_name": {
-          "source": "Change File Permissions With SFTP",
+          "source": "Change file permissions with SFTP",
           "message": "Dateiberechtigungen mit SFTP ändern"
         },
         "app.U0ZUUA.action.Y2htb2Q.option.bW9kZQ.desc": {
@@ -44,11 +44,11 @@
           "message": "Prüfen Sie die veröffentlichte Version, bevor die lokale Datei verfügbar wird. Geben Sie bei ersetzbaren Pfaden die Prüfsumme des Erstellers an. Endpunkt, Identität, entfernter Pfad und Version im Beleg dienen zur Duplikaterkennung."
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.display_name": {
-          "source": "Acquire Verified File",
+          "source": "Acquire verified file",
           "message": "Verifizierte Datei abrufen"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.allowed-value.c3RyaW5nOm5vLXJlcGxhY2U.display_name": {
-          "source": "No Replace",
+          "source": "No replace",
           "message": "Ersetzen verhindern"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.allowed-value.c3RyaW5nOnJlcGxhY2U.display_name": {
@@ -60,7 +60,7 @@
           "message": "Verhalten des Endpunkts bei bereits vorhandener Datei auswählen"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.display_name": {
-          "source": "Collision Policy",
+          "source": "Collision policy",
           "message": "Verhalten bei Namenskonflikten"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.short_desc": {
@@ -72,7 +72,7 @@
           "message": "Festgelegter SSH-Hostschlüssel als Hexwert in Kleinbuchstaben, für das gehostete Profil erforderlich"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.aG9zdF9rZXlfc2hhMjU2.display_name": {
-          "source": "Host Key SHA-256",
+          "source": "Host key SHA-256",
           "message": "SHA-256 des Hostschlüssels"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.aG9zdF9rZXlfc2hhMjU2.short_desc": {
@@ -84,7 +84,7 @@
           "message": "Lokale Datei, die nach der Prüfung ersetzt wird"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.bG9jYWxfcGF0aA.display_name": {
-          "source": "Destination File",
+          "source": "Destination file",
           "message": "Zieldatei"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.bG9jYWxfcGF0aA.short_desc": {
@@ -96,7 +96,7 @@
           "message": "Angegebene Dateilänge in Byte"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.bGVuZ3Ro.display_name": {
-          "source": "Expected Length",
+          "source": "Expected length",
           "message": "Erwartete Länge"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.bGVuZ3Ro.short_desc": {
@@ -120,7 +120,7 @@
           "message": "OpenSSH POSIX"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.cHJvZmlsZQ.allowed-value.c3RyaW5nOmhvc3RlZC1pbW11dGFibGU.display_name": {
-          "source": "Hosted Immutable",
+          "source": "Hosted immutable",
           "message": "Gehostete unveränderliche Dateien"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.cHJvZmlsZQ.desc": {
@@ -128,7 +128,7 @@
           "message": "Veröffentlichungsvereinbarung für diesen Endpunkt"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.cHJvZmlsZQ.display_name": {
-          "source": "Endpoint Profile",
+          "source": "Endpoint profile",
           "message": "Endpunktprofil"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.cHJvZmlsZQ.short_desc": {
@@ -140,7 +140,7 @@
           "message": "Absoluter Pfad der veröffentlichten Datei"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.cmVtb3RlX3BhdGg.display_name": {
-          "source": "Remote Path",
+          "source": "Remote path",
           "message": "Entfernter Pfad"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.cmVtb3RlX3BhdGg.short_desc": {
@@ -156,7 +156,7 @@
           "message": "Eine Datei von einem SFTP-Server abrufen"
         },
         "app.U0ZUUA.action.Z2V0LWZpbGU.display_name": {
-          "source": "Retrieve File With SFTP",
+          "source": "Retrieve file with SFTP",
           "message": "Datei mit SFTP abrufen"
         },
         "app.U0ZUUA.action.Z2V0LWZpbGU.option.ZW5jb2Rpbmc.desc": {
@@ -188,7 +188,7 @@
           "message": "Wenn `True`, wird die Datei als Zeichenkette zurückgegeben, `False` (Standard) als Binärdaten"
         },
         "app.U0ZUUA.action.Z2V0LWZpbGU.option.dGV4dA.display_name": {
-          "source": "Text Mode",
+          "source": "Text mode",
           "message": "Textmodus"
         },
         "app.U0ZUUA.action.Z2V0LWZpbGU.option.dGV4dA.short_desc": {
@@ -204,7 +204,7 @@
           "message": "Löscht eine Datei auf einem SFTP-Server"
         },
         "app.U0ZUUA.action.ZGVsZXRlLWZpbGU.display_name": {
-          "source": "Delete File With SFTP",
+          "source": "Delete file with SFTP",
           "message": "Datei mit SFTP löschen"
         },
         "app.U0ZUUA.action.ZGVsZXRlLWZpbGU.option.cGF0aA.desc": {
@@ -228,7 +228,7 @@
           "message": "Prüft, ob eine Datei oder ein Verzeichnis auf einem SFTP-Server existiert"
         },
         "app.U0ZUUA.action.ZXhpc3Rz.display_name": {
-          "source": "Check If Path Exists With SFTP",
+          "source": "Check if path exists with SFTP",
           "message": "Prüfen, ob Pfad mit SFTP existiert"
         },
         "app.U0ZUUA.action.ZXhpc3Rz.option.cGF0aA.desc": {
@@ -252,7 +252,7 @@
           "message": "Sendet eine Datei an einen SFTP-Server"
         },
         "app.U0ZUUA.action.c2VuZC1maWxl.display_name": {
-          "source": "Send File With SFTP",
+          "source": "Send file with SFTP",
           "message": "Datei mit SFTP senden"
         },
         "app.U0ZUUA.action.c2VuZC1maWxl.option.ZW5jb2Rpbmc.desc": {
@@ -284,7 +284,7 @@
           "message": "Wenn `True`, wird die Datei als Zeichenkette zurückgegeben, `False` (Standard) als Binärdaten"
         },
         "app.U0ZUUA.action.c2VuZC1maWxl.option.dGV4dA.display_name": {
-          "source": "Text Mode",
+          "source": "Text mode",
           "message": "Textmodus"
         },
         "app.U0ZUUA.action.c2VuZC1maWxl.option.dGV4dA.short_desc": {
@@ -300,11 +300,11 @@
           "message": "Prüfen Sie vor der Veröffentlichung die Länge und die optionale Prüfsumme des Erstellers. Wählen Sie `openssh-posix` zum Ersetzen oder `hosted-immutable`, um ein Ersetzen zu verhindern. Klären Sie bei `indeterminate` den tatsächlichen Zustand vor einem erneuten Versuch."
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.display_name": {
-          "source": "Publish Verified File",
+          "source": "Publish verified file",
           "message": "Verifizierte Datei veröffentlichen"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.allowed-value.c3RyaW5nOm5vLXJlcGxhY2U.display_name": {
-          "source": "No Replace",
+          "source": "No replace",
           "message": "Ersetzen verhindern"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.allowed-value.c3RyaW5nOnJlcGxhY2U.display_name": {
@@ -316,7 +316,7 @@
           "message": "Verhalten des Endpunkts bei bereits vorhandener Datei auswählen"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.display_name": {
-          "source": "Collision Policy",
+          "source": "Collision policy",
           "message": "Verhalten bei Namenskonflikten"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.short_desc": {
@@ -328,7 +328,7 @@
           "message": "Festgelegter SSH-Hostschlüssel als Hexwert in Kleinbuchstaben, für das gehostete Profil erforderlich"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.aG9zdF9rZXlfc2hhMjU2.display_name": {
-          "source": "Host Key SHA-256",
+          "source": "Host key SHA-256",
           "message": "SHA-256 des Hostschlüssels"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.aG9zdF9rZXlfc2hhMjU2.short_desc": {
@@ -340,7 +340,7 @@
           "message": "Zu veröffentlichende lokale Datei"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.bG9jYWxfcGF0aA.display_name": {
-          "source": "Source File",
+          "source": "Source file",
           "message": "Quelldatei"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.bG9jYWxfcGF0aA.short_desc": {
@@ -352,7 +352,7 @@
           "message": "Angegebene Dateilänge in Byte"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.bGVuZ3Ro.display_name": {
-          "source": "Expected Length",
+          "source": "Expected length",
           "message": "Erwartete Länge"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.bGVuZ3Ro.short_desc": {
@@ -376,7 +376,7 @@
           "message": "Privates Zwischenverzeichnis auf dem entfernten Dateisystem"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.c3RhZ2luZ19kaXI.display_name": {
-          "source": "Staging Directory",
+          "source": "Staging directory",
           "message": "Zwischenverzeichnis"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.c3RhZ2luZ19kaXI.short_desc": {
@@ -388,7 +388,7 @@
           "message": "OpenSSH POSIX"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.cHJvZmlsZQ.allowed-value.c3RyaW5nOmhvc3RlZC1pbW11dGFibGU.display_name": {
-          "source": "Hosted Immutable",
+          "source": "Hosted immutable",
           "message": "Gehostete unveränderliche Dateien"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.cHJvZmlsZQ.desc": {
@@ -396,7 +396,7 @@
           "message": "Veröffentlichungsvereinbarung für diesen Endpunkt"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.cHJvZmlsZQ.display_name": {
-          "source": "Endpoint Profile",
+          "source": "Endpoint profile",
           "message": "Endpunktprofil"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.cHJvZmlsZQ.short_desc": {
@@ -408,7 +408,7 @@
           "message": "Absoluter Pfad der veröffentlichten Datei"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.cmVtb3RlX3BhdGg.display_name": {
-          "source": "Remote Path",
+          "source": "Remote path",
           "message": "Entfernter Pfad"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.cmVtb3RlX3BhdGg.short_desc": {
@@ -424,7 +424,7 @@
           "message": "Entfernt ein leeres Verzeichnis auf einem SFTP-Server"
         },
         "app.U0ZUUA.action.cm1kaXI.display_name": {
-          "source": "Remove Directory With SFTP",
+          "source": "Remove directory with SFTP",
           "message": "Verzeichnis mit SFTP entfernen"
         },
         "app.U0ZUUA.action.cm1kaXI.option.cGF0aA.desc": {

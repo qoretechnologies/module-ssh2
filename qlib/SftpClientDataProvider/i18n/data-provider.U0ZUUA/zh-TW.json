@@ -8,7 +8,7 @@
           "message": "變更 SFTP 伺服器上的檔案或目錄權限"
         },
         "app.U0ZUUA.action.Y2htb2Q.display_name": {
-          "source": "Change File Permissions With SFTP",
+          "source": "Change file permissions with SFTP",
           "message": "使用 SFTP 變更檔案權限"
         },
         "app.U0ZUUA.action.Y2htb2Q.option.bW9kZQ.desc": {
@@ -44,11 +44,11 @@
           "message": "在開放存取本機檔案前驗證已發布的版本。對於可取代的路徑，請提供產生者的摘要。使用收據中的端點、身分、遠端路徑及版本辨識重複項目。"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.display_name": {
-          "source": "Acquire Verified File",
+          "source": "Acquire verified file",
           "message": "取得已驗證的檔案"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.allowed-value.c3RyaW5nOm5vLXJlcGxhY2U.display_name": {
-          "source": "No Replace",
+          "source": "No replace",
           "message": "禁止取代"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.allowed-value.c3RyaW5nOnJlcGxhY2U.display_name": {
@@ -60,7 +60,7 @@
           "message": "選擇端點處理現有檔案的方式"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.display_name": {
-          "source": "Collision Policy",
+          "source": "Collision policy",
           "message": "名稱衝突處理原則"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.short_desc": {
@@ -72,7 +72,7 @@
           "message": "釘選的 SSH 主機金鑰指紋，以小寫十六進位表示，託管設定檔必填"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.aG9zdF9rZXlfc2hhMjU2.display_name": {
-          "source": "Host Key SHA-256",
+          "source": "Host key SHA-256",
           "message": "主機金鑰 SHA-256"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.aG9zdF9rZXlfc2hhMjU2.short_desc": {
@@ -84,7 +84,7 @@
           "message": "驗證後要取代的本機檔案"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.bG9jYWxfcGF0aA.display_name": {
-          "source": "Destination File",
+          "source": "Destination file",
           "message": "目的檔案"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.bG9jYWxfcGF0aA.short_desc": {
@@ -96,7 +96,7 @@
           "message": "宣告的檔案長度（位元組）"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.bGVuZ3Ro.display_name": {
-          "source": "Expected Length",
+          "source": "Expected length",
           "message": "預期長度"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.bGVuZ3Ro.short_desc": {
@@ -120,7 +120,7 @@
           "message": "OpenSSH POSIX"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.cHJvZmlsZQ.allowed-value.c3RyaW5nOmhvc3RlZC1pbW11dGFibGU.display_name": {
-          "source": "Hosted Immutable",
+          "source": "Hosted immutable",
           "message": "託管的不可變檔案"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.cHJvZmlsZQ.desc": {
@@ -128,7 +128,7 @@
           "message": "此端點的發布約定"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.cHJvZmlsZQ.display_name": {
-          "source": "Endpoint Profile",
+          "source": "Endpoint profile",
           "message": "端點設定檔"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.cHJvZmlsZQ.short_desc": {
@@ -140,7 +140,7 @@
           "message": "已發布檔案的絕對路徑"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.cmVtb3RlX3BhdGg.display_name": {
-          "source": "Remote Path",
+          "source": "Remote path",
           "message": "遠端路徑"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.cmVtb3RlX3BhdGg.short_desc": {
@@ -156,7 +156,7 @@
           "message": "從 SFTP 伺服器檢索檔案"
         },
         "app.U0ZUUA.action.Z2V0LWZpbGU.display_name": {
-          "source": "Retrieve File With SFTP",
+          "source": "Retrieve file with SFTP",
           "message": "使用 SFTP 檢索檔案"
         },
         "app.U0ZUUA.action.Z2V0LWZpbGU.option.ZW5jb2Rpbmc.desc": {
@@ -188,7 +188,7 @@
           "message": "若為 `True`，檔案將作為字串傳回；若為 `False`（預設），將作為二進位資料傳回"
         },
         "app.U0ZUUA.action.Z2V0LWZpbGU.option.dGV4dA.display_name": {
-          "source": "Text Mode",
+          "source": "Text mode",
           "message": "文字模式"
         },
         "app.U0ZUUA.action.Z2V0LWZpbGU.option.dGV4dA.short_desc": {
@@ -204,7 +204,7 @@
           "message": "刪除 SFTP 伺服器上的檔案"
         },
         "app.U0ZUUA.action.ZGVsZXRlLWZpbGU.display_name": {
-          "source": "Delete File With SFTP",
+          "source": "Delete file with SFTP",
           "message": "使用 SFTP 刪除檔案"
         },
         "app.U0ZUUA.action.ZGVsZXRlLWZpbGU.option.cGF0aA.desc": {
@@ -228,7 +228,7 @@
           "message": "檢查 SFTP 伺服器上是否存在檔案或目錄"
         },
         "app.U0ZUUA.action.ZXhpc3Rz.display_name": {
-          "source": "Check If Path Exists With SFTP",
+          "source": "Check if path exists with SFTP",
           "message": "使用 SFTP 檢查路徑是否存在"
         },
         "app.U0ZUUA.action.ZXhpc3Rz.option.cGF0aA.desc": {
@@ -252,7 +252,7 @@
           "message": "傳送檔案至 SFTP 伺服器"
         },
         "app.U0ZUUA.action.c2VuZC1maWxl.display_name": {
-          "source": "Send File With SFTP",
+          "source": "Send file with SFTP",
           "message": "使用 SFTP 傳送檔案"
         },
         "app.U0ZUUA.action.c2VuZC1maWxl.option.ZW5jb2Rpbmc.desc": {
@@ -284,7 +284,7 @@
           "message": "若為 `True`，檔案將作為字串傳回；若為 `False`（預設），將作為二進位資料傳回"
         },
         "app.U0ZUUA.action.c2VuZC1maWxl.option.dGV4dA.display_name": {
-          "source": "Text Mode",
+          "source": "Text mode",
           "message": "文字模式"
         },
         "app.U0ZUUA.action.c2VuZC1maWxl.option.dGV4dA.short_desc": {
@@ -300,11 +300,11 @@
           "message": "發布私有暫存檔案前，先驗證長度及產生者提供的選用摘要。選擇 `openssh-posix` 以允許取代，或選擇 `hosted-immutable` 以禁止取代。若收據顯示 `indeterminate`，請先確認實際狀態再重試。"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.display_name": {
-          "source": "Publish Verified File",
+          "source": "Publish verified file",
           "message": "發布已驗證的檔案"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.allowed-value.c3RyaW5nOm5vLXJlcGxhY2U.display_name": {
-          "source": "No Replace",
+          "source": "No replace",
           "message": "禁止取代"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.allowed-value.c3RyaW5nOnJlcGxhY2U.display_name": {
@@ -316,7 +316,7 @@
           "message": "選擇端點處理現有檔案的方式"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.display_name": {
-          "source": "Collision Policy",
+          "source": "Collision policy",
           "message": "名稱衝突處理原則"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.short_desc": {
@@ -328,7 +328,7 @@
           "message": "釘選的 SSH 主機金鑰指紋，以小寫十六進位表示，託管設定檔必填"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.aG9zdF9rZXlfc2hhMjU2.display_name": {
-          "source": "Host Key SHA-256",
+          "source": "Host key SHA-256",
           "message": "主機金鑰 SHA-256"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.aG9zdF9rZXlfc2hhMjU2.short_desc": {
@@ -340,7 +340,7 @@
           "message": "要發布的本機檔案"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.bG9jYWxfcGF0aA.display_name": {
-          "source": "Source File",
+          "source": "Source file",
           "message": "來源檔案"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.bG9jYWxfcGF0aA.short_desc": {
@@ -352,7 +352,7 @@
           "message": "宣告的檔案長度（位元組）"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.bGVuZ3Ro.display_name": {
-          "source": "Expected Length",
+          "source": "Expected length",
           "message": "預期長度"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.bGVuZ3Ro.short_desc": {
@@ -376,7 +376,7 @@
           "message": "遠端檔案系統上的私有暫存目錄"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.c3RhZ2luZ19kaXI.display_name": {
-          "source": "Staging Directory",
+          "source": "Staging directory",
           "message": "暫存目錄"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.c3RhZ2luZ19kaXI.short_desc": {
@@ -388,7 +388,7 @@
           "message": "OpenSSH POSIX"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.cHJvZmlsZQ.allowed-value.c3RyaW5nOmhvc3RlZC1pbW11dGFibGU.display_name": {
-          "source": "Hosted Immutable",
+          "source": "Hosted immutable",
           "message": "託管的不可變檔案"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.cHJvZmlsZQ.desc": {
@@ -396,7 +396,7 @@
           "message": "此端點的發布約定"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.cHJvZmlsZQ.display_name": {
-          "source": "Endpoint Profile",
+          "source": "Endpoint profile",
           "message": "端點設定檔"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.cHJvZmlsZQ.short_desc": {
@@ -408,7 +408,7 @@
           "message": "已發布檔案的絕對路徑"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.cmVtb3RlX3BhdGg.display_name": {
-          "source": "Remote Path",
+          "source": "Remote path",
           "message": "遠端路徑"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.cmVtb3RlX3BhdGg.short_desc": {
@@ -424,7 +424,7 @@
           "message": "移除 SFTP 伺服器上的空目錄"
         },
         "app.U0ZUUA.action.cm1kaXI.display_name": {
-          "source": "Remove Directory With SFTP",
+          "source": "Remove directory with SFTP",
           "message": "使用 SFTP 移除目錄"
         },
         "app.U0ZUUA.action.cm1kaXI.option.cGF0aA.desc": {

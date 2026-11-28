@@ -63,7 +63,7 @@ module SftpPoller {
             "app": SftpPoller::AppName,
             "path": "/",
             "action": "sftp-file-event",
-            "display_name": "SFTP File Received",
+            "display_name": "SFTP file received",
             "subtype": "sftppoller",
             "short_desc": "A file is uploaded to an SFTP server",
             "desc": "React to files uploaded to an SFTP server; the action configuration determines if the event "
@@ -1526,24 +1526,24 @@ public class SftpPollerDataProviderBase inherits DataProvider::AbstractDataProvi
         #! Constructor options
         const ConstructorOptions = {
             "commit_profile": <DataProviderOptionInfo>{
-                "display_name": "Publication Agreement",
+                "display_name": "Publication agreement",
                 "short_desc": "Verify committed files before emitting events",
                 "desc": "Use a dedicated committed directory and a writable local directory. Hosted files are immutable. "
                     "On OpenSSH the committed name starts with the producer SHA-256 and a dot.",
                 "type": AbstractDataProviderTypeMap."string",
                 "allowed_values": (
-                    <AllowedValueInfo>{"value": "hosted-immutable", "display_name": "Hosted Immutable"},
-                    <AllowedValueInfo>{"value": "openssh-sha256-name", "display_name": "OpenSSH Digest Filename"},
+                    <AllowedValueInfo>{"value": "hosted-immutable", "display_name": "Hosted immutable"},
+                    <AllowedValueInfo>{"value": "openssh-sha256-name", "display_name": "OpenSSH digest filename"},
                 ),
             },
             "host_key_sha256": <DataProviderOptionInfo>{
-                "display_name": "Host Key SHA-256",
+                "display_name": "Host key SHA-256",
                 "short_desc": "Pinned host key fingerprint",
                 "desc": "Pinned SSH host key in lowercase hex, required for the hosted profile",
                 "type": AbstractDataProviderTypeMap."string",
             },
             "atomic_transfer":  <DataProviderOptionInfo>{
-                "display_name": "Atomic File Transfer",
+                "display_name": "Atomic file transfer",
                 "short_desc": "Use an atomic file transfer mechanism",
                 "type": AbstractDataProviderTypeMap."bool",
                 "desc": "Use an atomic transfer mechanism with `local_dir` where remote files are first moved to a "
@@ -1554,14 +1554,14 @@ public class SftpPollerDataProviderBase inherits DataProvider::AbstractDataProvi
             },
 
             "keyfile": <DataProviderOptionInfo>{
-                "display_name": "SSH Private Key",
+                "display_name": "SSH private key",
                 "short_desc": "A path to an SSH private key file in PEM format",
                 "type": AbstractDataProviderTypeMap."string",
                 "desc": "A path to an SSH private key file in PEM format to use for key-based authentication",
             },
 
             "known_hosts": <DataProviderOptionInfo>{
-                "display_name": "Known Hosts File",
+                "display_name": "Known hosts file",
                 "short_desc": "A path to an OpenSSH known_hosts file for host key verification",
                 "type": AbstractDataProviderTypeMap."string",
                 "desc": "A path to an OpenSSH known_hosts file for host key verification; environment variables "
@@ -1572,7 +1572,7 @@ public class SftpPollerDataProviderBase inherits DataProvider::AbstractDataProvi
             },
 
             "host_key_policy": <DataProviderOptionInfo>{
-                "display_name": "Host Key Policy",
+                "display_name": "Host key policy",
                 "short_desc": "Policy for unknown host keys",
                 "type": AbstractDataProviderTypeMap."string",
                 "desc": "Policy for unknown host keys when host-key verification is enabled: `reject` rejects "
@@ -1587,14 +1587,14 @@ public class SftpPollerDataProviderBase inherits DataProvider::AbstractDataProvi
                         "value": "reject",
                     },
                     <AllowedValueInfo>{
-                        "display_name": "Trust On First Use",
+                        "display_name": "Trust on first use",
                         "short_desc": "Trust unknown host keys on first use and persist them",
                         "desc": "Trust unknown host keys on first use and persist them to the configured known_hosts "
                             "file",
                         "value": "tofu",
                     },
                     <AllowedValueInfo>{
-                        "display_name": "Session Trust On First Use",
+                        "display_name": "Session trust on first use",
                         "short_desc": "Trust unknown host keys for the current connection only when needed",
                         "desc": "Trust unknown host keys for the current connection only if no known_hosts file is "
                             "configured",
@@ -1605,7 +1605,7 @@ public class SftpPollerDataProviderBase inherits DataProvider::AbstractDataProvi
             },
 
             "verify_host_key": <DataProviderOptionInfo>{
-                "display_name": "Verify Host Key",
+                "display_name": "Verify host key",
                 "short_desc": "Enable host key verification against the known_hosts file",
                 "type": AbstractDataProviderTypeMap."bool",
                 "desc": "Enable host key verification against the known_hosts file",
@@ -1613,7 +1613,7 @@ public class SftpPollerDataProviderBase inherits DataProvider::AbstractDataProvi
             },
 
             "use_agent": <DataProviderOptionInfo>{
-                "display_name": "Use SSH Agent",
+                "display_name": "Use SSH agent",
                 "short_desc": "Enable SSH agent authentication",
                 "type": AbstractDataProviderTypeMap."bool",
                 "desc": "Enable SSH agent authentication; when enabled, the client will attempt to authenticate "
@@ -1622,7 +1622,7 @@ public class SftpPollerDataProviderBase inherits DataProvider::AbstractDataProvi
             },
 
             "keepalive_interval": <DataProviderOptionInfo>{
-                "display_name": "Keepalive Interval",
+                "display_name": "Keepalive interval",
                 "short_desc": "Keepalive interval in seconds",
                 "type": AbstractDataProviderTypeMap."int",
                 "desc": "Keepalive interval in seconds; 0 disables keepalive; default: 60",
@@ -1630,7 +1630,7 @@ public class SftpPollerDataProviderBase inherits DataProvider::AbstractDataProvi
             },
 
             "local_dir": <DataProviderOptionInfo>{
-                "display_name": "Local Directory",
+                "display_name": "Local directory",
                 "short_desc": "A local directory that will be used to retrieve files",
                 "type": AbstractDataProviderType::get(StringType, NOTHING, {
                     DTT_FromFile: True,
@@ -1640,7 +1640,7 @@ public class SftpPollerDataProviderBase inherits DataProvider::AbstractDataProvi
             },
 
             "mask": <DataProviderOptionInfo>{
-                "display_name": "Glob Mask",
+                "display_name": "Glob mask",
                 "short_desc": "The glob mask to use to match files to poll",
                 "type": AbstractDataProviderTypeMap."string",
                 "desc": "The glob mask to use to match files to poll; will be treated as a regex if `regex` is "
@@ -1649,7 +1649,7 @@ public class SftpPollerDataProviderBase inherits DataProvider::AbstractDataProvi
             },
 
             "minage": <DataProviderOptionInfo>{
-                "display_name": "Minimum Polling Age",
+                "display_name": "Minimum polling age",
                 "short_desc": "The minimum age of files to poll in seconds",
                 "type": AbstractDataProviderTypeMap."int",
                 "desc": "An integer giving the minimum file age in seconds before the file will be polled; this is "
@@ -1659,7 +1659,7 @@ public class SftpPollerDataProviderBase inherits DataProvider::AbstractDataProvi
             },
 
             "poll_interval": <DataProviderOptionInfo>{
-                "display_name": "Poll Interval",
+                "display_name": "Poll interval",
                 "short_desc": "The poll interval in seconds",
                 "type": AbstractDataProviderTypeMap."int",
                 "desc": "The interval in seconds between polling for files",
@@ -1667,14 +1667,14 @@ public class SftpPollerDataProviderBase inherits DataProvider::AbstractDataProvi
             },
 
             "regex": <DataProviderOptionInfo>{
-                "display_name": "Regular Expression Match",
+                "display_name": "Regular expression match",
                 "short_desc": "If true then the 'mask' argument is treated as a regular expression",
                 "type": AbstractDataProviderTypeMap."bool",
                 "desc": "If `true` then `mask` is treated as a regular expression instead of a glob pattern",
             },
 
             "remote_file_disposition": <DataProviderOptionInfo>{
-                "display_name": "Remote File Disposition",
+                "display_name": "Remote file disposition",
                 "short_desc": "Delete or move remote file after processing?",
                 "desc": "Delete or move remote file after processing? If `MOVE`, `remote_file_move_target` must also "
                     "be set",
@@ -1705,7 +1705,7 @@ public class SftpPollerDataProviderBase inherits DataProvider::AbstractDataProvi
             },
 
             "remote_file_move_target": <DataProviderOptionInfo>{
-                "display_name": "Remote File Move Target",
+                "display_name": "Remote file move target",
                 "short_desc": "The target template for the remote file after processing",
                 "desc": "The target template for the remote file after processing; use `%s` for the original file "
                     "name. This option is only used when `remote_file_disposition` is `MOVE`, otherwise it is "
@@ -1714,7 +1714,7 @@ public class SftpPollerDataProviderBase inherits DataProvider::AbstractDataProvi
             },
 
             "reopt": <DataProviderOptionInfo>{
-                "display_name": "Regular Expression Options",
+                "display_name": "Regular expression options",
                 "short_desc": "A bitfield of regular expression options",
                 "type": AbstractDataProviderTypeMap."int",
                 "desc": "A bitfield of regular expression options (`1` = ignore case, `2` = treat EOL as a regular "
@@ -1722,21 +1722,21 @@ public class SftpPollerDataProviderBase inherits DataProvider::AbstractDataProvi
             },
 
             "sort_desc": <DataProviderOptionInfo>{
-                "display_name": "Sort Descending",
+                "display_name": "Sort descending",
                 "short_desc": "Sort files in descending order",
                 "type": AbstractDataProviderTypeMap."bool",
                 "desc": "Sort descending; if not given then an ascending sort is assumed if a `sort_type` is given",
             },
 
             "sort_type": <DataProviderOptionInfo>{
-                "display_name": "Sort Type",
+                "display_name": "Sort type",
                 "short_desc": "Field to sort files on",
                 "type": AbstractDataProviderTypeMap."string",
                 "desc": "Either `name` or `date` for the data to use for sorting",
             },
 
             "tempfile_template":  <DataProviderOptionInfo>{
-                "display_name": "Temporary Filename Template",
+                "display_name": "Temporary filename template",
                 "short_desc": "The template for temporary filenames",
                 "desc": "The template for temporary filenames; use `%s` for the original filename",
                 "type": AbstractDataProviderTypeMap."string",

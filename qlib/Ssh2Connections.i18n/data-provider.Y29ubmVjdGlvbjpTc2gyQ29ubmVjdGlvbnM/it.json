@@ -28,7 +28,7 @@
           "message": "Un percorso a un file known_hosts di OpenSSH per la verifica della chiave host; le variabili d'ambiente possono essere prefissate con '$' nel percorso; se impostato su una stringa vuota, non viene configurato alcun file known_hosts; se non impostato, viene applicato il valore predefinito del modulo ssh2 (normalmente il file ~/.ssh/known_hosts dell'utente locale, a meno che l'applicazione incorporante non abbia modificato o disabilitato il valore predefinito)"
         },
         "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.a25vd25faG9zdHM.display_name": {
-          "source": "Known Hosts File",
+          "source": "Known hosts file",
           "message": "File degli host noti"
         },
         "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.a25vd25faG9zdHM.short_desc": {
@@ -40,7 +40,7 @@
           "message": "Un percorso verso un file di chiave privata SSH in formato PEM da utilizzare per l'autenticazione basata su chiavi"
         },
         "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.a2V5ZmlsZQ.display_name": {
-          "source": "SSH Private Key",
+          "source": "SSH private key",
           "message": "Chiave privata SSH"
         },
         "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.a2V5ZmlsZQ.short_desc": {
@@ -52,7 +52,7 @@
           "message": "Intervallo di keepalive in secondi; 0 disabilita il keepalive; predefinito: 60"
         },
         "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.a2VlcGFsaXZlX2ludGVydmFs.display_name": {
-          "source": "Keepalive Interval",
+          "source": "Keepalive interval",
           "message": "Intervallo keepalive"
         },
         "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.a2VlcGFsaXZlX2ludGVydmFs.short_desc": {
@@ -76,7 +76,7 @@
           "message": "Fidati delle chiavi dell'host sconosciute al primo utilizzo e salvale nel file known_hosts configurato"
         },
         "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.aG9zdF9rZXlfcG9saWN5.allowed_values.c3RyaW5nOnRvZnU.display_name": {
-          "source": "Trust On First Use",
+          "source": "Trust on first use",
           "message": "Fidati al primo utilizzo"
         },
         "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.aG9zdF9rZXlfcG9saWN5.allowed_values.c3RyaW5nOnRvZnU.short_desc": {
@@ -88,7 +88,7 @@
           "message": "Fidati delle chiavi host sconosciute solo per la connessione corrente se non è configurato alcun file known_hosts"
         },
         "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.aG9zdF9rZXlfcG9saWN5.allowed_values.c3RyaW5nOnRvZnUtc2Vzc2lvbg.display_name": {
-          "source": "Session Trust On First Use",
+          "source": "Session trust on first use",
           "message": "Fiducia in prima utilizzo per la sessione"
         },
         "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.aG9zdF9rZXlfcG9saWN5.allowed_values.c3RyaW5nOnRvZnUtc2Vzc2lvbg.short_desc": {
@@ -100,7 +100,7 @@
           "message": "Politica per le chiavi host sconosciute quando la verifica della chiave host è abilitata: `reject` rifiuta le chiavi sconosciute, `tofu` salva le chiavi usate per la prima volta nel file known_hosts configurato, e `tofu-session` fidati delle chiavi sconosciute solo per la connessione corrente se non è configurato alcun file known_hosts"
         },
         "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.aG9zdF9rZXlfcG9saWN5.display_name": {
-          "source": "Host Key Policy",
+          "source": "Host key policy",
           "message": "Politica per le chiavi host"
         },
         "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.aG9zdF9rZXlfcG9saWN5.short_desc": {
@@ -112,7 +112,7 @@
           "message": "Abilita l'autenticazione tramite agente SSH; quando abilitato, il client cercherà di autenticarsi usando le chiavi dall'agente SSH in esecuzione prima di altri metodi"
         },
         "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.dXNlX2FnZW50.display_name": {
-          "source": "Use SSH Agent",
+          "source": "Use SSH agent",
           "message": "Usa l'agente SSH"
         },
         "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.dXNlX2FnZW50.short_desc": {
@@ -124,7 +124,7 @@
           "message": "Abilita la verifica della chiave host rispetto al file known_hosts; abilitato per impostazione predefinita; il valore predefinito effettivo segue il predefinito globale del processo del modulo ssh2, che un'applicazione incorporata può modificare tramite SSH2Base::setDefaultVerifyHostKey() o la variabile d'ambiente QORE_SSH2_DEFAULT_VERIFY_HOST_KEY"
         },
         "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.dmVyaWZ5X2hvc3Rfa2V5.display_name": {
-          "source": "Verify Host Key",
+          "source": "Verify host key",
           "message": "Verifica chiave host"
         },
         "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.dmVyaWZ5X2hvc3Rfa2V5.short_desc": {

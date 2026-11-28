@@ -29,7 +29,7 @@ public class SftpClientMoveRequestDataType inherits HashDataType {
         #! Field descriptions
         const Fields = {
             "source": {
-                "display_name": "Source Path",
+                "display_name": "Source path",
                 "short_desc": "The source file path",
                 "desc": "The source file or directory path on the SFTP server",
                 "type": AbstractDataProviderTypeMap."string",
@@ -37,7 +37,7 @@ public class SftpClientMoveRequestDataType inherits HashDataType {
                 "example_value": "/home/user/oldname.txt",
             },
             "target": {
-                "display_name": "Target Path",
+                "display_name": "Target path",
                 "short_desc": "The target file path",
                 "desc": "The target file or directory path on the SFTP server",
                 "type": AbstractDataProviderTypeMap."string",
