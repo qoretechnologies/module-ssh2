@@ -8,15 +8,15 @@
           "message": "Реагувати на файли, завантажені на сервер SFTP; конфігурація дії визначає, чи містить подія самі дані файлу, чи посилання на розташування файлу в локальній файловій системі. У будь-якому разі подія вказує на те, що дані файлу вже завантажено і вони доступні локально. Задайте для remote_file_disposition значення DELETE або MOVE, щоб після обробки прибрати файл із віддаленого каталогу. Для NONE діє таке правило. Обробник має перемістити, перейменувати або видалити файл, інакше під час наступного опитування його буде доставлено повторно."
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.display_name": {
-          "source": "SFTP File Received",
+          "source": "SFTP file received",
           "message": "Отримано файл SFTP"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.Y29tbWl0X3Byb2ZpbGU.allowed-value.c3RyaW5nOm9wZW5zc2gtc2hhMjU2LW5hbWU.display_name": {
-          "source": "OpenSSH Digest Filename",
+          "source": "OpenSSH digest filename",
           "message": "Назва файлу OpenSSH із хешем"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.Y29tbWl0X3Byb2ZpbGU.allowed-value.c3RyaW5nOmhvc3RlZC1pbW11dGFibGU.display_name": {
-          "source": "Hosted Immutable",
+          "source": "Hosted immutable",
           "message": "Незмінні файли на сервері"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.Y29tbWl0X3Byb2ZpbGU.desc": {
@@ -24,7 +24,7 @@
           "message": "Використовуйте окремий каталог для опублікованих файлів і локальний каталог із правом запису. Файли в серверному профілі незмінні. В OpenSSH опублікована назва починається з SHA-256 виробника та крапки."
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.Y29tbWl0X3Byb2ZpbGU.display_name": {
-          "source": "Publication Agreement",
+          "source": "Publication agreement",
           "message": "Угода про публікацію"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.Y29tbWl0X3Byb2ZpbGU.short_desc": {
@@ -36,7 +36,7 @@
           "message": "Використовувати механізм атомарної передачі з `local_dir`, де віддалені файли спочатку переміщуються в тимчасове розташування, а потім переміщуються в остаточне розташування після їх повної передачі.\n\nЦе гарантує, що файли ніколи не будуть прочитані до тих пір, поки вони не будуть повністю передані"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.YXRvbWljX3RyYW5zZmVy.display_name": {
-          "source": "Atomic File Transfer",
+          "source": "Atomic file transfer",
           "message": "Атомарна передача файлів"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.YXRvbWljX3RyYW5zZmVy.short_desc": {
@@ -48,7 +48,7 @@
           "message": "Шлях до файлу приватного ключа SSH у форматі PEM для автентифікації на основі ключів"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.a2V5ZmlsZQ.display_name": {
-          "source": "SSH Private Key",
+          "source": "SSH private key",
           "message": "Приватний ключ SSH"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.a2V5ZmlsZQ.short_desc": {
@@ -60,7 +60,7 @@
           "message": "Закріплений ключ хоста SSH у шістнадцятковому записі малими літерами, обов’язковий для серверного профілю"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfc2hhMjU2.display_name": {
-          "source": "Host Key SHA-256",
+          "source": "Host key SHA-256",
           "message": "SHA-256 ключа хоста"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfc2hhMjU2.short_desc": {
@@ -72,7 +72,7 @@
           "message": "Локальний каталог, який використовуватиметься для отримання файлів"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.bG9jYWxfZGly.display_name": {
-          "source": "Local Directory",
+          "source": "Local directory",
           "message": "Локальний каталог"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.bG9jYWxfZGly.short_desc": {
@@ -84,7 +84,7 @@
           "message": "Маска glob для збігу файлів під час опитування; оброблятиметься як регулярний вираз, якщо `regex` має значення `true`"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.bWFzaw.display_name": {
-          "source": "Glob Mask",
+          "source": "Glob mask",
           "message": "Маска Glob"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.bWFzaw.short_desc": {
@@ -96,7 +96,7 @@
           "message": "Ціле число, що задає мінімальний вік файлу в секундах перед його опитуванням; це призначено для обходу неатомарних операцій передачі файлів.\n\nЯкщо цей параметр необхідний, встановіть значення, більше за найдовший час, який може знадобитися для передачі файлу"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.bWluYWdl.display_name": {
-          "source": "Minimum Polling Age",
+          "source": "Minimum polling age",
           "message": "Мінімальний вік опитування"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.bWluYWdl.short_desc": {
@@ -108,7 +108,7 @@
           "message": "Або `name`, або `date` для даних, які використовуються для сортування"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.c29ydF90eXBl.display_name": {
-          "source": "Sort Type",
+          "source": "Sort type",
           "message": "Тип сортування"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.c29ydF90eXBl.short_desc": {
@@ -120,7 +120,7 @@
           "message": "Сортувати за спаданням; якщо не вказано, припускається сортування за зростанням, якщо вказано `sort_type`"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.c29ydF9kZXNj.display_name": {
-          "source": "Sort Descending",
+          "source": "Sort descending",
           "message": "Сортувати за спаданням"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.c29ydF9kZXNj.short_desc": {
@@ -132,7 +132,7 @@
           "message": "Інтервал у секундах між опитуваннями файлів"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cG9sbF9pbnRlcnZhbA.display_name": {
-          "source": "Poll Interval",
+          "source": "Poll interval",
           "message": "Інтервал опитування"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cG9sbF9pbnRlcnZhbA.short_desc": {
@@ -144,7 +144,7 @@
           "message": "Якщо `true`, то `mask` розглядається як регулярний вираз замість шаблону glob"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cmVnZXg.display_name": {
-          "source": "Regular Expression Match",
+          "source": "Regular expression match",
           "message": "Збіг за регулярним виразом"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cmVnZXg.short_desc": {
@@ -192,7 +192,7 @@
           "message": "Видалити чи перемістити віддалений файл після обробки? Якщо `MOVE`, також має бути встановлено `remote_file_move_target`"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cmVtb3RlX2ZpbGVfZGlzcG9zaXRpb24.display_name": {
-          "source": "Remote File Disposition",
+          "source": "Remote file disposition",
           "message": "Дія з віддаленим файлом"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cmVtb3RlX2ZpbGVfZGlzcG9zaXRpb24.short_desc": {
@@ -204,7 +204,7 @@
           "message": "Цільовий шаблон для віддаленого файлу після обробки; використовуйте `%s` для початкового імені файлу. Цей параметр використовується лише тоді, коли `remote_file_disposition` має значення `MOVE`, інакше він ігнорується"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cmVtb3RlX2ZpbGVfbW92ZV90YXJnZXQ.display_name": {
-          "source": "Remote File Move Target",
+          "source": "Remote file move target",
           "message": "Ціль переміщення віддаленого файлу"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cmVtb3RlX2ZpbGVfbW92ZV90YXJnZXQ.short_desc": {
@@ -216,7 +216,7 @@
           "message": "Бітове поле параметрів регулярного виразу (`1` = ігнорувати регістр, `2` = вважати EOL звичайним символом); ігнорується, якщо `regex` не є `true`"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cmVvcHQ.display_name": {
-          "source": "Regular Expression Options",
+          "source": "Regular expression options",
           "message": "Параметри регулярного виразу"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cmVvcHQ.short_desc": {
@@ -228,7 +228,7 @@
           "message": "Шаблон для тимчасових імен файлів; використовуйте `%s` для початкового імені файлу"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.dGVtcGZpbGVfdGVtcGxhdGU.display_name": {
-          "source": "Temporary Filename Template",
+          "source": "Temporary filename template",
           "message": "Шаблон тимчасового імені файлу"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.dGVtcGZpbGVfdGVtcGxhdGU.short_desc": {
@@ -252,7 +252,7 @@
           "message": "Універсальний сервер SFTP для обміну файлами через SFTP"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.a25vd25faG9zdHM.display_name": {
-          "source": "Known Hosts File",
+          "source": "Known hosts file",
           "message": "Файл відомих хостів"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.a25vd25faG9zdHM.short_desc": {
@@ -264,7 +264,7 @@
           "message": "Шлях до файлу known_hosts OpenSSH для перевірки ключів хоста; змінні середовища можуть мати префікс '$' у шляху; якщо встановлено порожній рядок, файл known_hosts не конфігурується; якщо не встановлено, застосовується значення за замовчуванням модуля ssh2 (зазвичай файл ~/.ssh/known_hosts користувача, якщо вкладене застосування не змінило або не вимкнуло значення за замовчуванням)"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfcG9saWN5.display_name": {
-          "source": "Host Key Policy",
+          "source": "Host key policy",
           "message": "Політика ключів хостів"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfcG9saWN5.short_desc": {
@@ -288,7 +288,7 @@
           "message": "Відхиляти невідомі ключі хоста"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfcG9saWN5.allowed-value.c3RyaW5nOnRvZnU.display_name": {
-          "source": "Trust On First Use",
+          "source": "Trust on first use",
           "message": "Надійність при першому використанні"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfcG9saWN5.allowed-value.c3RyaW5nOnRvZnU.short_desc": {
@@ -300,7 +300,7 @@
           "message": "Надавати довіру невідомим ключам хоста при першому використанні та зберігати їх у конфігурованому файлі known_hosts"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfcG9saWN5.allowed-value.c3RyaW5nOnRvZnUtc2Vzc2lvbg.display_name": {
-          "source": "Session Trust On First Use",
+          "source": "Session trust on first use",
           "message": "Надійність сеансу при першому використанні"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfcG9saWN5.allowed-value.c3RyaW5nOnRvZnUtc2Vzc2lvbg.short_desc": {
@@ -312,7 +312,7 @@
           "message": "Надійність невідомих ключів хостів лише для поточного з’єднання, якщо не налаштовано файл known_hosts"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.dmVyaWZ5X2hvc3Rfa2V5.display_name": {
-          "source": "Verify Host Key",
+          "source": "Verify host key",
           "message": "Перевірити ключ хоста"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.dmVyaWZ5X2hvc3Rfa2V5.short_desc": {
@@ -324,7 +324,7 @@
           "message": "Увімкнути перевірку ключа хоста проти файлу known_hosts"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.dXNlX2FnZW50.display_name": {
-          "source": "Use SSH Agent",
+          "source": "Use SSH agent",
           "message": "Використовувати SSH-агент"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.dXNlX2FnZW50.short_desc": {
@@ -336,7 +336,7 @@
           "message": "Увімкнути автентифікацію через SSH-агент; коли увімкнено, клієнт спробує автентифікуватися за допомогою ключів із запущеного SSH-агента перед іншими методами"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.a2VlcGFsaXZlX2ludGVydmFs.display_name": {
-          "source": "Keepalive Interval",
+          "source": "Keepalive interval",
           "message": "Інтервал keepalive"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.a2VlcGFsaXZlX2ludGVydmFs.short_desc": {

@@ -37,7 +37,7 @@ public class SftpClientGetFileRequestDataType inherits HashDataType {
                 "example_value": "/home/user/file.txt",
             },
             "text": {
-                "display_name": "Text Mode",
+                "display_name": "Text mode",
                 "short_desc": "Return file as text string",
                 "desc": "If `True` the file will be returned as a string, `False` (the default) as binary data",
                 "type": AbstractDataProviderTypeMap."bool",

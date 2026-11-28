@@ -28,7 +28,7 @@
           "message": "Cesta k súboru known_hosts OpenSSH pre overenie hostiteľského kľúča; premenné prostredia môžu mať v ceste predponu '$'; ak je nastavené na prázdny reťazec, žiadny súbor known_hosts nie je nakonfigurovaný; ak nie je nastavené, použije sa predvolená hodnota modulu ssh2 (obvykle súbor ~/.ssh/known_hosts lokálneho užívateľa, pokiaľ aplikácia, ktorá modul vložila, nezmenila alebo vypnula predvolenú hodnotu)"
         },
         "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.a25vd25faG9zdHM.display_name": {
-          "source": "Known Hosts File",
+          "source": "Known hosts file",
           "message": "Súbor známych hostiteľov"
         },
         "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.a25vd25faG9zdHM.short_desc": {
@@ -40,7 +40,7 @@
           "message": "Cesta k súboru so súkromným kľúčom SSH vo formáte PEM na použitie pri autentifikácii pomocou kľúča"
         },
         "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.a2V5ZmlsZQ.display_name": {
-          "source": "SSH Private Key",
+          "source": "SSH private key",
           "message": "Súkromný kľúč SSH"
         },
         "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.a2V5ZmlsZQ.short_desc": {
@@ -52,7 +52,7 @@
           "message": "Interval keepalive v sekundách; hodnota 0 vypne keepalive; predvolené: 60"
         },
         "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.a2VlcGFsaXZlX2ludGVydmFs.display_name": {
-          "source": "Keepalive Interval",
+          "source": "Keepalive interval",
           "message": "Interval keepalive"
         },
         "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.a2VlcGFsaXZlX2ludGVydmFs.short_desc": {
@@ -76,7 +76,7 @@
           "message": "Dôverovať neznámym kľúčom hostiteľa pri prvom použití a uchovávať ich v konfigurovanej súbore known_hosts"
         },
         "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.aG9zdF9rZXlfcG9saWN5.allowed_values.c3RyaW5nOnRvZnU.display_name": {
-          "source": "Trust On First Use",
+          "source": "Trust on first use",
           "message": "Dôvera pri prvom použití"
         },
         "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.aG9zdF9rZXlfcG9saWN5.allowed_values.c3RyaW5nOnRvZnU.short_desc": {
@@ -88,7 +88,7 @@
           "message": "Dôverovať neznámym kľúčom hostiteľa len pre aktuálnu spojenie, ak nie je konfigurovaný súbor known_hosts"
         },
         "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.aG9zdF9rZXlfcG9saWN5.allowed_values.c3RyaW5nOnRvZnUtc2Vzc2lvbg.display_name": {
-          "source": "Session Trust On First Use",
+          "source": "Session trust on first use",
           "message": "Dôvera pri prvom použití pre spojenie"
         },
         "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.aG9zdF9rZXlfcG9saWN5.allowed_values.c3RyaW5nOnRvZnUtc2Vzc2lvbg.short_desc": {
@@ -100,7 +100,7 @@
           "message": "Pravidlo pre neznáme kľúče hostiteľa, keď je overovanie hostiteľského kľúča zapnuté: `reject` odmietne neznáme kľúče, `tofu` uloží kľúče použité prvýkrát do konfigurovanej súboru known_hosts a `tofu-session` dôveruje neznámym kľúčom pre aktuálnu spojenie len, ak nie je konfigurovaný súbor known_hosts"
         },
         "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.aG9zdF9rZXlfcG9saWN5.display_name": {
-          "source": "Host Key Policy",
+          "source": "Host key policy",
           "message": "Politika verejného kľúča"
         },
         "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.aG9zdF9rZXlfcG9saWN5.short_desc": {
@@ -112,7 +112,7 @@
           "message": "Povoliť overenie pomocou SSH agenta; ak je povolené, klient sa pokúsi overiť pomocou kľúčov z bežiaceho SSH agenta pred inými metódami"
         },
         "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.dXNlX2FnZW50.display_name": {
-          "source": "Use SSH Agent",
+          "source": "Use SSH agent",
           "message": "Použiť SSH agenta"
         },
         "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.dXNlX2FnZW50.short_desc": {
@@ -124,7 +124,7 @@
           "message": "Povoliť overenie kľúča hostiteľa podľa súboru known_hosts; je povolené predvolene; skutočný predvolený stav nasleduje globálny predvolený stav modulu ssh2, ktorý môže vložená aplikácia zmeniť prostredníctvom SSH2Base::setDefaultVerifyHostKey() alebo prostredníctvom premenného prostredia QORE_SSH2_DEFAULT_VERIFY_HOST_KEY"
         },
         "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.dmVyaWZ5X2hvc3Rfa2V5.display_name": {
-          "source": "Verify Host Key",
+          "source": "Verify host key",
           "message": "Overiť kľúč hostiteľa"
         },
         "connection.U3NoMkNvbm5lY3Rpb25z.scheme.U3NoMkNsaWVudENvbm5lY3Rpb24.option.dmVyaWZ5X2hvc3Rfa2V5.short_desc": {

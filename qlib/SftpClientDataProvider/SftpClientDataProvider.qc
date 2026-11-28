@@ -51,13 +51,13 @@ const HostKeyPolicyAllowedValues = (
         "value": SftpClientHostKeyPolicyOption::Reject,
     },
     <AllowedValueInfo>{
-        "display_name": "Trust On First Use",
+        "display_name": "Trust on first use",
         "short_desc": "Trust unknown host keys on first use and persist them",
         "desc": "Trust unknown host keys on first use and persist them to the configured known_hosts file",
         "value": SftpClientHostKeyPolicyOption::TrustOnFirstUse,
     },
     <AllowedValueInfo>{
-        "display_name": "Session Trust On First Use",
+        "display_name": "Session trust on first use",
         "short_desc": "Trust unknown host keys for the current connection only when needed",
         "desc": "Trust unknown host keys for the current connection only if no known_hosts file is configured",
         "value": SftpClientHostKeyPolicyOption::TrustOnFirstUseSession,
@@ -102,13 +102,13 @@ public class SftpClientDataProvider inherits AbstractDataProvider {
                 "required": True,
             },
             "keyfile": <DataProviderOptionInfo>{
-                "display_name": "SSH Private Key",
+                "display_name": "SSH private key",
                 "short_desc": "A path to an SSH private key file in PEM format",
                 "type": AbstractDataProviderTypeMap."string",
                 "desc": "A path to an SSH private key file in PEM format to use for key-based authentication",
             },
             "known_hosts": <DataProviderOptionInfo>{
-                "display_name": "Known Hosts File",
+                "display_name": "Known hosts file",
                 "short_desc": "A path to an OpenSSH known_hosts file for host key verification",
                 "type": AbstractDataProviderTypeMap."string",
                 "desc": "A path to an OpenSSH known_hosts file for host key verification; environment variables "
@@ -116,7 +116,7 @@ public class SftpClientDataProvider inherits AbstractDataProvider {
                     "configured; if not set, the ssh2 module default applies",
             },
             "host_key_policy": <DataProviderOptionInfo>{
-                "display_name": "Host Key Policy",
+                "display_name": "Host key policy",
                 "short_desc": "Policy for unknown host keys",
                 "type": AbstractDataProviderTypeMap."string",
                 "desc": "Policy for unknown host keys when host-key verification is enabled: `reject` rejects "
@@ -127,14 +127,14 @@ public class SftpClientDataProvider inherits AbstractDataProvider {
                 "default_value": SftpClientHostKeyPolicyOption::TrustOnFirstUse,
             },
             "verify_host_key": <DataProviderOptionInfo>{
-                "display_name": "Verify Host Key",
+                "display_name": "Verify host key",
                 "short_desc": "Enable host key verification against the known_hosts file",
                 "type": AbstractDataProviderTypeMap."bool",
                 "desc": "Enable host key verification against the known_hosts file",
                 "default_value": True,
             },
             "use_agent": <DataProviderOptionInfo>{
-                "display_name": "Use SSH Agent",
+                "display_name": "Use SSH agent",
                 "short_desc": "Enable SSH agent authentication",
                 "type": AbstractDataProviderTypeMap."bool",
                 "desc": "Enable SSH agent authentication; when enabled, the client will attempt to authenticate "
@@ -142,7 +142,7 @@ public class SftpClientDataProvider inherits AbstractDataProvider {
                 "default_value": True,
             },
             "keepalive_interval": <DataProviderOptionInfo>{
-                "display_name": "Keepalive Interval",
+                "display_name": "Keepalive interval",
                 "short_desc": "Keepalive interval in seconds",
                 "type": AbstractDataProviderTypeMap."int",
                 "desc": "Keepalive interval in seconds; 0 disables keepalive; default: 60",

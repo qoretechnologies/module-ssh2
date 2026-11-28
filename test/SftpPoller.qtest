@@ -295,6 +295,8 @@ class SftpPollerTest inherits QUnit::Test {
     #! qore issue #6400: an event handler that refuses a file (ex: an observer of a data provider) leaves the remote
     #! file in place, and polling continues after the error delay, so the file is handled again once it is accepted
     sftpPollerRefusalTest() {
+        assertTrue(SftpPollerDataProvider::ProviderInfo.supports_refusal_redelivery);
+        assertTrue(SftpDelayedPollerDataProvider::ProviderInfo.supports_refusal_redelivery);
         SFTPClient setup = getClient();
         string nd = makeOneFileDir(setup, "refused.txt");
         on_exit {

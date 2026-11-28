@@ -104,49 +104,49 @@ public class SftpClientStatvfsResponseDataType inherits HashDataType {
         #! Field descriptions
         const Fields = {
             "f_bsize": {
-                "display_name": "Block Size",
+                "display_name": "Block size",
                 "short_desc": "Filesystem block size",
                 "desc": "The filesystem block size in bytes",
                 "type": AbstractDataProviderTypeMap."int",
             },
             "f_frsize": {
-                "display_name": "Fragment Size",
+                "display_name": "Fragment size",
                 "short_desc": "Fragment size",
                 "desc": "The fragment size in bytes",
                 "type": AbstractDataProviderTypeMap."int",
             },
             "f_blocks": {
-                "display_name": "Total Blocks",
+                "display_name": "Total blocks",
                 "short_desc": "Total data blocks in filesystem",
                 "desc": "The total number of data blocks in the filesystem",
                 "type": AbstractDataProviderTypeMap."int",
             },
             "f_bfree": {
-                "display_name": "Free Blocks",
+                "display_name": "Free blocks",
                 "short_desc": "Free blocks in filesystem",
                 "desc": "The number of free blocks in the filesystem",
                 "type": AbstractDataProviderTypeMap."int",
             },
             "f_bavail": {
-                "display_name": "Available Blocks",
+                "display_name": "Available blocks",
                 "short_desc": "Free blocks available to non-root",
                 "desc": "The number of free blocks available to non-privileged users",
                 "type": AbstractDataProviderTypeMap."int",
             },
             "f_files": {
-                "display_name": "Total Inodes",
+                "display_name": "Total inodes",
                 "short_desc": "Total file nodes in filesystem",
                 "desc": "The total number of file nodes (inodes) in the filesystem",
                 "type": AbstractDataProviderTypeMap."int",
             },
             "f_ffree": {
-                "display_name": "Free Inodes",
+                "display_name": "Free inodes",
                 "short_desc": "Free file nodes in filesystem",
                 "desc": "The number of free file nodes in the filesystem",
                 "type": AbstractDataProviderTypeMap."int",
             },
             "f_favail": {
-                "display_name": "Available Inodes",
+                "display_name": "Available inodes",
                 "short_desc": "Free file nodes available to non-root",
                 "desc": "The number of free file nodes available to non-privileged users",
                 "type": AbstractDataProviderTypeMap."int",
@@ -158,13 +158,13 @@ public class SftpClientStatvfsResponseDataType inherits HashDataType {
                 "type": AbstractDataProviderTypeMap."int",
             },
             "f_flag": {
-                "display_name": "Mount Flags",
+                "display_name": "Mount flags",
                 "short_desc": "Mount flags",
                 "desc": "The mount flags for the filesystem",
                 "type": AbstractDataProviderTypeMap."int",
             },
             "f_namemax": {
-                "display_name": "Max Filename Length",
+                "display_name": "Max filename length",
                 "short_desc": "Maximum filename length",
                 "desc": "The maximum filename length supported by the filesystem",
                 "type": AbstractDataProviderTypeMap."int",

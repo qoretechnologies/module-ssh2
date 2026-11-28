@@ -16,8 +16,8 @@
           "message": "Generic SFTP server for exchanging files with SFTP"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.display_name": {
-          "source": "SFTP File Received",
-          "message": "SFTP File Received"
+          "source": "SFTP file received",
+          "message": "SFTP file received"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.short_desc": {
           "source": "A file is uploaded to an SFTP server",
@@ -28,8 +28,8 @@
           "message": "React to files uploaded to an SFTP server; the action configuration determines if the event contains the file data itself or a link to the location of the file on the local filesystem. In any case, the event indicates that the file data has already been downloaded and is available locally. Set remote_file_disposition to DELETE or MOVE to remove the remote file after processing. With NONE, the handler must move, rename or delete the file, or it will be delivered again on the next poll."
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.bWFzaw.display_name": {
-          "source": "Glob Mask",
-          "message": "Glob Mask"
+          "source": "Glob mask",
+          "message": "Glob mask"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.bWFzaw.short_desc": {
           "source": "The glob mask to use to match files to poll",
@@ -40,8 +40,8 @@
           "message": "The glob mask to use to match files to poll; will be treated as a regex if `regex` is `true`"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.Y29tbWl0X3Byb2ZpbGU.display_name": {
-          "source": "Publication Agreement",
-          "message": "Publication Agreement"
+          "source": "Publication agreement",
+          "message": "Publication agreement"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.Y29tbWl0X3Byb2ZpbGU.short_desc": {
           "source": "Verify committed files before emitting events",
@@ -52,16 +52,16 @@
           "message": "Use a dedicated committed directory and a writable local directory. Hosted files are immutable. On OpenSSH the committed name starts with the producer SHA-256 and a dot."
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.Y29tbWl0X3Byb2ZpbGU.allowed-value.c3RyaW5nOmhvc3RlZC1pbW11dGFibGU.display_name": {
-          "source": "Hosted Immutable",
-          "message": "Hosted Immutable"
+          "source": "Hosted immutable",
+          "message": "Hosted immutable"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.Y29tbWl0X3Byb2ZpbGU.allowed-value.c3RyaW5nOm9wZW5zc2gtc2hhMjU2LW5hbWU.display_name": {
-          "source": "OpenSSH Digest Filename",
-          "message": "OpenSSH Digest Filename"
+          "source": "OpenSSH digest filename",
+          "message": "OpenSSH digest filename"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfc2hhMjU2.display_name": {
-          "source": "Host Key SHA-256",
-          "message": "Host Key SHA-256"
+          "source": "Host key SHA-256",
+          "message": "Host key SHA-256"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfc2hhMjU2.short_desc": {
           "source": "Pinned host key fingerprint",
@@ -72,8 +72,8 @@
           "message": "Pinned SSH host key in lowercase hex, required for the hosted profile"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.YXRvbWljX3RyYW5zZmVy.display_name": {
-          "source": "Atomic File Transfer",
-          "message": "Atomic File Transfer"
+          "source": "Atomic file transfer",
+          "message": "Atomic file transfer"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.YXRvbWljX3RyYW5zZmVy.short_desc": {
           "source": "Use an atomic file transfer mechanism",
@@ -84,8 +84,8 @@
           "message": "Use an atomic transfer mechanism with `local_dir` where remote files are first moved to a temporary location and then moved to the final location when they have been fully transferred.\n\nThis ensures that files will never be read until they are fully transferred"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.a2V5ZmlsZQ.display_name": {
-          "source": "SSH Private Key",
-          "message": "SSH Private Key"
+          "source": "SSH private key",
+          "message": "SSH private key"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.a2V5ZmlsZQ.short_desc": {
           "source": "A path to an SSH private key file in PEM format",
@@ -96,8 +96,8 @@
           "message": "A path to an SSH private key file in PEM format to use for key-based authentication"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.a25vd25faG9zdHM.display_name": {
-          "source": "Known Hosts File",
-          "message": "Known Hosts File"
+          "source": "Known hosts file",
+          "message": "Known hosts file"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.a25vd25faG9zdHM.short_desc": {
           "source": "A path to an OpenSSH known_hosts file for host key verification",
@@ -108,8 +108,8 @@
           "message": "A path to an OpenSSH known_hosts file for host key verification; environment variables can be prefixed with '$' in the path; if set to an empty string, no known_hosts file is configured; if not set, the ssh2 module default applies (normally the local user's ~/.ssh/known_hosts file, unless the embedding application has changed or disabled the module default)"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfcG9saWN5.display_name": {
-          "source": "Host Key Policy",
-          "message": "Host Key Policy"
+          "source": "Host key policy",
+          "message": "Host key policy"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfcG9saWN5.short_desc": {
           "source": "Policy for unknown host keys",
@@ -132,8 +132,8 @@
           "message": "Reject unknown host keys"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfcG9saWN5.allowed-value.c3RyaW5nOnRvZnU.display_name": {
-          "source": "Trust On First Use",
-          "message": "Trust On First Use"
+          "source": "Trust on first use",
+          "message": "Trust on first use"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfcG9saWN5.allowed-value.c3RyaW5nOnRvZnU.short_desc": {
           "source": "Trust unknown host keys on first use and persist them",
@@ -144,8 +144,8 @@
           "message": "Trust unknown host keys on first use and persist them to the configured known_hosts file"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfcG9saWN5.allowed-value.c3RyaW5nOnRvZnUtc2Vzc2lvbg.display_name": {
-          "source": "Session Trust On First Use",
-          "message": "Session Trust On First Use"
+          "source": "Session trust on first use",
+          "message": "Session trust on first use"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.aG9zdF9rZXlfcG9saWN5.allowed-value.c3RyaW5nOnRvZnUtc2Vzc2lvbg.short_desc": {
           "source": "Trust unknown host keys for the current connection only when needed",
@@ -156,8 +156,8 @@
           "message": "Trust unknown host keys for the current connection only if no known_hosts file is configured"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.dmVyaWZ5X2hvc3Rfa2V5.display_name": {
-          "source": "Verify Host Key",
-          "message": "Verify Host Key"
+          "source": "Verify host key",
+          "message": "Verify host key"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.dmVyaWZ5X2hvc3Rfa2V5.short_desc": {
           "source": "Enable host key verification against the known_hosts file",
@@ -168,8 +168,8 @@
           "message": "Enable host key verification against the known_hosts file"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.dXNlX2FnZW50.display_name": {
-          "source": "Use SSH Agent",
-          "message": "Use SSH Agent"
+          "source": "Use SSH agent",
+          "message": "Use SSH agent"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.dXNlX2FnZW50.short_desc": {
           "source": "Enable SSH agent authentication",
@@ -180,8 +180,8 @@
           "message": "Enable SSH agent authentication; when enabled, the client will attempt to authenticate using keys from the running SSH agent before other methods"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.a2VlcGFsaXZlX2ludGVydmFs.display_name": {
-          "source": "Keepalive Interval",
-          "message": "Keepalive Interval"
+          "source": "Keepalive interval",
+          "message": "Keepalive interval"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.a2VlcGFsaXZlX2ludGVydmFs.short_desc": {
           "source": "Keepalive interval in seconds",
@@ -192,8 +192,8 @@
           "message": "Keepalive interval in seconds; 0 disables keepalive; default: 60"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.bG9jYWxfZGly.display_name": {
-          "source": "Local Directory",
-          "message": "Local Directory"
+          "source": "Local directory",
+          "message": "Local directory"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.bG9jYWxfZGly.short_desc": {
           "source": "A local directory that will be used to retrieve files",
@@ -204,8 +204,8 @@
           "message": "A local directory that will be used to retrieve files"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.bWluYWdl.display_name": {
-          "source": "Minimum Polling Age",
-          "message": "Minimum Polling Age"
+          "source": "Minimum polling age",
+          "message": "Minimum polling age"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.bWluYWdl.short_desc": {
           "source": "The minimum age of files to poll in seconds",
@@ -216,8 +216,8 @@
           "message": "An integer giving the minimum file age in seconds before the file will be polled; this is meant to work around non-atomic file transfer operations.\n\nIf this option is necessary, set it to a value that is larger than the longest time it should take to transfer a file"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cG9sbF9pbnRlcnZhbA.display_name": {
-          "source": "Poll Interval",
-          "message": "Poll Interval"
+          "source": "Poll interval",
+          "message": "Poll interval"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cG9sbF9pbnRlcnZhbA.short_desc": {
           "source": "The poll interval in seconds",
@@ -228,8 +228,8 @@
           "message": "The interval in seconds between polling for files"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cmVnZXg.display_name": {
-          "source": "Regular Expression Match",
-          "message": "Regular Expression Match"
+          "source": "Regular expression match",
+          "message": "Regular expression match"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cmVnZXg.short_desc": {
           "source": "If true then the 'mask' argument is treated as a regular expression",
@@ -240,8 +240,8 @@
           "message": "If `true` then `mask` is treated as a regular expression instead of a glob pattern"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cmVtb3RlX2ZpbGVfZGlzcG9zaXRpb24.display_name": {
-          "source": "Remote File Disposition",
-          "message": "Remote File Disposition"
+          "source": "Remote file disposition",
+          "message": "Remote file disposition"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cmVtb3RlX2ZpbGVfZGlzcG9zaXRpb24.short_desc": {
           "source": "Delete or move remote file after processing?",
@@ -288,8 +288,8 @@
           "message": "Leave the file untouched after processing; the file must be moved or deleted manually during post-processing, or the file will appear in subsequent polls as well"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cmVtb3RlX2ZpbGVfbW92ZV90YXJnZXQ.display_name": {
-          "source": "Remote File Move Target",
-          "message": "Remote File Move Target"
+          "source": "Remote file move target",
+          "message": "Remote file move target"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cmVtb3RlX2ZpbGVfbW92ZV90YXJnZXQ.short_desc": {
           "source": "The target template for the remote file after processing",
@@ -300,8 +300,8 @@
           "message": "The target template for the remote file after processing; use `%s` for the original file name. This option is only used when `remote_file_disposition` is `MOVE`, otherwise it is ignored"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cmVvcHQ.display_name": {
-          "source": "Regular Expression Options",
-          "message": "Regular Expression Options"
+          "source": "Regular expression options",
+          "message": "Regular expression options"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.cmVvcHQ.short_desc": {
           "source": "A bitfield of regular expression options",
@@ -312,8 +312,8 @@
           "message": "A bitfield of regular expression options (`1` = ignore case, `2` = treat EOL as a regular character); ignored if `regex` is not `true`"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.c29ydF9kZXNj.display_name": {
-          "source": "Sort Descending",
-          "message": "Sort Descending"
+          "source": "Sort descending",
+          "message": "Sort descending"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.c29ydF9kZXNj.short_desc": {
           "source": "Sort files in descending order",
@@ -324,8 +324,8 @@
           "message": "Sort descending; if not given then an ascending sort is assumed if a `sort_type` is given"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.c29ydF90eXBl.display_name": {
-          "source": "Sort Type",
-          "message": "Sort Type"
+          "source": "Sort type",
+          "message": "Sort type"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.c29ydF90eXBl.short_desc": {
           "source": "Field to sort files on",
@@ -336,8 +336,8 @@
           "message": "Either `name` or `date` for the data to use for sorting"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.dGVtcGZpbGVfdGVtcGxhdGU.display_name": {
-          "source": "Temporary Filename Template",
-          "message": "Temporary Filename Template"
+          "source": "Temporary filename template",
+          "message": "Temporary filename template"
         },
         "app.U0ZUUA.action.c2Z0cC1maWxlLWV2ZW50.option.dGVtcGZpbGVfdGVtcGxhdGU.short_desc": {
           "source": "The template for temporary filenames",

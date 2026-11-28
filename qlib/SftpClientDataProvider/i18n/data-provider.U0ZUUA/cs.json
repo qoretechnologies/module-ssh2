@@ -8,7 +8,7 @@
           "message": "Změní oprávnění k souboru nebo adresáři na SFTP serveru"
         },
         "app.U0ZUUA.action.Y2htb2Q.display_name": {
-          "source": "Change File Permissions With SFTP",
+          "source": "Change file permissions with SFTP",
           "message": "Změnit oprávnění k souboru pomocí SFTP"
         },
         "app.U0ZUUA.action.Y2htb2Q.option.bW9kZQ.desc": {
@@ -44,11 +44,11 @@
           "message": "Před zpřístupněním místního souboru ověřte zveřejněnou verzi. U nahraditelné cesty zadejte otisk od producenta. Duplicity rozpoznáte podle koncového bodu, identity, vzdálené cesty a verze v potvrzení."
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.display_name": {
-          "source": "Acquire Verified File",
+          "source": "Acquire verified file",
           "message": "Převzít ověřený soubor"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.allowed-value.c3RyaW5nOm5vLXJlcGxhY2U.display_name": {
-          "source": "No Replace",
+          "source": "No replace",
           "message": "Nenahrazovat"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.allowed-value.c3RyaW5nOnJlcGxhY2U.display_name": {
@@ -60,7 +60,7 @@
           "message": "Vyberte, jak koncový bod zachází s existujícím souborem"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.display_name": {
-          "source": "Collision Policy",
+          "source": "Collision policy",
           "message": "Řešení kolizí"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.short_desc": {
@@ -72,7 +72,7 @@
           "message": "Připnutý klíč hostitele SSH v hexadecimálním zápisu malými písmeny, povinný pro hostovaný profil"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.aG9zdF9rZXlfc2hhMjU2.display_name": {
-          "source": "Host Key SHA-256",
+          "source": "Host key SHA-256",
           "message": "SHA-256 klíče hostitele"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.aG9zdF9rZXlfc2hhMjU2.short_desc": {
@@ -84,7 +84,7 @@
           "message": "Místní soubor, který se po ověření nahradí"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.bG9jYWxfcGF0aA.display_name": {
-          "source": "Destination File",
+          "source": "Destination file",
           "message": "Cílový soubor"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.bG9jYWxfcGF0aA.short_desc": {
@@ -96,7 +96,7 @@
           "message": "Deklarovaná délka souboru v bajtech"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.bGVuZ3Ro.display_name": {
-          "source": "Expected Length",
+          "source": "Expected length",
           "message": "Očekávaná délka"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.bGVuZ3Ro.short_desc": {
@@ -120,7 +120,7 @@
           "message": "OpenSSH POSIX"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.cHJvZmlsZQ.allowed-value.c3RyaW5nOmhvc3RlZC1pbW11dGFibGU.display_name": {
-          "source": "Hosted Immutable",
+          "source": "Hosted immutable",
           "message": "Hostované neměnné soubory"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.cHJvZmlsZQ.desc": {
@@ -128,7 +128,7 @@
           "message": "Dohoda o zveřejňování pro tento koncový bod"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.cHJvZmlsZQ.display_name": {
-          "source": "Endpoint Profile",
+          "source": "Endpoint profile",
           "message": "Profil koncového bodu"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.cHJvZmlsZQ.short_desc": {
@@ -140,7 +140,7 @@
           "message": "Absolutní cesta ke zveřejněnému souboru"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.cmVtb3RlX3BhdGg.display_name": {
-          "source": "Remote Path",
+          "source": "Remote path",
           "message": "Vzdálená cesta"
         },
         "app.U0ZUUA.action.YWNxdWlyZS12ZXJpZmllZA.option.cmVtb3RlX3BhdGg.short_desc": {
@@ -156,7 +156,7 @@
           "message": "Získat soubor ze SFTP serveru"
         },
         "app.U0ZUUA.action.Z2V0LWZpbGU.display_name": {
-          "source": "Retrieve File With SFTP",
+          "source": "Retrieve file with SFTP",
           "message": "Získat soubor pomocí SFTP"
         },
         "app.U0ZUUA.action.Z2V0LWZpbGU.option.ZW5jb2Rpbmc.desc": {
@@ -188,7 +188,7 @@
           "message": "Pokud `True`, soubor bude vrácen jako řetězec, `False` (výchozí) jako binární data"
         },
         "app.U0ZUUA.action.Z2V0LWZpbGU.option.dGV4dA.display_name": {
-          "source": "Text Mode",
+          "source": "Text mode",
           "message": "Textový režim"
         },
         "app.U0ZUUA.action.Z2V0LWZpbGU.option.dGV4dA.short_desc": {
@@ -204,7 +204,7 @@
           "message": "Smaže soubor na SFTP serveru"
         },
         "app.U0ZUUA.action.ZGVsZXRlLWZpbGU.display_name": {
-          "source": "Delete File With SFTP",
+          "source": "Delete file with SFTP",
           "message": "Smazat soubor pomocí SFTP"
         },
         "app.U0ZUUA.action.ZGVsZXRlLWZpbGU.option.cGF0aA.desc": {
@@ -228,7 +228,7 @@
           "message": "Zkontroluje, zda na SFTP serveru existuje soubor nebo adresář"
         },
         "app.U0ZUUA.action.ZXhpc3Rz.display_name": {
-          "source": "Check If Path Exists With SFTP",
+          "source": "Check if path exists with SFTP",
           "message": "Zkontrolovat existenci cesty pomocí SFTP"
         },
         "app.U0ZUUA.action.ZXhpc3Rz.option.cGF0aA.desc": {
@@ -252,7 +252,7 @@
           "message": "Odešle soubor na SFTP server"
         },
         "app.U0ZUUA.action.c2VuZC1maWxl.display_name": {
-          "source": "Send File With SFTP",
+          "source": "Send file with SFTP",
           "message": "Odeslat soubor pomocí SFTP"
         },
         "app.U0ZUUA.action.c2VuZC1maWxl.option.ZW5jb2Rpbmc.desc": {
@@ -284,7 +284,7 @@
           "message": "Pokud `True`, soubor bude vrácen jako řetězec, `False` (výchozí) jako binární data"
         },
         "app.U0ZUUA.action.c2VuZC1maWxl.option.dGV4dA.display_name": {
-          "source": "Text Mode",
+          "source": "Text mode",
           "message": "Textový režim"
         },
         "app.U0ZUUA.action.c2VuZC1maWxl.option.dGV4dA.short_desc": {
@@ -300,11 +300,11 @@
           "message": "Před zveřejněním soukromého pracovního souboru ověřte délku a volitelný otisk od producenta. Pro nahrazení zvolte `openssh-posix`, pro vynucený zákaz nahrazení `hosted-immutable`. Při výsledku `indeterminate` před opakováním ověřte stav."
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.display_name": {
-          "source": "Publish Verified File",
+          "source": "Publish verified file",
           "message": "Zveřejnit ověřený soubor"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.allowed-value.c3RyaW5nOm5vLXJlcGxhY2U.display_name": {
-          "source": "No Replace",
+          "source": "No replace",
           "message": "Nenahrazovat"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.allowed-value.c3RyaW5nOnJlcGxhY2U.display_name": {
@@ -316,7 +316,7 @@
           "message": "Vyberte, jak koncový bod zachází s existujícím souborem"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.display_name": {
-          "source": "Collision Policy",
+          "source": "Collision policy",
           "message": "Řešení kolizí"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.Y29sbGlzaW9uX3BvbGljeQ.short_desc": {
@@ -328,7 +328,7 @@
           "message": "Připnutý klíč hostitele SSH v hexadecimálním zápisu malými písmeny, povinný pro hostovaný profil"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.aG9zdF9rZXlfc2hhMjU2.display_name": {
-          "source": "Host Key SHA-256",
+          "source": "Host key SHA-256",
           "message": "SHA-256 klíče hostitele"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.aG9zdF9rZXlfc2hhMjU2.short_desc": {
@@ -340,7 +340,7 @@
           "message": "Místní soubor ke zveřejnění"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.bG9jYWxfcGF0aA.display_name": {
-          "source": "Source File",
+          "source": "Source file",
           "message": "Zdrojový soubor"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.bG9jYWxfcGF0aA.short_desc": {
@@ -352,7 +352,7 @@
           "message": "Deklarovaná délka souboru v bajtech"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.bGVuZ3Ro.display_name": {
-          "source": "Expected Length",
+          "source": "Expected length",
           "message": "Očekávaná délka"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.bGVuZ3Ro.short_desc": {
@@ -376,7 +376,7 @@
           "message": "Soukromý pracovní adresář na vzdáleném souborovém systému"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.c3RhZ2luZ19kaXI.display_name": {
-          "source": "Staging Directory",
+          "source": "Staging directory",
           "message": "Pracovní adresář"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.c3RhZ2luZ19kaXI.short_desc": {
@@ -388,7 +388,7 @@
           "message": "OpenSSH POSIX"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.cHJvZmlsZQ.allowed-value.c3RyaW5nOmhvc3RlZC1pbW11dGFibGU.display_name": {
-          "source": "Hosted Immutable",
+          "source": "Hosted immutable",
           "message": "Hostované neměnné soubory"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.cHJvZmlsZQ.desc": {
@@ -396,7 +396,7 @@
           "message": "Dohoda o zveřejňování pro tento koncový bod"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.cHJvZmlsZQ.display_name": {
-          "source": "Endpoint Profile",
+          "source": "Endpoint profile",
           "message": "Profil koncového bodu"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.cHJvZmlsZQ.short_desc": {
@@ -408,7 +408,7 @@
           "message": "Absolutní cesta ke zveřejněnému souboru"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.cmVtb3RlX3BhdGg.display_name": {
-          "source": "Remote Path",
+          "source": "Remote path",
           "message": "Vzdálená cesta"
         },
         "app.U0ZUUA.action.cHVibGlzaC12ZXJpZmllZA.option.cmVtb3RlX3BhdGg.short_desc": {
@@ -424,7 +424,7 @@
           "message": "Odstraní prázdný adresář na SFTP serveru"
         },
         "app.U0ZUUA.action.cm1kaXI.display_name": {
-          "source": "Remove Directory With SFTP",
+          "source": "Remove directory with SFTP",
           "message": "Odstranit adresář pomocí SFTP"
         },
         "app.U0ZUUA.action.cm1kaXI.option.cGF0aA.desc": {

@@ -108,18 +108,18 @@ public class SftpPollerFileEventInfoDataType inherits HashDataType {
                 "example_value": 20,
             },
             "mode": {
-                "display_name": "File Mode",
+                "display_name": "File mode",
                 "short_desc": "The permissions / mode of the file",
                 "desc": "The permissions / mode of the file",
                 "example_value": 33261,
             },
             "atime": {
-                "display_name": "Last Access Time",
+                "display_name": "Last access time",
                 "short_desc": "The last accessed date/time of the file",
                 "desc": "The last accessed date/time of the file",
             },
             "mtime": {
-                "display_name": "Last Modified Time",
+                "display_name": "Last modified time",
                 "short_desc": "The last modified date/time of the file",
                 "desc": "The last modified date/time of the file",
             },
@@ -186,37 +186,37 @@ public class SftpPollerFileEventInfoDataType inherits HashDataType {
                 "example_value": "-rwxr-x-r-x",
             },
             "data": {
-                "display_name": "File Data",
+                "display_name": "File data",
                 "short_desc": "The file's data",
                 "desc": "The file's data; this will be a string unless the `binary` option is set to `True`, in "
                     "which case this key is assigned to the files binary data; this hash key is only present if "
                     "`skip_file_content_retrieval` was `False` in the `SftpPoller::constructor()` option hash",
             },
             "filepath": {
-                "display_name": "Remote Path",
+                "display_name": "Remote path",
                 "short_desc": "The remote filepath relative to the remote root directory",
                 "desc": "The remote filepath relative to the remote root directory",
                 "example_value": "./example-file.txt",
             },
             "transfer_time":  {
-                "display_name": "Transfer Time",
+                "display_name": "Transfer time",
                 "short_desc": "The relative date/time value giving the time taken to transfer the file",
                 "desc": "The relative date/time value giving the time taken to transfer the file",
                 "example_value": 0.154947s,
             },
             "receipt": {
-                "display_name": "Acquisition Receipt",
+                "display_name": "Acquisition receipt",
                 "short_desc": "Verified content version and endpoint evidence",
                 "desc": "Verified content version and endpoint evidence",
             },
             "local_path":  {
-                "display_name": "Local Path",
+                "display_name": "Local path",
                 "short_desc": "The target path for the file if applicable",
                 "desc": "Only included when `local_dir` is set; the target path for the file where the file will "
                     "be moved to in the post event action",
             },
             "remote_status":  {
-                "display_name": "Remote Status",
+                "display_name": "Remote status",
                 "short_desc": "The status of the remote file after processing",
                 "desc": "The status of the remote file after processing",
                 "allowed_values": (
