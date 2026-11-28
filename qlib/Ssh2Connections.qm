@@ -106,6 +106,8 @@ module Ssh2Connections {
       \c host_key_policy, \c verify_host_key or \c use_agent constructor option with another value raises
       \c DATA-PROVIDER-ERROR (see @ref ssh2connectionssubtypetarget;
       <a href="https://github.com/qoretechnologies/module-ssh2/issues/133">issue 133</a>)
+    - the \c "sftppoller" data provider of an @ref Ssh2Connections::SftpConnection "SftpConnection" takes the
+      connection's \c keyfile with environment variables substituted, as the connection's client does
     - the connection classes declare the functional domains of their clients (\c NETWORK and \c FILESYSTEM), so
       code restricted only from other domains, such as \c DATABASE, can create them
       (<a href="https://github.com/qoretechnologies/qore/issues/7099">issue 7099</a>)
@@ -609,6 +611,11 @@ public class SftpConnection inherits AbstractSsh2Connection {
         hash<auto> dp_opts = {
             "keepalive_interval": self.opts.keepalive_interval,
         } + getSubtypeOptions(subtype_info{subtype}, constructor_options - SubtypeTargetOptions) + target;
+        # the connection's client takes the key file with environment variables substituted, as the poller does
+        # with the known_hosts file; the poller takes the key file as it is given
+        if (dp_opts.keyfile) {
+            dp_opts.keyfile = substitute_env_vars(dp_opts.keyfile);
+        }
         return create_object(conf."class", dp_opts);
     }
 

@@ -79,6 +79,7 @@ class SftpConnectionSubtypeTargetTest inherits QUnit::Test {
             \sameSettingTest());
         addTestCase("an unset key file and known_hosts file of the connection", \unsetFileTest());
         addTestCase("the connection's default settings are accepted", \defaultSettingTest());
+        addTestCase("the connection's key file is given to the poller as its client uses it", \keyfileEnvTest());
         addTestCase("options that tune the poller stay with the caller", \tuningOptionsTest());
         addTestCase("errors give no secret", \noSecretTest());
         set_return_value(main());
@@ -311,6 +312,25 @@ class SftpConnectionSubtypeTargetTest inherits QUnit::Test {
         }
         checkRefused(conn, {"verify_host_key": defaults.verify_host_key ? 1 : 0}, "verify_host_key");
         checkRefused(conn, {"use_agent": defaults.use_agent ? "true" : "false"}, "use_agent");
+    }
+
+    keyfileEnvTest() {
+        # the connection's client substitutes environment variables in the key file path; the poller does not
+        if (!ENV.HOME.val()) {
+            testSkip("HOME is not set");
+        }
+        string name = "ssh2-subtype-target-no-such-key-" + get_random_string(10);
+        string env_keyfile = "$HOME/" + name;
+        SftpConnection conn = getConnection(getConnectionOptions() + {"keyfile": env_keyfile});
+        # the key file does not exist: the error of the poller names the path that it was given
+        foreach *hash<auto> opts in ((NOTHING, {"keyfile": env_keyfile})) {
+            hash<ExceptionInfo> ex = createFails(conn, opts);
+            assertEq("SSH2-SETKEYS-ERROR", ex.err, ex.desc);
+            assertTrue(ex.desc.find(ENV.HOME + "/" + name) >= 0, ex.desc);
+            assertEq(-1, ex.desc.find("$HOME"), ex.desc);
+        }
+        # the caller gives the key file as the connection's option gives it
+        checkRefused(conn, {"keyfile": ENV.HOME + "/" + name}, "keyfile");
     }
 
     tuningOptionsTest() {
