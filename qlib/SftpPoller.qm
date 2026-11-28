@@ -165,6 +165,11 @@ poller.waitStop();
 /** @page sftppollerreleasenotes SftpPoller Release Notes
 
     @section sftppollerv1_6 Version 1.6
+    - the poller data providers report \c supports_refusal_redelivery in their provider info, as a file that an
+      observer refuses stays on the server and is handled again
+      (<a href="https://github.com/qoretechnologies/qore/issues/7563">qore issue 7563</a>)
+    - the data providers' action, option and field names are in sentence case
+      (<a href="https://github.com/qoretechnologies/qore/issues/7749">qore issue 7749</a>)
     - the \c keyfile option is refused with \c PERMISSION-DENIED when the code that creates the poller is restricted
       from the file system, and @ref SftpPoller::SftpPoller::getStoreFile() "getStoreFile()" refuses a local path
       given by such code, also by the code that a host-created poller was lent to

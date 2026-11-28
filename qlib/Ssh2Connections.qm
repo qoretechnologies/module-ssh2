@@ -83,6 +83,8 @@ module Ssh2Connections {
 /** @page ssh2connectionsreleasenotes Ssh2Connections Release Notes
 
     @section ssh2connections_v2_0 Ssh2Connections v2.0
+    - the connection option names are in sentence case
+      (<a href="https://github.com/qoretechnologies/qore/issues/7749">issue 7749</a>)
     - the connection classes declare the functional domains of their clients (\c NETWORK and \c FILESYSTEM), so
       code restricted only from other domains, such as \c DATABASE, can create them
       (<a href="https://github.com/qoretechnologies/qore/issues/7099">issue 7099</a>)
