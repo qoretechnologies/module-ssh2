@@ -64,7 +64,8 @@ class Ssh2DataProviderOptionsTest inherits QUnit::Test {
     constructor() : Test("Ssh2DataProviderOptionsTest", "1.0", \ARGV) {
         addTestCase("the key file of the connection reaches the data provider", \keyfileTest());
         addTestCase("the data provider accepts all the options of the connection", \acceptedOptionsTest());
-        addTestCase("a constructor option of the caller overrides the option of the connection", \callerOptionsTest());
+        addTestCase("a constructor option of the caller cannot override the option of the connection",
+            \callerOptionsTest());
         addTestCase("the host key, agent and keepalive options are applied to the client", \clientOptionsAppliedTest());
         addTestCase("an unknown host key is refused on the poller path", \unknownHostKeyRefusedTest());
 
@@ -110,10 +111,15 @@ class Ssh2DataProviderOptionsTest inherits QUnit::Test {
 
     callerOptionsTest() {
         string other_keyfile = keyfile + "-caller";
-        hash<ExceptionInfo> ex = createFails(getConnection({"keyfile": keyfile}), {"keyfile": other_keyfile});
-        # the option of the caller wins over the option of the connection
+        SftpConnection conn = getConnection({"keyfile": keyfile});
+        hash<ExceptionInfo> ex = createFails(conn, {"keyfile": other_keyfile});
+        # the connection's key file always wins: another one is refused (module-ssh2 issue 133)
+        assertEq("DATA-PROVIDER-ERROR", ex.err);
+        assertEq(-1, ex.desc.find(other_keyfile), ex.desc);
+        # the connection's own key file is accepted and is the one that the data provider loads
+        ex = createFails(conn, {"keyfile": keyfile});
         assertEq("SSH2-SETKEYS-ERROR", ex.err);
-        assertTrue(ex.desc.find(other_keyfile) >= 0, ex.desc);
+        assertTrue(ex.desc.find(keyfile) >= 0, ex.desc);
     }
 
     clientOptionsAppliedTest() {

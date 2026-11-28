@@ -1,0 +1,346 @@
+#!/usr/bin/env qore
+# -*- mode: qore; indent-tabs-mode: nil -*-
+
+# Copyright (C) 2026 Qore Technologies, s.r.o.
+
+%modern
+
+%prepend-module-path "${SCRIPT_DIR}/../qlib"
+
+%requires Ssh2Connections
+%requires SftpPoller
+%requires ssh2 >= 2.0
+
+%requires FsUtil
+%requires QUnit
+
+# the values that the poller of the data provider is created with are its private members: reflection reads them
+%try-module reflection
+%define NoReflection
+%endtry
+
+%exec-class SftpConnectionSubtypeTargetTest
+
+#! The "sftppoller" data provider of an SFTP connection uses the connection's server, login, key and host key checks
+/** SftpConnection::getDataProviderImpl() merged the caller's constructor options over the connection's, so a caller
+    could point the poller of a connection at another server, directory or login, use another key, and turn the host
+    key checks of the connection off (module-ssh2 issue 133).  The connection's values now always win: a caller's
+    value for them is accepted only if it is the connection's, any other raises DATA-PROVIDER-ERROR, and the provider
+    is always created from the connection's values.
+
+    The test needs no SSH server: the data provider is created with a commit profile, with which the poller connects
+    only when it polls, and the values that its poller is created with are read with reflection.
+*/
+class SftpConnectionSubtypeTargetTest inherits QUnit::Test {
+    public {
+        #! the connection's password, which no error may give
+        const Password = "conn-secret-pw";
+
+        #! the connection's URL
+        const Url = "sftp://user:" + Password + "@Host.Example.invalid/inbound";
+
+        #! the members of the poller that the connection's values set
+        const PollerMembers = ("host", "port", "user", "pass", "keyfile", "known_hosts", "host_key_policy",
+            "verify_host_key", "use_agent", "path");
+    }
+
+    private {
+        #! the directory of the test
+        string dir;
+        #! the connection's key file (with its public key file)
+        string keyfile;
+        #! another key file (with its public key file)
+        string other_keyfile;
+        #! the connection's known_hosts file
+        string known_hosts;
+        #! the local directory of the poller
+        string local_dir;
+    }
+
+    constructor() : QUnit::Test("SftpConnectionSubtypeTarget", "1.0", \ARGV) {
+        dir = make_tmp_dir("ssh2-subtype-target-");
+        keyfile = dir + "/id_conn";
+        other_keyfile = dir + "/id_other";
+        known_hosts = dir + "/known_hosts";
+        local_dir = dir + "/local";
+        mkdir(local_dir);
+        # the poller sets the key files when it is created and reads them only when it connects
+        foreach string f in ((keyfile, keyfile + ".pub", other_keyfile, other_keyfile + ".pub")) {
+            File file();
+            file.open2(f, O_CREAT | O_WRONLY | O_TRUNC);
+            file.write("test\n");
+        }
+
+        addTestCase("the provider is created from the connection's values", \connectionValuesTest());
+        addTestCase("a url naming another target is refused", \otherUrlTest());
+        addTestCase("a url naming the connection's target is accepted", \sameUrlTest());
+        addTestCase("credential and host key options naming other values are refused", \otherSettingTest());
+        addTestCase("credential and host key options naming the connection's values are accepted",
+            \sameSettingTest());
+        addTestCase("an unset key file and known_hosts file of the connection", \unsetFileTest());
+        addTestCase("the connection's default settings are accepted", \defaultSettingTest());
+        addTestCase("options that tune the poller stay with the caller", \tuningOptionsTest());
+        addTestCase("errors give no secret", \noSecretTest());
+        set_return_value(main());
+    }
+
+    destructor() {
+        if (dir) {
+            remove_tree(dir);
+        }
+    }
+
+    #! the connection's options
+    private hash<auto> getConnectionOptions() {
+        return {
+            "keyfile": keyfile,
+            "known_hosts": known_hosts,
+            "host_key_policy": "reject",
+            "verify_host_key": True,
+            "use_agent": False,
+            "keepalive_interval": 30,
+        };
+    }
+
+    private SftpConnection getConnection(*hash<auto> options, string url = Url) {
+        return new SftpConnection("subtype-target-test", "test", url, {}, options ?? getConnectionOptions());
+    }
+
+    #! the options with which the poller can be created without connecting
+    private hash<auto> getBaseOptions() {
+        return {
+            "commit_profile": "openssh-sha256-name",
+            "local_dir": local_dir,
+            "remote_file_disposition": "NONE",
+        };
+    }
+
+    #! creates the data provider with the given options
+    private AbstractDataProvider create(SftpConnection conn, *hash<auto> options) {
+        return conn.getDataProvider("sftppoller", getBaseOptions() + options);
+    }
+
+    #! returns the exception that creating the data provider raises
+    private hash<ExceptionInfo> createFails(SftpConnection conn, *hash<auto> options) {
+        try {
+            create(conn, options);
+        } catch (hash<ExceptionInfo> ex) {
+            return ex;
+        }
+        throw "TEST-ERROR", sprintf("the data provider was created with options %y", options);
+    }
+
+    #! checks that creating the data provider with the given options is refused for the given option
+    private checkRefused(SftpConnection conn, hash<auto> options, string option) {
+        hash<ExceptionInfo> ex = createFails(conn, options);
+        assertEq("DATA-PROVIDER-ERROR", ex.err, sprintf("%y: %s", options, ex.desc));
+        assertRegex("subtype-target-test", ex.desc);
+        assertRegex(sprintf("the \"%s\" option", option), ex.desc, sprintf("%y", options));
+        assertEq(-1, ex.desc.find(Password));
+    }
+
+    #! returns the values that the poller of the data provider was created with
+    private *hash<auto> getPollerValues(AbstractDataProvider dp) {
+%ifdef NoReflection
+        testSkip("the reflection module is not available");
+%else
+        object poller = cast<NormalMember>(Class::forName("SftpPollerDataProviderBase").getMember("poller"))
+            .getValue(dp);
+        Class cls = Class::forName("SftpPoller");
+        hash<auto> rv;
+        foreach string member in (PollerMembers + ("keepalive_interval", "mask", "poll_interval",
+                "host_key_sha256")) {
+            rv{member} = cast<NormalMember>(cls.getMember(member)).getValue(poller);
+        }
+        return rv;
+%endif
+    }
+
+    #! the values that the poller of the connection's data provider is created with
+    private hash<auto> getExpectedValues() {
+        return {
+            "host": "Host.Example.invalid",
+            "port": 22,
+            "user": "user",
+            "pass": Password,
+            "keyfile": keyfile,
+            "known_hosts": known_hosts,
+            "host_key_policy": "reject",
+            "verify_host_key": True,
+            "use_agent": False,
+            "path": ("/inbound",),
+        };
+    }
+
+    #! checks that the poller of the data provider was created with the connection's values
+    private checkConnectionValues(AbstractDataProvider dp, string label) {
+        *hash<auto> values = getPollerValues(dp);
+        assertEq(getExpectedValues(), values{PollerMembers}, label);
+    }
+
+    connectionValuesTest() {
+        AbstractDataProvider dp = create(getConnection());
+        checkConnectionValues(dp, "no caller options");
+        # the connection's keepalive interval is the default of the caller's
+        assertEq(30, getPollerValues(dp).keepalive_interval);
+    }
+
+    otherUrlTest() {
+        SftpConnection conn = getConnection();
+        list<auto> urls = (
+            "sftp://user@other.example.invalid/inbound",
+            "sftp://user@Host.Example.invalid:2222/inbound",
+            "sftp://user@Host.Example.invalid/outbound",
+            "sftp://user@Host.Example.invalid/inbound/sub",
+            "sftp://user@Host.Example.invalid/inbound/..",
+            "sftp://user@Host.Example.invalid/",
+            "sftp://user@Host.Example.invalid",
+            "ftp://user@Host.Example.invalid/inbound",
+            "sftp://other@Host.Example.invalid/inbound",
+            "sftp://user:other-pw@Host.Example.invalid/inbound",
+            "sftp://User@Host.Example.invalid/inbound",
+            "sftp://",
+            # with no scheme, the host is part of the path
+            "Host.Example.invalid/inbound",
+            1,
+            True,
+            ("sftp://user@Host.Example.invalid/inbound",),
+        );
+        foreach auto url in (urls) {
+            checkRefused(conn, {"url": url}, "url");
+        }
+    }
+
+    sameUrlTest() {
+        SftpConnection conn = getConnection();
+        list<string> urls = (
+            Url,
+            "sftp://Host.Example.invalid/inbound",
+            "SFTP://user@host.example.INVALID:22/inbound",
+            "sftp://user@Host.Example.invalid//inbound/",
+            "sftp://user@Host.Example.invalid/./inbound/.",
+            "sftp://user:" + Password + "@Host.Example.invalid:22/inbound",
+            "",
+        );
+        foreach string url in (urls) {
+            AbstractDataProvider dp = create(conn, {"url": url});
+            checkConnectionValues(dp, url);
+        }
+
+        # the connection's port is compared with the default port, also when the connection gives it
+        conn = getConnection(NOTHING, "sftp://user@Host.Example.invalid:22/inbound");
+        AbstractDataProvider dp = create(conn, {"url": "sftp://user@Host.Example.invalid/inbound"});
+        assertEq(22, getPollerValues(dp).port);
+        checkRefused(conn, {"url": "sftp://user@Host.Example.invalid:23/inbound"}, "url");
+
+        # a connection with no user in its URL accepts no user in the caller's URL
+        conn = getConnection(NOTHING, "sftp://Host.Example.invalid/inbound");
+        create(conn, {"url": "sftp://Host.Example.invalid/inbound"});
+        checkRefused(conn, {"url": "sftp://user@Host.Example.invalid/inbound"}, "url");
+    }
+
+    otherSettingTest() {
+        SftpConnection conn = getConnection();
+        hash<auto> other = {
+            "keyfile": (other_keyfile, "", 1),
+            "known_hosts": (dir + "/other_known_hosts", "", True),
+            "host_key_policy": ("tofu", "tofu-session", "REJECT", 1),
+            "verify_host_key": (False, "true", 1),
+            "use_agent": (True, "false", 0),
+        };
+        foreach hash<auto> i in (other.pairIterator()) {
+            foreach auto v in (i.value) {
+                checkRefused(conn, {i.key: v}, i.key);
+            }
+        }
+
+        # a connection that turns host key checks off: a caller cannot turn them on either, as the connection's
+        # settings are its own
+        hash<auto> opts = getConnectionOptions() + {"verify_host_key": False, "host_key_policy": "tofu-session"};
+        conn = getConnection(opts);
+        checkRefused(conn, {"verify_host_key": True}, "verify_host_key");
+        checkRefused(conn, {"host_key_policy": "reject"}, "host_key_policy");
+    }
+
+    sameSettingTest() {
+        SftpConnection conn = getConnection();
+        hash<auto> opts = getConnectionOptions() - "keepalive_interval";
+        foreach hash<auto> i in (opts.pairIterator()) {
+            AbstractDataProvider dp = create(conn, {i.key: i.value});
+            checkConnectionValues(dp, i.key);
+        }
+        AbstractDataProvider dp = create(conn, opts + {"url": Url});
+        checkConnectionValues(dp, "all");
+    }
+
+    unsetFileTest() {
+        hash<auto> opts = getConnectionOptions() - ("keyfile", "known_hosts");
+        SftpConnection conn = getConnection(opts);
+        # with no key file of the connection, an empty one is the same
+        AbstractDataProvider dp = create(conn, {"keyfile": ""});
+        *hash<auto> values = getPollerValues(dp);
+        assertEq(NOTHING, values.keyfile);
+        assertEq(NOTHING, values.known_hosts);
+        checkRefused(conn, {"keyfile": keyfile}, "keyfile");
+        # an empty known_hosts file turns off the default known_hosts file: it is not the connection's setting
+        checkRefused(conn, {"known_hosts": ""}, "known_hosts");
+        checkRefused(conn, {"known_hosts": known_hosts}, "known_hosts");
+    }
+
+    defaultSettingTest() {
+        # a connection with no options has the default settings, some of which are enum values
+        SftpConnection conn = getConnection({});
+        hash<auto> defaults = conn.getRealOptions(){"host_key_policy", "verify_host_key", "use_agent"};
+        assertEq(3, defaults.size());
+        AbstractDataProvider dp = create(conn, defaults);
+        *hash<auto> values = getPollerValues(dp);
+        assertEq(defaults.host_key_policy, values.host_key_policy);
+        assertEq(defaults.verify_host_key, values.verify_host_key);
+        assertEq(defaults.use_agent, values.use_agent);
+        # the same values as plain strings and booleans
+        create(conn, {
+            "host_key_policy": sprintf("%s", defaults.host_key_policy),
+            "verify_host_key": boolean(defaults.verify_host_key),
+            "use_agent": boolean(defaults.use_agent),
+        });
+        # another policy or a value of another type is refused
+        foreach string policy in (("reject", "tofu", "tofu-session")) {
+            if (policy != defaults.host_key_policy) {
+                checkRefused(conn, {"host_key_policy": policy}, "host_key_policy");
+            }
+        }
+        checkRefused(conn, {"verify_host_key": defaults.verify_host_key ? 1 : 0}, "verify_host_key");
+        checkRefused(conn, {"use_agent": defaults.use_agent ? "true" : "false"}, "use_agent");
+    }
+
+    tuningOptionsTest() {
+        SftpConnection conn = getConnection();
+        string pin = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+        AbstractDataProvider dp = create(conn, {
+            "keepalive_interval": 15,
+            "mask": "*.csv",
+            "poll_interval": 3,
+            "host_key_sha256": pin,
+        });
+        checkConnectionValues(dp, "tuning options");
+        *hash<auto> values = getPollerValues(dp);
+        assertEq(15, values.keepalive_interval);
+        # the poller converts the glob mask to a regular expression
+        assertRegex("csv", values.mask);
+        assertEq(-1, values.mask.find("*.*"));
+        assertEq(3, values.poll_interval);
+        assertEq(pin, values.host_key_sha256);
+    }
+
+    noSecretTest() {
+        SftpConnection conn = getConnection();
+        string other_pw = "caller-secret-pw";
+        hash<ExceptionInfo> ex = createFails(conn, {"url": "sftp://user:" + other_pw + "@other.example.invalid/x"});
+        assertEq("DATA-PROVIDER-ERROR", ex.err);
+        assertEq(-1, ex.desc.find(other_pw));
+        assertEq(-1, ex.desc.find(Password));
+        assertEq(-1, ex.desc.find("other.example.invalid"));
+        # the connection is named with its safe URL
+        assertTrue(ex.desc.find("sftp://user:<masked>@Host.Example.invalid/inbound") >= 0, ex.desc);
+    }
+}
