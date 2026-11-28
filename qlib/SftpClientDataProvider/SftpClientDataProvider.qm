@@ -232,6 +232,11 @@ module SftpClientDataProvider {
 /** @page sftpclientdataproviderreleasenotes SftpClientDataProvider Release Notes
 
     @section sftpclientdataprovider_v2_1 SftpClientDataProvider v2.1
+    - the \c keyfile constructor option is refused with \c PERMISSION-DENIED when the code that creates the provider
+      is restricted from the file system, and the \c location of the \c get-file-location and
+      \c create-file-location actions is refused when the calling code is restricted from a functional domain of the
+      location's handler, also for the code that a host-created provider was lent to
+      (<a href="https://github.com/qoretechnologies/module-ssh2/issues/128">issue 128</a>)
     - Added publish-verified and acquire-verified actions with typed commit receipts.
     - added host-key verification constructor options: \c known_hosts, \c host_key_policy,
       \c verify_host_key, \c use_agent, and \c keepalive_interval

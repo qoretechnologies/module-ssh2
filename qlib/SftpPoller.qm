@@ -151,6 +151,11 @@ poller.waitStop();
     The @ref SftpPoller::SftpPoller "SftpPoller" class includes support for running in sandboxed Program objects with the following parse options set:
     - \c PO_NO_THREAD_CONTROL: in this case the \c "start_thread" option is required in @ref SftpPoller::SftpPoller::constructor() "SftpPoller::constructor()"
     - \c PO_NO_PROCESS_CONTROL: in this case the \c "sleep" option is required in @ref SftpPoller::SftpPoller::constructor() "SftpPoller::constructor()" when the module is loaded by its path; the installed module declares the \c PROCESS_CONTROL functional domain (it registers data provider types and waits between polls), so a Program restricted like a Qorus interface does not need the option
+    - \c PO_NO_FILESYSTEM: the local paths given in the \c "keyfile", \c "known_hosts" and \c "local_dir" options
+      are refused with \c PERMISSION-DENIED, as is the local path of
+      @ref SftpPoller::SftpPoller::getStoreFile() "getStoreFile()"; a poller that the host creates with its paths and
+      lends to such code keeps them, but the local path given to @ref SftpPoller::SftpPoller::getStoreFile()
+      "getStoreFile()" is refused for that code too
 
     @anchor sftppollerrelnotes
 
@@ -160,6 +165,10 @@ poller.waitStop();
 /** @page sftppollerreleasenotes SftpPoller Release Notes
 
     @section sftppollerv1_6 Version 1.6
+    - the \c keyfile option is refused with \c PERMISSION-DENIED when the code that creates the poller is restricted
+      from the file system, and @ref SftpPoller::SftpPoller::getStoreFile() "getStoreFile()" refuses a local path
+      given by such code, also by the code that a host-created poller was lent to
+      (<a href="https://github.com/qoretechnologies/module-ssh2/issues/128">issue 128</a>)
     - Added opt-in verified acquisition from dedicated publication directories.
     - an error raised while a polled file is handled (ex: an observer that refuses the file event) is logged, the
       remote file is kept, and the poll is retried after the \c "error_delay" option's delay; previously polling
@@ -475,6 +484,8 @@ public class SftpPoller {
         they are in the remote SFTP server, unless they are removed or moved during polling processing. Only one of
         these options may be set at one time; setting both will result in an error
 
+        @throw PERMISSION-DENIED a \c keyfile, \c known_hosts or \c local_dir path is given and the creating code is
+        restricted from the \c FILESYSTEM functional domain
         @throw SFTPPOLLER-CONSTRUCTOR-ARG-ERROR missing required key, invalid port, poll_interval or error_delay
         given
         @throw SFTPCLIENT-PARAMETER-ERROR empty hostname passed
@@ -488,6 +499,8 @@ public class SftpPoller {
     constructor(Qore::SSH2::SFTPClient sftp, hash<auto> nconf) {
         # create hash of keys with only valid options in argument hash
         hash<auto> conf = Defaults + nconf{AllKeys};
+        # the local paths are the creator's: refused before they are used or anything is transferred
+        SftpPoller::checkCreatorPaths(nconf);
         if (exists conf.commit_profile) {
             conf.local_dir = nconf.local_dir;
             validateCommitOptions(conf);
@@ -617,6 +630,8 @@ public class SftpPoller {
           to use when transferring files to the local directory specified by \c local_dir; use \c "%s" as the
           placeholder for the target filename
 
+        @throw PERMISSION-DENIED a \c keyfile, \c known_hosts or \c local_dir path is given and the creating code is
+        restricted from the \c FILESYSTEM functional domain
         @throw SFTPPOLLER-CONSTRUCTOR-ARG-ERROR missing required key, invalid port, poll_interval or error_delay
         given
         @throw SFTPCLIENT-PARAMETER-ERROR empty hostname passed
@@ -630,6 +645,8 @@ public class SftpPoller {
     constructor(hash<auto> nconf) {
         # create hash of keys with only valid options in argument hash
         hash<auto> conf = Defaults + nconf{AllKeys};
+        # the local paths are the creator's: refused before they are used or anything is transferred
+        SftpPoller::checkCreatorPaths(nconf);
         if (exists conf.commit_profile) {
             conf.local_dir = nconf.local_dir;
             validateCommitOptions(conf);
@@ -756,6 +773,9 @@ public class SftpPoller {
         @throw OPTION-VALUE-ERROR invalid \c host_key_policy value
     */
     static applyClientOptions(SFTPClient sftp, hash<auto> options) {
+        if (options.known_hosts.val()) {
+            SftpPoller::checkCreatorFileAccess("the 'known_hosts' option");
+        }
         if (exists options.known_hosts) {
             sftp.setKnownHostsFile(substitute_env_vars(options.known_hosts));
         }
@@ -770,6 +790,32 @@ public class SftpPoller {
         }
         if (exists options.keepalive_interval) {
             sftp.setKeepalive(options.keepalive_interval);
+        }
+    }
+
+    #! refuses the local paths of the options if the code that creates the poller is restricted from the file system
+    /** @throw PERMISSION-DENIED a \c local_dir, \c keyfile or \c known_hosts path is given and the creating code is
+        restricted from the \c FILESYSTEM functional domain
+    */
+    private static checkCreatorPaths(hash<auto> conf) {
+        foreach string opt in (("local_dir", "keyfile", "known_hosts")) {
+            if (conf{opt}.val()) {
+                SftpPoller::checkCreatorFileAccess(sprintf("the %y option", opt));
+            }
+        }
+    }
+
+    #! refuses a local path given when the poller is created if the creating code is restricted from the file system
+    /** The creating code is judged as by @ref Qore::SandboxManager::isCallerRestricted()
+        "SandboxManager::isCallerRestricted()", so a poller that a method of an object that the host lent creates with
+        the paths that the host gave keeps working.  A sandbox's file-system policy applies when the path is opened.
+
+        @throw PERMISSION-DENIED the creating code is restricted from the \c FILESYSTEM functional domain
+    */
+    private static checkCreatorFileAccess(string what) {
+        if (SandboxManager::isCallerRestricted(DOM_FILESYSTEM)) {
+            throw "PERMISSION-DENIED", sprintf("%s cannot be used: the calling code is restricted from the FILESYSTEM "
+                "functional domain", what);
         }
     }
 
@@ -867,8 +913,16 @@ public class SftpPoller {
         @param n_timeout a timeout in milliseconds
 
         @return the number of bytes transferred
+
+        @throw PERMISSION-DENIED the calling code (or the code that the poller was lent to) is restricted from the
+        \c FILESYSTEM functional domain
     */
     int getStoreFile(string remote_path, string local_path, *timeout n_timeout) {
+        # the path is the caller's input: refused before anything is written or transferred
+        if (SandboxManager::isLentToRestricted(DOM_FILESYSTEM)) {
+            throw "PERMISSION-DENIED", "the local_path argument cannot be used: the calling code is restricted from "
+                "the FILESYSTEM functional domain";
+        }
         return sftp.retrieveFile(remote_path, local_path, n_timeout ?? timeout);
     }
 

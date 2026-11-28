@@ -179,6 +179,14 @@ public:
             err.raiseException("SFTP-EXCHANGE-ARG", "a replaceable path requires a producer SHA-256");
             return;
         }
+        // the local path is checked against the sandbox of the calling code before any connection is made; the
+        // staging file next to it is checked again when it is created
+        if (!input) {
+            QoreSandboxManagerHelper smh(QoreSandboxManagerHelper::Policy);
+            if (smh && !smh->checkFilesystemAccess(local.c_str(), QSEC_CREATE | QSEC_WRITE | QSEC_DELETE, &err)) {
+                return;
+            }
+        }
         std::string fingerprint;
         auto peer = client.prepareExchangeUnlocked(profile, pin, timeout, fingerprint, err);
         if (!fingerprint.empty()) {

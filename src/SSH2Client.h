@@ -644,16 +644,7 @@ public:
     DLLLOCAL QoreObject *scpPut(ExceptionSink *xsink, const char *path, size_t size, int mode = 0644, long mtime = 0, long atime = 0, int timeout_ms = -1);
     DLLLOCAL void scpPut(ExceptionSink *xsink, const char *path, InputStream *is, size_t size, int mode = 0644, long mtime = 0, long atime = 0, int timeout_ms = -1);
 
-    DLLLOCAL int setKnownHostsFile(const char* path, ExceptionSink* xsink) {
-        AutoLocker al(m);
-        if (sshSessionActiveUnlocked()) {
-            xsink->raiseException(SSH2_CONNECTED,
-                "usage of SSH2Base::setKnownHostsFile() is not allowed when connected or connecting");
-            return -1;
-        }
-        known_hosts_file = path ? path : "";
-        return 0;
-    }
+    DLLLOCAL int setKnownHostsFile(const char* path, ExceptionSink* xsink);
 
     DLLLOCAL void getKnownHostsFileLocked(QoreString& str) {
         AutoLocker al(m);
